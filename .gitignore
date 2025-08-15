@@ -1,0 +1,43 @@
+# Node / Vue
+node_modules/
+**/node_modules/
+dist/
+dist-ssr/
+.vitepress/
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Drupal (Composer + Webroot)
+drupal/vendor/
+drupal/web/core/
+drupal/web/modules/contrib/
+drupal/web/themes/contrib/
+drupal/web/profiles/
+drupal/web/sites/default/files/
+drupal/web/sites/default/private/
+drupal/web/sites/default/settings.local.php
+
+# Composer / Drush
+composer.phar
+drush/
+.drush/
+.drushrc.php
+
+# Python (Matching)
+matching/__pycache__/
+matching/*.pyc
+venv/
+.pytest_cache/
+
+# Docker / Volumes
+db_data/
+
+# IDE / OS
+.DS_Store
+.vscode/
+.idea/
+.env
+.env.local

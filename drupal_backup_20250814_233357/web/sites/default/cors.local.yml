@@ -1,0 +1,9 @@
+parameters:
+  cors.config:
+    enabled: true
+    allowedHeaders: ['*']
+    allowedMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']
+    allowedOrigins: ['http://localhost:5173', 'http://localhost:3000']
+    exposedHeaders: false
+    maxAge: false
+    supportsCredentials: true

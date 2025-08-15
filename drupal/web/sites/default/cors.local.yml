@@ -1,0 +1,24 @@
+# web/sites/default/cors.local.yml
+parameters:
+  cors.config:
+    enabled: true
+    # Erlaubte Origins für Dev (Vite) & Prod (Nginx)
+    allowedOrigins:
+      - 'http://localhost:5173'
+      - 'http://127.0.0.1:5173'
+      - 'http://localhost:3000'
+      - 'http://127.0.0.1:3000'
+    allowedHeaders:
+      - 'x-csrf-token'
+      - 'content-type'
+      - 'authorization'
+      - 'accept'
+    allowedMethods:
+      - 'GET'
+      - 'POST'
+      - 'PATCH'
+      - 'DELETE'
+      - 'OPTIONS'
+    exposedHeaders: false
+    maxAge: 1000
+    supportsCredentials: true

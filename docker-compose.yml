@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: drupal
+      POSTGRES_USER: drupal
+      POSTGRES_PASSWORD: drupal
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  drupal:
+    build:
+      context: ./drupal
+      dockerfile: Dockerfile
+    container_name: drupal
+    ports:
+      - "8080:80"
+    volumes:
+      - ./drupal:/opt/drupal
+    depends_on:
+      - postgres
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+
+  matching:
+    build:
+      context: ./matching
+      dockerfile: Dockerfile
+    container_name: matching
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./matching:/app
+    depends_on:
+      - drupal
+
+  # Produktion: statisch via Nginx
+  vue-prod:
+    image: nginx:alpine
+    container_name: vue-prod
+    profiles: [prod]
+    ports:
+      - "3000:80"
+    volumes:
+      - ./vue-frontend/dist:/usr/share/nginx/html:ro
+      - ./nginx/vue-site.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - drupal
+
+volumes:
+  db_data:

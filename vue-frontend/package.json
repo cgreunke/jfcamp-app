@@ -1,0 +1,31 @@
+{
+  "name": "jfcamp-vue",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "postinstall": "node -e \"try{require('@rollup/rollup-linux-x64-gnu');console.log('rollup native ok')}catch(e){console.log('installing native rollup…');process.exit(1)}\" || npm i -D @rollup/rollup-linux-x64-gnu@^4.21.0"
+  },
+  "dependencies": {
+    "vue": "^3.5.13",
+    "vuetify": "^3.8.5",
+    "@mdi/font": "^7.4.47",
+    "sass": "^1.88.0"
+  },
+  "devDependencies": {
+    "vite": "^6.2.4",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "vite-plugin-vuetify": "^2.1.1",
+    "rollup": "^4.21.0",
+    "@rollup/rollup-linux-x64-gnu": "^4.21.0",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@eslint/js": "^9.22.0",
+    "eslint": "^9.22.0",
+    "eslint-plugin-vue": "~10.0.0",
+    "globals": "^16.0.0",
+    "prettier": "3.5.3"
+  }
+}

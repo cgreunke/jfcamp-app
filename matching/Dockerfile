@@ -1,12 +1,30 @@
-FROM drupal:11-apache
+# matching/Dockerfile
+FROM python:3.11-slim
 
-# Tools + Composer installieren
-RUN apt-get update && apt-get install -y git unzip curl && rm -rf /var/lib/apt/lists/* \
-  && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONUNBUFFERED=1
 
-# Apache: DocumentRoot auf /opt/drupal/web umbiegen
-RUN a2enmod rewrite
-RUN sed -ri -e 's!/var/www/html!/opt/drupal/web!g' /etc/apache2/sites-available/000-default.conf \
- && sed -ri -e 's!/var/www/!/opt/drupal/web/!g' /etc/apache2/apache2.conf
+WORKDIR /app
 
-WORKDIR /opt/drupal
+# System-Dependencies minimal halten
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Python-Dependencies zuerst cachen
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# App-Code
+COPY . /app
+
+# Flask / Gunicorn auf Port 5000
+EXPOSE 5000
+
+# Healthcheck (ruft /health)
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD curl -fsS http://localhost:5000/health || exit 1
+
+# Produktionstauglicher Start (2 Worker für Dev ausreichend)
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "matching_server:app"]

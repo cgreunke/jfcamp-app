@@ -19,6 +19,8 @@ drupal/web/profiles/
 drupal/web/sites/default/files/
 drupal/web/sites/default/private/
 drupal/web/sites/default/settings.local.php
+drupal_src/
+drupal_backup_20250814_233357/
 
 # Composer / Drush
 composer.phar

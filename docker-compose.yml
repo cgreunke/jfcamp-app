@@ -15,10 +15,31 @@ services:
     container_name: drupal
     ports:
       - "8080:80"
+    environment:
+      DRUPAL_DB_HOST: postgres
+      DRUPAL_DB_NAME: drupal
+      DRUPAL_DB_USER: drupal
+      DRUPAL_DB_PASS: drupal
+      DRUPAL_ADMIN_USER: admin
+      DRUPAL_ADMIN_PASS: admin
+      DRUPAL_ADMIN_MAIL: admin@example.com
+      DRUPAL_TRUSTED_HOSTS: "^localhost$,^drupal$,^127\\.0\\.0\\.1$"
+      DRUPAL_SITE_NAME: "JF Startercamp - App"
     volumes:
-      - ./drupal:/opt/drupal
+      # Persistentes Composer-Projekt (Core + vendor + web)
+      - drupal_project:/opt/drupal
+      # Nur Custom-Entwicklung binden
+      - ./drupal/custom/modules:/opt/drupal/web/modules/custom
+      - ./drupal/custom/themes:/opt/drupal/web/themes/custom
+      # Optional: Config-Verzeichnis
+      # - ./drupal/config:/opt/drupal/config
     depends_on:
       - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/jsonapi"]
+      interval: 20s
+      timeout: 5s
+      retries: 15
 
   adminer:
     image: adminer
@@ -33,12 +54,16 @@ services:
       context: ./matching
       dockerfile: Dockerfile
     container_name: matching
+    environment:
+      DRUPAL_URL: http://drupal/jsonapi
+      # DRUPAL_TOKEN: your_token_if_applicable
     ports:
       - "5001:5000"
     volumes:
       - ./matching:/app
     depends_on:
-      - drupal
+      drupal:
+        condition: service_started
 
   # Produktion: statisch via Nginx
   vue-prod:
@@ -55,3 +80,4 @@ services:
 
 volumes:
   db_data:
+  drupal_project:

@@ -41,3 +41,9 @@ db_data/
 .idea/
 .env
 .env.local
+
+# Env-Dateien überall ignorieren
+**/.env
+**/.env.*
+!**/.env.example
+

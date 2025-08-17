@@ -1,27 +1,24 @@
-export async function absendenWunsch(code, teilnehmerId, wuensche) {
-  const rel = {
-    field_teilnehmer: {
-      data: { type: 'node--teilnehmer', id: teilnehmerId }
-    }
-  }
-  wuensche.forEach((w, i) => {
-    if (w?.id) {
-      rel[`field_wunsch_${i + 1}`] = { data: { type: 'node--workshop', id: w.id } }
-    }
-  })
-
-  const body = {
-    data: {
-      type: 'node--wunsch',
-      attributes: { title: `Wunsch von ${code}` },
-      relationships: rel
-    }
+// Wünsche anonym über eigene API abgeben
+export async function absendenWunsch({ code, teilnehmerId, workshopIds }) {
+  // Hinweis: teilnehmerId wird serverseitig aus 'code' geprüft – wir senden sie nicht extra.
+  const payload = {
+    code: String(code || '').trim(),
+    workshop_ids: (workshopIds || []).filter(Boolean).map(String),
   }
 
-  const res = await fetch('http://localhost:8080/jsonapi/node/wunsch', {
+  const res = await fetch('/jfcamp/wunsch', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/vnd.api+json' },
-    body: JSON.stringify(body)
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'omit',
+    body: JSON.stringify(payload),
   })
-  if (!res.ok) throw new Error(await res.text())
+
+  const text = await res.text()
+  let json = {}
+  try { json = JSON.parse(text) } catch {}
+
+  if (!res.ok || !json.ok) {
+    throw new Error(json?.error || `Wunsch HTTP ${res.status}`)
+  }
+  return json.wunsch_uuid || ''
 }

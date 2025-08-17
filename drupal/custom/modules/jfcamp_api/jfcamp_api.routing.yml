@@ -1,0 +1,17 @@
+jfcamp_api.wunsch:
+  path: '/jfcamp/wunsch'
+  defaults:
+    _controller: '\Drupal\jfcamp_api\Controller\WunschController::wunsch'
+    _format: 'json'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+
+jfcamp_api.teilnehmer_id:
+  path: '/jfcamp/teilnehmer-id'
+  defaults:
+    _controller: '\Drupal\jfcamp_api\Controller\WunschController::teilnehmerId'
+    _format: 'json'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'

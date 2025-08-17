@@ -1,7 +1,18 @@
+// Teilnehmer-ID (UUID) per Code (eigene API)
 export async function fetchTeilnehmerIdByCode(code) {
-  const url = `http://localhost:8080/jsonapi/node/teilnehmer?filter[field_code]=${encodeURIComponent(code)}`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error('Teilnehmer konnte nicht geladen werden')
-  const data = await res.json()
-  return data.data?.[0]?.id || null
+  const cleaned = String(code || '').trim()
+  if (!cleaned) return null
+
+  const res = await fetch('/jfcamp/teilnehmer-id', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'omit',
+    body: JSON.stringify({ code: cleaned }),
+  })
+
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`Teilnehmer-ID HTTP ${res.status}`)
+
+  const json = await res.json().catch(() => ({}))
+  return json?.ok ? json.id : null
 }

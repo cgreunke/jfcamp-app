@@ -1,0 +1,5 @@
+name: JFCamp API
+type: module
+description: API-Endpunkte für Wunsch-Submit ohne Login
+core_version_requirement: "^10 || ^11"
+package: JFCamp

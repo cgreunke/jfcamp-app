@@ -20,7 +20,7 @@
           class="mb-3"
         />
 
-       <v-select
+        <v-select
           v-for="(n, idx) in anzahlWuensche"
           :key="idx"
           :label="`Wunsch ${idx + 1}`"
@@ -31,7 +31,11 @@
           clearable
           class="mb-3"
           @update:modelValue="onPick(idx)"
-        ></v-select>
+        />
+
+        <div class="text-caption mb-2">
+          Ausgewählt: {{ ausgewaehltCount }} / {{ anzahlWuensche }}
+        </div>
 
         <v-btn
           :loading="sending"
@@ -44,21 +48,11 @@
           Wünsche absenden
         </v-btn>
 
-        <v-alert
-          v-if="fehler"
-          type="error"
-          class="mt-4"
-          density="compact"
-        >
+        <v-alert v-if="fehler" type="error" class="mt-4" density="compact">
           {{ fehler }}
         </v-alert>
 
-        <v-alert
-          v-if="erfolg"
-          type="success"
-          class="mt-4"
-          density="compact"
-        >
+        <v-alert v-if="erfolg" type="success" class="mt-4" density="compact">
           Vielen Dank! Deine Wünsche wurden gespeichert.
         </v-alert>
       </v-form>
@@ -88,6 +82,9 @@ const optionen = (idx) => {
   return workshopOptions.value.filter(o => !verbotene.has(o.id))
 }
 
+/** Mini-Info: wie viele Wünsche sind gesetzt */
+const ausgewaehltCount = computed(() => wuensche.value.filter(Boolean).length)
+
 /** Minimal-Validierung: Code + mind. 1 Wunsch */
 const istUngueltig = computed(() => {
   const hasCode = !!(code.value && code.value.trim())
@@ -95,14 +92,14 @@ const istUngueltig = computed(() => {
   return !hasCode || !hasMind1
 })
 
-/** Wird bei jeder Auswahl aufgerufen: bereinigt Duplikate */
-function onPick(changedIdx) {
+/** Wird bei jeder Auswahl aufgerufen: bereinigt Duplikate, falls zwei Felder gleich wurden */
+function onPick() {
   const seen = new Set()
   for (let i = 0; i < wuensche.value.length; i++) {
     const val = wuensche.value[i]
     if (!val) continue
     if (seen.has(val)) {
-      // Duplikat gefunden -> diesen Eintrag leeren
+      // Duplikat -> diesen Eintrag leeren
       wuensche.value[i] = null
     } else {
       seen.add(val)
@@ -153,8 +150,8 @@ async function absenden() {
 
     await absendenWunsch({ code: cleaned, teilnehmerId: tnId, workshopIds })
     erfolg.value = true
-    // optional: Formular zurücksetzen
-    wuensche.value = Array.from({ length: anzahlWuensche.value }, () => null)
+    // Optional zurücksetzen:
+    // wuensche.value = Array.from({ length: anzahlWuensche.value }, () => null)
     // code.value = ''
   } catch (e) {
     console.error(e)
@@ -164,3 +161,4 @@ async function absenden() {
   }
 }
 </script>
+

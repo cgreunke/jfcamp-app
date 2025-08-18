@@ -1,0 +1,61 @@
+<?php
+use Drupal\field\Entity\FieldConfig;
+
+/**
+ * Baut Standard-Form- und View-Displays für unsere Bundles und
+ * hängt vorhandene Felder mit passenden Widgets/Formattern ein.
+ * Idempotent: beliebig oft ausführbar.
+ */
+
+// Bundle -> [ field, widget, formatter ]
+$bundles = [
+  'workshop' => [
+    ['field_maximale_plaetze', 'number', 'number_integer'],
+    ['field_ext_id', 'string_textfield', 'string'],
+  ],
+  'teilnehmer' => [
+    ['field_code', 'string_textfield', 'string'],
+    ['field_vorname', 'string_textfield', 'string'],
+    ['field_name', 'string_textfield', 'string'],
+    ['field_regionalverband', 'string_textfield', 'string'],
+    ['field_zugewiesen', 'entity_reference_autocomplete_tags', 'entity_reference_label'],
+  ],
+  'wunsch' => [
+    ['field_teilnehmer', 'entity_reference_autocomplete', 'entity_reference_label'],
+    ['field_wuensche', 'entity_reference_autocomplete_tags', 'entity_reference_label'],
+  ],
+  'matching_config' => [
+    ['field_num_wuensche', 'number', 'number_integer'],
+    ['field_num_zuteilung', 'number', 'number_integer'],
+  ],
+];
+
+function field_exists_for_bundle(string $bundle, string $field): bool {
+  return FieldConfig::loadByName('node', $bundle, $field) !== NULL;
+}
+
+$repo = \Drupal::service('entity_display.repository');
+
+foreach ($bundles as $bundle => $components) {
+  // --- Form display (liefert existierende oder leere Anzeige) ---
+  $form = $repo->getFormDisplay('node', $bundle, 'default');
+  $w = 0;
+  foreach ($components as [$field, $widget, $formatter]) {
+    if (field_exists_for_bundle($bundle, $field)) {
+      $form->setComponent($field, ['type' => $widget, 'weight' => $w++]);
+    }
+  }
+  $form->save();
+
+  // --- View display ---
+  $view = $repo->getViewDisplay('node', $bundle, 'default');
+  $w = 0;
+  foreach ($components as [$field, $widget, $formatter]) {
+    if (field_exists_for_bundle($bundle, $field)) {
+      $view->setComponent($field, ['type' => $formatter, 'label' => 'above', 'weight' => $w++]);
+    }
+  }
+  $view->save();
+}
+
+print "Displays repariert\n";

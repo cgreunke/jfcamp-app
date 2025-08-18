@@ -137,9 +137,7 @@ vendor/bin/drush locale:check || true
 vendor/bin/drush locale:update || true
 
 # ===== 7) Pflichtmodule & Custom-Modul aktivieren =====
-vendor/bin/drush en jsonapi dblog -y || true
-vendor/bin/drush en basic_auth -y || true
-
+vendor/bin/drush en jsonapi dblog basic_auth field_ui -y || true
 vendor/bin/drush cset -y jsonapi.settings read_only 0 || true
 
 if [ -d "web/modules/custom/jfcamp_api" ]; then
@@ -183,9 +181,12 @@ ensure_bundle("teilnehmer","Teilnehmer");
 ensure_bundle("wunsch","Wunsch");
 ensure_bundle("matching_config","Matching Config");
 
-/* Workshop: field_maximale_plaetze (Integer) */
+/* Workshop: field_maximale_plaetze (Integer) + ext_id (optional) */
 ensure_field_storage("node","field_maximale_plaetze","integer",[],1,false);
 ensure_field("node","workshop","field_maximale_plaetze","Maximale Plätze");
+
+ensure_field_storage("node","field_ext_id","string",["max_length"=>128],1,false);
+ensure_field("node","workshop","field_ext_id","Externe ID");
 
 /* Teilnehmer: Code/Vorname/Nachname/RV/Zuweisung */
 ensure_field_storage("node","field_code","string",["max_length"=>128],1,false);
@@ -201,14 +202,23 @@ ensure_field_storage("node","field_regionalverband","string",["max_length"=>128]
 ensure_field("node","teilnehmer","field_regionalverband","Regionalverband");
 
 ensure_field_storage("node","field_zugewiesen","entity_reference",["target_type"=>"node"],-1,false);
-ensure_field("node","teilnehmer","field_zugewiesen","Zugewiesene Workshops");
+ensure_field("node","teilnehmer","field_zugewiesen","Zugewiesene Workshops",[
+  "handler"=>"default",
+  "handler_settings"=>["target_bundles"=>["workshop"=>"workshop"]]
+]);
 
 /* Wunsch: Teilnehmer (einfach), Wünsche (mehrfach, Reihenfolge) */
 ensure_field_storage("node","field_teilnehmer","entity_reference",["target_type"=>"node"],1,false);
-ensure_field("node","wunsch","field_teilnehmer","Teilnehmer");
+ensure_field("node","wunsch","field_teilnehmer","Teilnehmer",[
+  "handler"=>"default",
+  "handler_settings"=>["target_bundles"=>["teilnehmer"=>"teilnehmer"]]
+]);
 
 ensure_field_storage("node","field_wuensche","entity_reference",["target_type"=>"node"],-1,false);
-ensure_field("node","wunsch","field_wuensche","Wünsche");
+ensure_field("node","wunsch","field_wuensche","Wünsche",[
+  "handler"=>"default",
+  "handler_settings"=>["target_bundles"=>["workshop"=>"workshop"]]
+]);
 
 /* Matching Config: Anzahl Wünsche & Zuteilungen */
 ensure_field_storage("node","field_num_wuensche","integer",[],1,false);
@@ -228,39 +238,23 @@ if (empty($ids)) {
 }
 ';
 
-# Beziehungen/Handler (Target Bundles) in der UI setzen – oder via Config-Export importieren.
-# (Für schnelle Tests reicht die obige Anlage; Matching-Service arbeitet über UUIDs.)
+# ===== 9) Displays (Form & View) sicherstellen – Skript schreiben & ausführen =====
 
-# ===== 9) API-Rolle + User für Matching =====
+vendor/bin/drush php:script web/modules/custom/jfcamp_api/scripts/ensure_displays.php || true
+
+# ===== 10) API-Rolle + User für Matching =====
+# Rolle sicherstellen und echte Permissions vergeben (ohne fiktive 'access jsonapi resources')
 vendor/bin/drush ev '
 use Drupal\user\Entity\Role;
-
-$role_id = getenv("DRUPAL_API_ROLE") ?: "api_writer";
-$role = Role::load($role_id);
-if (!$role) {
-  $role = Role::create(["id"=>$role_id,"label"=>"API Writer"]);
-  $role->save();
-}
-
-/**
- * Erforderliche Berechtigungen:
- * - access content                   (veröffentlichte Nodes lesen)
- * - access jsonapi resources         (JSON:API nutzen)
- * - edit any teilnehmer content      (Zuteilungen zurückschreiben)
- * - access user profiles             (optional, meist harmlos)
- *
- * Hinweis: "access jsonapi resources" existiert nur, wenn das JSON:API-Modul aktiv ist.
- */
+$rid = getenv("DRUPAL_API_ROLE") ?: "api_writer";
+$role = Role::load($rid);
+if (!$role) { $role = Role::create(["id"=>$rid,"label"=>"API Writer"]); $role->save(); }
 $perms = [
-  "access content",
-  "access jsonapi resources",
-  "edit any teilnehmer content",
-  "access user profiles",
+  "access content",                // veröffentlichte Nodes lesen
+  "edit any teilnehmer content",   // Zuweisungen schreiben
+  "access user profiles",          // optional
 ];
-
-foreach ($perms as $p) {
-  $role->grantPermission($p);
-}
+foreach ($perms as $p) { $role->grantPermission($p); }
 $role->save();
 '
 
@@ -269,10 +263,12 @@ if ! vendor/bin/drush user:information "$API_USER" >/dev/null 2>&1; then
   vendor/bin/drush user:create "$API_USER" --mail="${API_USER}@example.com" --password="$API_PASS"
 fi
 vendor/bin/drush user:role:add "$API_ROLE" "$API_USER" || true
-vendor/bin/drush role:perm:add "administrator" "import jfcamp csv" || true
-vendor/bin/drush role:perm:add "$API_USER" "import jfcamp csv" || true
 
-# ===== 10) Cache leeren & Apache starten =====
+# CSV-Import-Recht auf Rollen geben (Admin + API-Rolle)
+vendor/bin/drush role:perm:add "administrator" "import jfcamp csv" || true
+vendor/bin/drush role:perm:add "$API_ROLE" "import jfcamp csv" || true
+
+# ===== 11) Caches leeren & Apache starten =====
 vendor/bin/drush cr || true
 echo "[start] Starte Apache…"
 exec apache2-foreground

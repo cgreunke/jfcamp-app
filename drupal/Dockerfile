@@ -2,7 +2,7 @@
 FROM drupal:11-apache
 
 # ---- Systempakete ----
-# curl/git/unzip für Composer; Build-Deps für GD; libpq-dev & postgresql-client für PostgreSQL
+# curl/git/unzip für Composer; Build-Deps für GD; libpq-dev + postgresql-client für PostgreSQL
 RUN apt-get update && apt-get install -y \
     git unzip curl \
     libjpeg62-turbo-dev libpng-dev libfreetype6-dev libwebp-dev libavif-dev \
@@ -37,4 +37,6 @@ COPY start-drupal.sh /usr/local/bin/start-drupal.sh
 RUN chmod +x /usr/local/bin/start-drupal.sh
 
 EXPOSE 80
+
+# Start: Composer-Setup (falls nötig) -> Apache
 CMD ["bash", "/usr/local/bin/start-drupal.sh"]

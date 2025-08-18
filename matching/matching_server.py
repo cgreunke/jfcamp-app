@@ -1,187 +1,226 @@
-from flask import Flask, jsonify, request
 import os
-import random
-from collections import defaultdict
-import logging
-
+import math
+from typing import Dict, List, Tuple, Any, Optional
+from flask import Flask, jsonify, request
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_exception_type
 
-# -----------------------------------------------------------------------------
-# App & Logging
-# -----------------------------------------------------------------------------
+JSONAPI = os.environ.get("DRUPAL_URL", "http://drupal/jsonapi").rstrip("/")
+DRUPAL_USER = os.environ.get("DRUPAL_USER")  # z.B. apiuser
+DRUPAL_PASS = os.environ.get("DRUPAL_PASS")  # z.B. apipassword
+DRUPAL_TOKEN = os.environ.get("DRUPAL_TOKEN")  # optional Bearer-Token
+
 app = Flask(__name__)
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("matching")
 
-# -----------------------------------------------------------------------------
-# Konfiguration (ENV mit Defaults)
-# -----------------------------------------------------------------------------
-# Basis-URL für Drupal JSON:API, z. B. http://drupal/jsonapi im Compose-Netz
-DRUPAL_URL = os.getenv("DRUPAL_URL", "http://drupal/jsonapi").rstrip("/")
-# Optionaler Bearer-Token (wenn JSON:API Auth genutzt wird)
-DRUPAL_TOKEN = os.getenv("DRUPAL_TOKEN", "").strip()
+def _auth_headers() -> Dict[str, str]:
+    headers = {"Accept": "application/vnd.api+json"}
+    if DRUPAL_TOKEN:
+        headers["Authorization"] = f"Bearer {DRUPAL_TOKEN}"
+    return headers
 
-log.info("Using DRUPAL_URL=%s", DRUPAL_URL)
-log.info("Using DRUPAL_TOKEN=%s", "set" if DRUPAL_TOKEN else "not set")
+def _auth_tuple():
+    if DRUPAL_TOKEN:
+        return None
+    if DRUPAL_USER and DRUPAL_PASS:
+        return (DRUPAL_USER, DRUPAL_PASS)
+    return None
 
-# -----------------------------------------------------------------------------
-# Requests-Session mit Retries/Timeouts
-# -----------------------------------------------------------------------------
-session = requests.Session()
-retries = Retry(
-    total=5,
-    backoff_factor=0.4,
-    status_forcelist=[429, 500, 502, 503, 504],
-    allowed_methods=["GET", "PATCH", "POST"]
-)
-session.mount("http://", HTTPAdapter(max_retries=retries))
-session.mount("https://", HTTPAdapter(max_retries=retries))
+@retry(wait=wait_fixed(1), stop=stop_after_attempt(5), retry=retry_if_exception_type(requests.RequestException))
+def _get(url: str, params: Optional[Dict[str, Any]] = None) -> requests.Response:
+    resp = requests.get(url, headers=_auth_headers(), params=params, auth=_auth_tuple(), timeout=15)
+    resp.raise_for_status()
+    return resp
 
-BASE_HEADERS = {
-    "Accept": "application/vnd.api+json",
-    "Content-Type": "application/vnd.api+json",
-}
-if DRUPAL_TOKEN:
-    BASE_HEADERS["Authorization"] = f"Bearer {DRUPAL_TOKEN}"
+@retry(wait=wait_fixed(1), stop=stop_after_attempt(5), retry=retry_if_exception_type(requests.RequestException))
+def _patch(url: str, payload: Dict[str, Any]) -> requests.Response:
+    headers = _auth_headers()
+    headers["Content-Type"] = "application/vnd.api+json"
+    resp = requests.patch(url, headers=headers, json=payload, auth=_auth_tuple(), timeout=20)
+    resp.raise_for_status()
+    return resp
 
-def _get(url, timeout=8):
-    r = session.get(url, headers=BASE_HEADERS, timeout=timeout)
-    if not r.ok:
-        raise RuntimeError(f"GET {url} -> {r.status_code} {r.text[:200]}")
-    return r.json()
+def fetch_all(url: str, params: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Follow JSON:API pagination and return concatenated data array."""
+    items: List[Dict[str, Any]] = []
+    next_url = url
+    next_params = params.copy()
+    while True:
+        r = _get(next_url, next_params).json()
+        items.extend(r.get("data", []))
+        links = r.get("links", {})
+        nxt = links.get("next", {})
+        href = nxt.get("href")
+        if not href:
+            break
+        # next link already has params embedded
+        next_url = href
+        next_params = {}
+    return items
 
-def _patch(url, payload, timeout=12):
-    r = session.patch(url, headers=BASE_HEADERS, json=payload, timeout=timeout)
-    if not r.ok:
-        raise RuntimeError(f"PATCH {url} -> {r.status_code} {r.text[:200]}")
-    return r.json() if r.content else {}
+def get_matching_config() -> Tuple[int, int]:
+    # newest published matching_config
+    url = f"{JSONAPI}/node/matching_config"
+    params = {
+        "filter[status]": 1,
+        "sort": "-created",
+        "page[limit]": 1,
+        "fields[node--matching_config]": "field_num_wuensche,field_num_zuteilung"
+    }
+    r = _get(url, params).json()
+    data = r.get("data", [])
+    if not data:
+        # Fallback
+        return (5, 3)
+    attrs = data[0].get("attributes", {}) or {}
+    wishes = int(attrs.get("field_num_wuensche") or 5)
+    assign = int(attrs.get("field_num_zuteilung") or 3)
+    return (wishes, assign)
 
-# -----------------------------------------------------------------------------
-# Health
-# -----------------------------------------------------------------------------
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"ok": True})
-
-# -----------------------------------------------------------------------------
-# Matching-Endpunkt
-# -----------------------------------------------------------------------------
-@app.route('/matching/run', methods=['POST', 'GET'])
-def run_matching():
-    """
-    Führt ein einfaches Greedy-Matching aus:
-      - Nimmt pro Teilnehmer die Wunschliste in Reihenfolge.
-      - Füllt bis zu 'num_assign' Plätze, dann ggf. Restplätze zufällig.
-      - Schreibt Zuteilungen in Teilnehmer-Felder field_workshop_1..M zurück.
-    Erwartete Drupal-Nodes:
-      - node--matching_config (field_num_wuensche, field_num_zuteilung)
-      - node--wunsch mit relationships: field_teilnehmer, field_wunsch_1..N
-      - node--workshop mit attributes: field_maximale_plaetze
-      - node--teilnehmer mit relationships: field_workshop_1..M
-    """
-    try:
-        # 1) Matching-Konfiguration laden
-        cfg = _get(f"{DRUPAL_URL}/node/matching_config")
-        if not cfg.get('data'):
-            return jsonify({"status": "error", "message": "Keine Matching-Config angelegt."}), 400
-
-        attrs = cfg['data'][0]['attributes']
-        num_wishes = int(attrs.get('field_num_wuensche') or 0)
-        num_assign = int(attrs.get('field_num_zuteilung') or 0)
-        if num_wishes < 1 or num_assign < 1:
-            return jsonify({"status": "error", "message": "Matching-Config unvollständig."}), 400
-
-        # 2) Wünsche + Workshops laden
-        # Feldnamen: field_wunsch_1 .. field_wunsch_N
-        wish_fields = ",".join([f"field_wunsch_{i}" for i in range(1, num_wishes + 1)])
-
-        # include holt die Relationen in einem Schwung (Teilnehmer & Workshops)
-        wishes = _get(f"{DRUPAL_URL}/node/wunsch?include=field_teilnehmer,{wish_fields}")
-
-        workshops = _get(f"{DRUPAL_URL}/node/workshop")
-        capacity = {
-            w['id']: int(w['attributes'].get('field_maximale_plaetze') or 0)
-            for w in workshops.get('data', [])
-        }
-
-        # 3) Shuffle + Greedy Matching
-        allocation = defaultdict(list)  # teilnehmerID -> [workshopIDs]
-        fill = defaultdict(list)        # workshopID -> [teilnehmerIDs]
-        items = wishes.get('data', [])
-        random.shuffle(items)
-
-        for entry in items:
-            rel = entry.get('relationships', {})
-            tn_rel = rel.get('field_teilnehmer', {}).get('data')
-            if not tn_rel:
-                # Falls Wunsch ohne Teilnehmerbezug existiert, überspringen
-                continue
-            tn_id = tn_rel['id']
-
-            # Wunschliste extrahieren
-            desired = []
-            for i in range(1, num_wishes + 1):
-                rid = rel.get(f'field_wunsch_{i}', {}).get('data', {})
-                w_id = rid.get('id')
-                if w_id:
-                    desired.append(w_id)
-
-            assigned = 0
-
-            # Erst Wünsche in Reihenfolge
-            for w_id in desired:
-                if assigned >= num_assign:
-                    break
-                if capacity.get(w_id, 0) > 0 and w_id not in allocation[tn_id]:
-                    allocation[tn_id].append(w_id)
-                    fill[w_id].append(tn_id)
-                    capacity[w_id] -= 1
-                    assigned += 1
-
-            # Dann Restplätze zufällig
-            if assigned < num_assign:
-                free_ws = [wid for wid, cap in capacity.items()
-                           if cap > 0 and wid not in allocation[tn_id]]
-                random.shuffle(free_ws)
-                need = num_assign - assigned
-                for w in free_ws[:need]:
-                    allocation[tn_id].append(w)
-                    fill[w].append(tn_id)
-                    capacity[w] -= 1
-
-        # 4) Ergebnisse zurückschreiben: Teilnehmer-Felder field_workshop_1..M
-        errors = []
-        updated = 0
-        for tn_id, ws_list in allocation.items():
-            rels = {}
-            for i, wid in enumerate(ws_list[:num_assign], start=1):
-                rels[f"field_workshop_{i}"] = {"data": {"type": "node--workshop", "id": wid}}
-
-            patch = {"data": {"type": "node--teilnehmer", "id": tn_id, "relationships": rels}}
-            url = f"{DRUPAL_URL}/node/teilnehmer/{tn_id}"
+def get_workshops_capacity() -> Dict[str, int]:
+    """Return map: workshop_uuid -> capacity (None/empty means big capacity)."""
+    url = f"{JSONAPI}/node/workshop"
+    params = {
+        "filter[status]": 1,
+        "fields[node--workshop]": "title,field_maximale_plaetze",
+        "page[limit]": 1000
+    }
+    items = fetch_all(url, params)
+    caps: Dict[str, int] = {}
+    for it in items:
+        uuid = it["id"]
+        attrs = it.get("attributes", {}) or {}
+        cap_raw = attrs.get("field_maximale_plaetze")
+        if cap_raw in (None, "", 0):
+            caps[uuid] = 10**9  # praktisch unendlich
+        else:
             try:
-                _patch(url, patch)
-                updated += 1
-            except Exception as e:
-                msg = f"PATCH Teilnehmer {tn_id} fehlgeschlagen: {e}"
-                log.warning(msg)
-                errors.append(msg)
+                caps[uuid] = max(0, int(cap_raw))
+            except Exception:
+                caps[uuid] = 10**9
+    return caps
 
-        result = {"status": "success",
-                  "message": "Matching abgeschlossen.",
-                  "updated_participants": updated,
-                  "errors": errors}
-        return jsonify(result), (207 if errors else 200)
+def get_wishes() -> Dict[str, List[str]]:
+    """
+    Return map: participant_uuid -> [workshop_uuid, ...] in priority order.
+    Reads node--wunsch with relationships field_teilnehmer and field_wuensche.
+    """
+    url = f"{JSONAPI}/node/wunsch"
+    params = {
+        "filter[status]": 1,
+        "include": "field_teilnehmer,field_wuensche",
+        "fields[node--wunsch]": "field_teilnehmer,field_wuensche",
+        "page[limit]": 2000
+    }
+    items = fetch_all(url, params)
+    wishes: Dict[str, List[str]] = {}
+    for it in items:
+        rel = it.get("relationships", {}) or {}
+        p = rel.get("field_teilnehmer", {}).get("data")
+        if not p:
+            continue
+        participant_uuid = p.get("id")
+        ws_list = rel.get("field_wuensche", {}).get("data") or []
+        # Keep order, dedup
+        seen = set()
+        ordered: List[str] = []
+        for ref in ws_list:
+            wid = ref.get("id")
+            if wid and wid not in seen:
+                seen.add(wid)
+                ordered.append(wid)
+        if participant_uuid:
+            wishes[participant_uuid] = ordered
+    return wishes
 
-    except Exception as e:
-        log.exception("Fehler im Matching")
-        return jsonify({"status": "error", "message": str(e)}), 500
+def assign_greedy(
+    wishes: Dict[str, List[str]],
+    capacities: Dict[str, int],
+    per_participant_limit: int
+) -> Dict[str, List[str]]:
+    """
+    Round-based greedy: go through priority 1..N and give each participant one slot per round.
+    """
+    result: Dict[str, List[str]] = {p: [] for p in wishes.keys()}
+    if not wishes:
+        return result
+    max_depth = max((len(v) for v in wishes.values()), default=0)
+    for round_idx in range(max_depth):
+        for participant, prefs in wishes.items():
+            if len(result[participant]) >= per_participant_limit:
+                continue
+            if round_idx >= len(prefs):
+                continue
+            wid = prefs[round_idx]
+            if capacities.get(wid, 0) <= 0:
+                continue
+            if wid in result[participant]:
+                continue
+            # assign
+            result[participant].append(wid)
+            capacities[wid] = capacities.get(wid, 0) - 1
+    return result
 
-# -----------------------------------------------------------------------------
-# Main
-# -----------------------------------------------------------------------------
-if __name__ == "__main__":
-    # In Container auf 0.0.0.0:5000
-    app.run(host="0.0.0.0", port=5000)
+def patch_assignment(participant_uuid: str, workshop_uuids: List[str]) -> None:
+    url = f"{JSONAPI}/node/teilnehmer/{participant_uuid}"
+    payload = {
+        "data": {
+            "type": "node--teilnehmer",
+            "id": participant_uuid,
+            "relationships": {
+                "field_zugewiesen": {
+                    "data": [{"type": "node--workshop", "id": w} for w in workshop_uuids]
+                }
+            }
+        }
+    }
+    _patch(url, payload)
+
+@app.get("/health")
+def health():
+    return jsonify({"ok": True, "jsonapi": JSONAPI})
+
+@app.post("/matching/dry-run")
+@app.get("/matching/dry-run")
+def dry_run():
+    wishes_max, assign_max = get_matching_config()
+    caps = get_workshops_capacity()
+    wishes = get_wishes()
+    caps_copy = caps.copy()
+    result = assign_greedy(wishes, caps_copy, assign_max)
+
+    # Summaries
+    assigned_counts = {p: len(ws) for p, ws in result.items()}
+    remaining_caps = {w: c for w, c in caps_copy.items() if c < (10**9)}
+    return jsonify({
+        "ok": True,
+        "config": {"max_wishes": wishes_max, "max_assign": assign_max},
+        "participants": len(wishes),
+        "assigned_ok": sum(1 for k in assigned_counts.values() if k == assign_max),
+        "assigned_distribution": assigned_counts,
+        "remaining_caps": remaining_caps,
+        "preview": result
+    })
+
+@app.post("/matching/run")
+@app.get("/matching/run")
+def run_and_write():
+    wishes_max, assign_max = get_matching_config()
+    caps = get_workshops_capacity()
+    wishes = get_wishes()
+    result = assign_greedy(wishes, caps, assign_max)
+
+    errors: Dict[str, str] = {}
+    success = 0
+    for participant_uuid, ws in result.items():
+        try:
+            patch_assignment(participant_uuid, ws)
+            success += 1
+        except Exception as e:
+            errors[participant_uuid] = str(e)
+
+    return jsonify({
+        "ok": len(errors) == 0,
+        "written": success,
+        "failed": errors,
+        "config": {"max_assign": assign_max},
+    })

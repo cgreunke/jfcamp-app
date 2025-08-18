@@ -48,6 +48,7 @@ services:
       - drupal_project:/opt/drupal
       # Bind-Mounts für deine Custom-Arbeit im Repo (überschreiben die Inhalte im Volume):
       - ./drupal/web/modules/custom:/opt/drupal/web/modules/custom
+      - ./drupal/web/modules/custom/jfcamp_api:/opt/drupal/web/modules/custom/jfcamp_api
       - ./drupal/web/themes/custom:/opt/drupal/web/themes/custom
       # Konfiguration & privates Filesystem auf Host sichtbar halten
       - ./drupal/config:/opt/drupal/config
@@ -67,8 +68,10 @@ services:
       dockerfile: Dockerfile
     container_name: matching
     environment:
-      # Matching-Service spricht Drupal über internen Hostnamen an
       DRUPAL_URL: http://drupal/jsonapi
+      DRUPAL_USER: apiuser
+      DRUPAL_PASS: apipassword
+      # alternativ: DRUPAL_TOKEN: <bearer-token>
     ports:
       - "5001:5000"
     volumes:

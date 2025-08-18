@@ -1,0 +1,251 @@
+code,wunsch1,wunsch2,wunsch3,wunsch4,wunsch5
+CODE001,Schauspiel,HipHop Tanzworkshop,Ultimate Frisbee,Graffiti,Social Media
+CODE002,Gefühlchaos und Handlungskompetenzen,Spoken Word,Graffiti,Bloom it yourself - kreatives Nähen von Hand,Spiel & Spaß Olympiade
+CODE003,Bloom it yourself - kreatives Nähen von Hand,JuHu – Challenge,Selbstverteidigung,Schauspiel,Spoken Word
+CODE004,HipHop Tanzworkshop,Schauspiel,JuHu – Challenge,Bloom it yourself - kreatives Nähen von Hand,Mini Quiz-Show
+CODE005,JuHu – Challenge,Graffiti,Spiel & Spaß Olympiade,Bloom it yourself - kreatives Nähen von Hand,Selbstverteidigung
+CODE006,Mini Quiz-Show,Batiken,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop,JuHu – Challenge
+CODE007,Graffiti,Batiken,HipHop Tanzworkshop,JuHu – Challenge,Spoken Word
+CODE008,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop,Schauspiel,JuHu – Challenge,Ultimate Frisbee
+CODE009,HipHop Tanzworkshop,Graffiti,Ultimate Frisbee,Mini Quiz-Show,Social Media
+CODE010,JuHu – Challenge,Selbstverteidigung,Bloom it yourself - kreatives Nähen von Hand,Spoken Word,Schauspiel
+CODE011,Batiken,Spoken Word,Gefühlchaos und Handlungskompetenzen,Spiel & Spaß Olympiade,Selbstverteidigung
+CODE012,Ultimate Frisbee,Mini Quiz-Show,HipHop Tanzworkshop,Schauspiel,Bloom it yourself - kreatives Nähen von Hand
+CODE013,Ultimate Frisbee,Gefühlchaos und Handlungskompetenzen,Selbstverteidigung,Social Media,Mini Quiz-Show
+CODE014,HipHop Tanzworkshop,Schauspiel,JuHu – Challenge,Graffiti,Gefühlchaos und Handlungskompetenzen
+CODE015,Spoken Word,Spiel & Spaß Olympiade,Mini Quiz-Show,Selbstverteidigung,Bloom it yourself - kreatives Nähen von Hand
+CODE016,Gefühlchaos und Handlungskompetenzen,Spiel & Spaß Olympiade,Selbstverteidigung,Social Media,Mini Quiz-Show
+CODE017,Spiel & Spaß Olympiade,Spoken Word,HipHop Tanzworkshop,Graffiti,Schauspiel
+CODE018,HipHop Tanzworkshop,Gefühlchaos und Handlungskompetenzen,Batiken,Ultimate Frisbee,Social Media
+CODE019,Mini Quiz-Show,JuHu – Challenge,Graffiti,Batiken,Spiel & Spaß Olympiade
+CODE020,Social Media,Bloom it yourself - kreatives Nähen von Hand,Selbstverteidigung,Spoken Word,Ultimate Frisbee
+CODE021,Spiel & Spaß Olympiade,Social Media,Graffiti,Mini Quiz-Show,Bloom it yourself - kreatives Nähen von Hand
+CODE022,Spiel & Spaß Olympiade,JuHu – Challenge,Social Media,Schauspiel,Bloom it yourself - kreatives Nähen von Hand
+CODE023,Social Media,Ultimate Frisbee,Bloom it yourself - kreatives Nähen von Hand,Spoken Word,Schauspiel
+CODE024,Social Media,Mini Quiz-Show,Spoken Word,Ultimate Frisbee,Bloom it yourself - kreatives Nähen von Hand
+CODE025,Mini Quiz-Show,Selbstverteidigung,Batiken,Bloom it yourself - kreatives Nähen von Hand,Gefühlchaos und Handlungskompetenzen
+CODE026,Batiken,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop,Schauspiel,Spoken Word
+CODE027,Graffiti,Ultimate Frisbee,Spoken Word,Schauspiel,Spiel & Spaß Olympiade
+CODE028,Gefühlchaos und Handlungskompetenzen,Graffiti,Schauspiel,Social Media,HipHop Tanzworkshop
+CODE029,Schauspiel,Selbstverteidigung,Spoken Word,Bloom it yourself - kreatives Nähen von Hand,Mini Quiz-Show
+CODE030,Mini Quiz-Show,Gefühlchaos und Handlungskompetenzen,Bloom it yourself - kreatives Nähen von Hand,Graffiti,Selbstverteidigung
+CODE031,Selbstverteidigung,JuHu – Challenge,Batiken,Schauspiel,Social Media
+CODE032,Spiel & Spaß Olympiade,HipHop Tanzworkshop,JuHu – Challenge,Graffiti,Batiken
+CODE033,Bloom it yourself - kreatives Nähen von Hand,Ultimate Frisbee,Schauspiel,Gefühlchaos und Handlungskompetenzen,Spoken Word
+CODE034,Selbstverteidigung,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop,Spoken Word,JuHu – Challenge
+CODE035,Graffiti,Gefühlchaos und Handlungskompetenzen,Spiel & Spaß Olympiade,Social Media,Mini Quiz-Show
+CODE036,Selbstverteidigung,Schauspiel,Ultimate Frisbee,Spoken Word,HipHop Tanzworkshop
+CODE037,HipHop Tanzworkshop,Spiel & Spaß Olympiade,Gefühlchaos und Handlungskompetenzen,Mini Quiz-Show,Social Media
+CODE038,Ultimate Frisbee,Spiel & Spaß Olympiade,HipHop Tanzworkshop,Graffiti,Schauspiel
+CODE039,Social Media,Graffiti,Schauspiel,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop
+CODE040,Mini Quiz-Show,Schauspiel,HipHop Tanzworkshop,Spoken Word,Spiel & Spaß Olympiade
+CODE041,Mini Quiz-Show,Bloom it yourself - kreatives Nähen von Hand,JuHu – Challenge,Social Media,Spoken Word
+CODE042,Spiel & Spaß Olympiade,Batiken,Social Media,Mini Quiz-Show,HipHop Tanzworkshop
+CODE043,Spoken Word,HipHop Tanzworkshop,Schauspiel,Bloom it yourself - kreatives Nähen von Hand,Spiel & Spaß Olympiade
+CODE044,Social Media,Batiken,Spoken Word,Schauspiel,Gefühlchaos und Handlungskompetenzen
+CODE045,Mini Quiz-Show,Bloom it yourself - kreatives Nähen von Hand,Social Media,Gefühlchaos und Handlungskompetenzen,Spiel & Spaß Olympiade
+CODE046,Mini Quiz-Show,Batiken,Spiel & Spaß Olympiade,Selbstverteidigung,Schauspiel
+CODE047,Bloom it yourself - kreatives Nähen von Hand,Gefühlchaos und Handlungskompetenzen,Selbstverteidigung,JuHu – Challenge,Graffiti
+CODE048,Selbstverteidigung,HipHop Tanzworkshop,Schauspiel,JuHu – Challenge,Social Media
+CODE049,JuHu – Challenge,Schauspiel,Graffiti,Bloom it yourself - kreatives Nähen von Hand,Social Media
+CODE050,Spiel & Spaß Olympiade,Spoken Word,Ultimate Frisbee,Mini Quiz-Show,Gefühlchaos und Handlungskompetenzen
+CODE051,Selbstverteidigung,Ultimate Frisbee,Social Media,Spoken Word,Schauspiel
+CODE052,Schauspiel,Ultimate Frisbee,Social Media,Graffiti,HipHop Tanzworkshop
+CODE053,Gefühlchaos und Handlungskompetenzen,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop,JuHu – Challenge,Batiken
+CODE054,JuHu – Challenge,Schauspiel,Ultimate Frisbee,Spiel & Spaß Olympiade,Selbstverteidigung
+CODE055,Batiken,Gefühlchaos und Handlungskompetenzen,Spoken Word,Mini Quiz-Show,Ultimate Frisbee
+CODE056,Graffiti,Ultimate Frisbee,Gefühlchaos und Handlungskompetenzen,JuHu – Challenge,Social Media
+CODE057,Spiel & Spaß Olympiade,Gefühlchaos und Handlungskompetenzen,Batiken,Schauspiel,Spoken Word
+CODE058,JuHu – Challenge,Schauspiel,Selbstverteidigung,Bloom it yourself - kreatives Nähen von Hand,Mini Quiz-Show
+CODE059,Gefühlchaos und Handlungskompetenzen,HipHop Tanzworkshop,Ultimate Frisbee,Spiel & Spaß Olympiade,Selbstverteidigung
+CODE060,Bloom it yourself - kreatives Nähen von Hand,Graffiti,Schauspiel,Mini Quiz-Show,Spoken Word
+CODE061,Graffiti,HipHop Tanzworkshop,Spiel & Spaß Olympiade,Bloom it yourself - kreatives Nähen von Hand,Batiken
+CODE062,Mini Quiz-Show,Selbstverteidigung,Ultimate Frisbee,Batiken,Social Media
+CODE063,Mini Quiz-Show,Selbstverteidigung,Schauspiel,Bloom it yourself - kreatives Nähen von Hand,Ultimate Frisbee
+CODE064,HipHop Tanzworkshop,Ultimate Frisbee,Selbstverteidigung,Schauspiel,Bloom it yourself - kreatives Nähen von Hand
+CODE065,Gefühlchaos und Handlungskompetenzen,Schauspiel,Spoken Word,JuHu – Challenge,Selbstverteidigung
+CODE066,Mini Quiz-Show,Social Media,HipHop Tanzworkshop,Selbstverteidigung,Batiken
+CODE067,Gefühlchaos und Handlungskompetenzen,Bloom it yourself - kreatives Nähen von Hand,Selbstverteidigung,Spiel & Spaß Olympiade,HipHop Tanzworkshop
+CODE068,Bloom it yourself - kreatives Nähen von Hand,Graffiti,Mini Quiz-Show,Schauspiel,Gefühlchaos und Handlungskompetenzen
+CODE069,Schauspiel,Selbstverteidigung,Social Media,HipHop Tanzworkshop,Batiken
+CODE070,HipHop Tanzworkshop,Graffiti,Ultimate Frisbee,Gefühlchaos und Handlungskompetenzen,Schauspiel
+CODE071,Batiken,Graffiti,Schauspiel,Ultimate Frisbee,Mini Quiz-Show
+CODE072,Bloom it yourself - kreatives Nähen von Hand,Spiel & Spaß Olympiade,Graffiti,Mini Quiz-Show,Ultimate Frisbee
+CODE073,Social Media,Gefühlchaos und Handlungskompetenzen,Mini Quiz-Show,Ultimate Frisbee,Batiken
+CODE074,JuHu – Challenge,Mini Quiz-Show,Batiken,Gefühlchaos und Handlungskompetenzen,Schauspiel
+CODE075,JuHu – Challenge,Selbstverteidigung,Gefühlchaos und Handlungskompetenzen,Spiel & Spaß Olympiade,Graffiti
+CODE076,Spoken Word,Spiel & Spaß Olympiade,JuHu – Challenge,Bloom it yourself - kreatives Nähen von Hand,Social Media
+CODE077,Selbstverteidigung,Gefühlchaos und Handlungskompetenzen,Ultimate Frisbee,Spiel & Spaß Olympiade,Batiken
+CODE078,Ultimate Frisbee,Spiel & Spaß Olympiade,Graffiti,HipHop Tanzworkshop,Selbstverteidigung
+CODE079,Gefühlchaos und Handlungskompetenzen,Ultimate Frisbee,Spoken Word,Mini Quiz-Show,Schauspiel
+CODE080,Bloom it yourself - kreatives Nähen von Hand,Ultimate Frisbee,Spiel & Spaß Olympiade,Schauspiel,JuHu – Challenge
+CODE081,Gefühlchaos und Handlungskompetenzen,JuHu – Challenge,Schauspiel,Graffiti,HipHop Tanzworkshop
+CODE082,Batiken,Spoken Word,Graffiti,Social Media,HipHop Tanzworkshop
+CODE083,Graffiti,Gefühlchaos und Handlungskompetenzen,Spiel & Spaß Olympiade,Selbstverteidigung,Schauspiel
+CODE084,Ultimate Frisbee,Mini Quiz-Show,Spoken Word,Bloom it yourself - kreatives Nähen von Hand,Batiken
+CODE085,Social Media,Gefühlchaos und Handlungskompetenzen,Mini Quiz-Show,Selbstverteidigung,Batiken
+CODE086,Social Media,Selbstverteidigung,Graffiti,Mini Quiz-Show,Spoken Word
+CODE087,Selbstverteidigung,Bloom it yourself - kreatives Nähen von Hand,Graffiti,JuHu – Challenge,Ultimate Frisbee
+CODE088,Selbstverteidigung,Schauspiel,JuHu – Challenge,Graffiti,Social Media
+CODE089,Graffiti,JuHu – Challenge,HipHop Tanzworkshop,Mini Quiz-Show,Schauspiel
+CODE090,Selbstverteidigung,Mini Quiz-Show,Ultimate Frisbee,Social Media,Schauspiel
+CODE091,Ultimate Frisbee,Selbstverteidigung,Spoken Word,Social Media,Mini Quiz-Show
+CODE092,Spiel & Spaß Olympiade,Schauspiel,Graffiti,Selbstverteidigung,HipHop Tanzworkshop
+CODE093,HipHop Tanzworkshop,JuHu – Challenge,Ultimate Frisbee,Gefühlchaos und Handlungskompetenzen,Schauspiel
+CODE094,Spiel & Spaß Olympiade,Spoken Word,Ultimate Frisbee,JuHu – Challenge,Social Media
+CODE095,Gefühlchaos und Handlungskompetenzen,HipHop Tanzworkshop,Ultimate Frisbee,Batiken,Schauspiel
+CODE096,Spoken Word,Bloom it yourself - kreatives Nähen von Hand,Social Media,Gefühlchaos und Handlungskompetenzen,Batiken
+CODE097,Mini Quiz-Show,Schauspiel,Graffiti,Social Media,Ultimate Frisbee
+CODE098,Bloom it yourself - kreatives Nähen von Hand,JuHu – Challenge,Selbstverteidigung,Mini Quiz-Show,Spoken Word
+CODE099,Graffiti,JuHu – Challenge,Mini Quiz-Show,Ultimate Frisbee,HipHop Tanzworkshop
+CODE100,Graffiti,JuHu – Challenge,Spiel & Spaß Olympiade,Schauspiel,HipHop Tanzworkshop
+CODE101,Spoken Word,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop,Gefühlchaos und Handlungskompetenzen,Schauspiel
+CODE102,Ultimate Frisbee,Spoken Word,Graffiti,Social Media,Batiken
+CODE103,Schauspiel,Batiken,Spoken Word,Graffiti,Ultimate Frisbee
+CODE104,Social Media,Graffiti,HipHop Tanzworkshop,JuHu – Challenge,Ultimate Frisbee
+CODE105,Gefühlchaos und Handlungskompetenzen,Mini Quiz-Show,Selbstverteidigung,Spiel & Spaß Olympiade,Social Media
+CODE106,Ultimate Frisbee,JuHu – Challenge,Graffiti,HipHop Tanzworkshop,Batiken
+CODE107,Schauspiel,Ultimate Frisbee,Batiken,Mini Quiz-Show,Spoken Word
+CODE108,Schauspiel,Spiel & Spaß Olympiade,Gefühlchaos und Handlungskompetenzen,Bloom it yourself - kreatives Nähen von Hand,Graffiti
+CODE109,Bloom it yourself - kreatives Nähen von Hand,Social Media,Mini Quiz-Show,Selbstverteidigung,Batiken
+CODE110,Spoken Word,Social Media,Ultimate Frisbee,Bloom it yourself - kreatives Nähen von Hand,Mini Quiz-Show
+CODE111,Gefühlchaos und Handlungskompetenzen,HipHop Tanzworkshop,Mini Quiz-Show,Bloom it yourself - kreatives Nähen von Hand,Batiken
+CODE112,Mini Quiz-Show,Spiel & Spaß Olympiade,Gefühlchaos und Handlungskompetenzen,Spoken Word,HipHop Tanzworkshop
+CODE113,Mini Quiz-Show,Ultimate Frisbee,Social Media,Schauspiel,Graffiti
+CODE114,JuHu – Challenge,Graffiti,Spiel & Spaß Olympiade,Spoken Word,Selbstverteidigung
+CODE115,Bloom it yourself - kreatives Nähen von Hand,Spiel & Spaß Olympiade,Social Media,Selbstverteidigung,Batiken
+CODE116,Gefühlchaos und Handlungskompetenzen,JuHu – Challenge,Spiel & Spaß Olympiade,Social Media,Bloom it yourself - kreatives Nähen von Hand
+CODE117,HipHop Tanzworkshop,JuHu – Challenge,Ultimate Frisbee,Schauspiel,Spoken Word
+CODE118,Bloom it yourself - kreatives Nähen von Hand,Spiel & Spaß Olympiade,JuHu – Challenge,Selbstverteidigung,Social Media
+CODE119,Bloom it yourself - kreatives Nähen von Hand,Spoken Word,JuHu – Challenge,Spiel & Spaß Olympiade,Gefühlchaos und Handlungskompetenzen
+CODE120,Graffiti,Ultimate Frisbee,HipHop Tanzworkshop,Bloom it yourself - kreatives Nähen von Hand,Spiel & Spaß Olympiade
+CODE121,Mini Quiz-Show,Spoken Word,Selbstverteidigung,Ultimate Frisbee,Batiken
+CODE122,HipHop Tanzworkshop,Batiken,Social Media,Gefühlchaos und Handlungskompetenzen,Ultimate Frisbee
+CODE123,Gefühlchaos und Handlungskompetenzen,JuHu – Challenge,Mini Quiz-Show,Selbstverteidigung,Batiken
+CODE124,Graffiti,Spoken Word,Gefühlchaos und Handlungskompetenzen,Selbstverteidigung,Schauspiel
+CODE125,Schauspiel,Graffiti,HipHop Tanzworkshop,JuHu – Challenge,Ultimate Frisbee
+CODE126,Selbstverteidigung,Ultimate Frisbee,JuHu – Challenge,HipHop Tanzworkshop,Spiel & Spaß Olympiade
+CODE127,Ultimate Frisbee,Schauspiel,Spoken Word,Batiken,Mini Quiz-Show
+CODE128,Spoken Word,Spiel & Spaß Olympiade,Schauspiel,Mini Quiz-Show,HipHop Tanzworkshop
+CODE129,Schauspiel,Gefühlchaos und Handlungskompetenzen,Selbstverteidigung,Social Media,Spiel & Spaß Olympiade
+CODE130,Gefühlchaos und Handlungskompetenzen,Graffiti,Bloom it yourself - kreatives Nähen von Hand,Ultimate Frisbee,JuHu – Challenge
+CODE131,Social Media,Spiel & Spaß Olympiade,Graffiti,Gefühlchaos und Handlungskompetenzen,Batiken
+CODE132,Bloom it yourself - kreatives Nähen von Hand,Schauspiel,Selbstverteidigung,HipHop Tanzworkshop,JuHu – Challenge
+CODE133,Gefühlchaos und Handlungskompetenzen,Mini Quiz-Show,JuHu – Challenge,Spiel & Spaß Olympiade,Social Media
+CODE134,Social Media,JuHu – Challenge,HipHop Tanzworkshop,Graffiti,Selbstverteidigung
+CODE135,Social Media,Graffiti,Spiel & Spaß Olympiade,Bloom it yourself - kreatives Nähen von Hand,Selbstverteidigung
+CODE136,JuHu – Challenge,Gefühlchaos und Handlungskompetenzen,Schauspiel,Ultimate Frisbee,Bloom it yourself - kreatives Nähen von Hand
+CODE137,Mini Quiz-Show,Social Media,HipHop Tanzworkshop,Gefühlchaos und Handlungskompetenzen,Ultimate Frisbee
+CODE138,JuHu – Challenge,Social Media,Ultimate Frisbee,Selbstverteidigung,Schauspiel
+CODE139,JuHu – Challenge,Schauspiel,Spoken Word,Batiken,Ultimate Frisbee
+CODE140,Gefühlchaos und Handlungskompetenzen,Mini Quiz-Show,Social Media,Spoken Word,Bloom it yourself - kreatives Nähen von Hand
+CODE141,Schauspiel,Social Media,Spoken Word,JuHu – Challenge,Selbstverteidigung
+CODE142,Spiel & Spaß Olympiade,Spoken Word,JuHu – Challenge,Mini Quiz-Show,Bloom it yourself - kreatives Nähen von Hand
+CODE143,Spoken Word,Social Media,Batiken,Spiel & Spaß Olympiade,Mini Quiz-Show
+CODE144,HipHop Tanzworkshop,Selbstverteidigung,Mini Quiz-Show,Spoken Word,JuHu – Challenge
+CODE145,Ultimate Frisbee,Social Media,JuHu – Challenge,Schauspiel,HipHop Tanzworkshop
+CODE146,HipHop Tanzworkshop,Schauspiel,Spiel & Spaß Olympiade,JuHu – Challenge,Mini Quiz-Show
+CODE147,Selbstverteidigung,Spoken Word,JuHu – Challenge,Bloom it yourself - kreatives Nähen von Hand,Graffiti
+CODE148,HipHop Tanzworkshop,JuHu – Challenge,Ultimate Frisbee,Bloom it yourself - kreatives Nähen von Hand,Social Media
+CODE149,Gefühlchaos und Handlungskompetenzen,Selbstverteidigung,Spiel & Spaß Olympiade,Social Media,Ultimate Frisbee
+CODE150,Ultimate Frisbee,Mini Quiz-Show,Selbstverteidigung,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop
+CODE151,JuHu – Challenge,Social Media,Selbstverteidigung,Spiel & Spaß Olympiade,Mini Quiz-Show
+CODE152,HipHop Tanzworkshop,Bloom it yourself - kreatives Nähen von Hand,Spoken Word,Graffiti,Social Media
+CODE153,Spoken Word,JuHu – Challenge,Social Media,Ultimate Frisbee,Batiken
+CODE154,Mini Quiz-Show,Graffiti,Gefühlchaos und Handlungskompetenzen,Selbstverteidigung,Spiel & Spaß Olympiade
+CODE155,Ultimate Frisbee,Selbstverteidigung,JuHu – Challenge,Spiel & Spaß Olympiade,Social Media
+CODE156,Graffiti,Selbstverteidigung,HipHop Tanzworkshop,Bloom it yourself - kreatives Nähen von Hand,Mini Quiz-Show
+CODE157,HipHop Tanzworkshop,Selbstverteidigung,Schauspiel,Spoken Word,JuHu – Challenge
+CODE158,Social Media,Ultimate Frisbee,Graffiti,Mini Quiz-Show,Spoken Word
+CODE159,Ultimate Frisbee,Spiel & Spaß Olympiade,Schauspiel,Social Media,Spoken Word
+CODE160,Schauspiel,Spoken Word,JuHu – Challenge,Gefühlchaos und Handlungskompetenzen,Social Media
+CODE161,Ultimate Frisbee,Schauspiel,Spiel & Spaß Olympiade,Bloom it yourself - kreatives Nähen von Hand,Social Media
+CODE162,Selbstverteidigung,Schauspiel,Batiken,Mini Quiz-Show,HipHop Tanzworkshop
+CODE163,Bloom it yourself - kreatives Nähen von Hand,Social Media,HipHop Tanzworkshop,Graffiti,Mini Quiz-Show
+CODE164,Spiel & Spaß Olympiade,Selbstverteidigung,HipHop Tanzworkshop,Ultimate Frisbee,Bloom it yourself - kreatives Nähen von Hand
+CODE165,JuHu – Challenge,Gefühlchaos und Handlungskompetenzen,Schauspiel,Batiken,Spoken Word
+CODE166,Graffiti,Batiken,Mini Quiz-Show,Bloom it yourself - kreatives Nähen von Hand,Ultimate Frisbee
+CODE167,JuHu – Challenge,Gefühlchaos und Handlungskompetenzen,Ultimate Frisbee,Selbstverteidigung,Schauspiel
+CODE168,Schauspiel,Graffiti,Spoken Word,HipHop Tanzworkshop,Ultimate Frisbee
+CODE169,Schauspiel,Spoken Word,Batiken,Selbstverteidigung,JuHu – Challenge
+CODE170,Gefühlchaos und Handlungskompetenzen,Selbstverteidigung,Bloom it yourself - kreatives Nähen von Hand,Spoken Word,Graffiti
+CODE171,Graffiti,Selbstverteidigung,Bloom it yourself - kreatives Nähen von Hand,Schauspiel,JuHu – Challenge
+CODE172,Spiel & Spaß Olympiade,Graffiti,JuHu – Challenge,Gefühlchaos und Handlungskompetenzen,Bloom it yourself - kreatives Nähen von Hand
+CODE173,Schauspiel,Mini Quiz-Show,Gefühlchaos und Handlungskompetenzen,Spiel & Spaß Olympiade,Batiken
+CODE174,Batiken,Spoken Word,HipHop Tanzworkshop,Mini Quiz-Show,Bloom it yourself - kreatives Nähen von Hand
+CODE175,Spoken Word,HipHop Tanzworkshop,Spiel & Spaß Olympiade,JuHu – Challenge,Selbstverteidigung
+CODE176,Graffiti,Social Media,Spoken Word,Mini Quiz-Show,Bloom it yourself - kreatives Nähen von Hand
+CODE177,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop,Social Media,JuHu – Challenge,Batiken
+CODE178,Batiken,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop,Ultimate Frisbee,Graffiti
+CODE179,JuHu – Challenge,Bloom it yourself - kreatives Nähen von Hand,Batiken,Gefühlchaos und Handlungskompetenzen,Schauspiel
+CODE180,Social Media,Spoken Word,Bloom it yourself - kreatives Nähen von Hand,Graffiti,Ultimate Frisbee
+CODE181,Graffiti,Spiel & Spaß Olympiade,HipHop Tanzworkshop,Ultimate Frisbee,JuHu – Challenge
+CODE182,Ultimate Frisbee,Gefühlchaos und Handlungskompetenzen,Selbstverteidigung,Graffiti,Spoken Word
+CODE183,Graffiti,Bloom it yourself - kreatives Nähen von Hand,Spiel & Spaß Olympiade,Gefühlchaos und Handlungskompetenzen,HipHop Tanzworkshop
+CODE184,JuHu – Challenge,Spiel & Spaß Olympiade,Spoken Word,HipHop Tanzworkshop,Schauspiel
+CODE185,Batiken,Selbstverteidigung,Spiel & Spaß Olympiade,Spoken Word,Bloom it yourself - kreatives Nähen von Hand
+CODE186,Spiel & Spaß Olympiade,Spoken Word,Schauspiel,Mini Quiz-Show,Graffiti
+CODE187,Mini Quiz-Show,Social Media,Batiken,Bloom it yourself - kreatives Nähen von Hand,Gefühlchaos und Handlungskompetenzen
+CODE188,Ultimate Frisbee,Schauspiel,JuHu – Challenge,Selbstverteidigung,Social Media
+CODE189,Graffiti,Bloom it yourself - kreatives Nähen von Hand,Spiel & Spaß Olympiade,Batiken,HipHop Tanzworkshop
+CODE190,Social Media,Schauspiel,Gefühlchaos und Handlungskompetenzen,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop
+CODE191,Social Media,Gefühlchaos und Handlungskompetenzen,Mini Quiz-Show,Selbstverteidigung,Graffiti
+CODE192,Gefühlchaos und Handlungskompetenzen,Spiel & Spaß Olympiade,Spoken Word,Social Media,Schauspiel
+CODE193,Ultimate Frisbee,Mini Quiz-Show,Graffiti,Schauspiel,Selbstverteidigung
+CODE194,HipHop Tanzworkshop,Batiken,Gefühlchaos und Handlungskompetenzen,JuHu – Challenge,Selbstverteidigung
+CODE195,Batiken,HipHop Tanzworkshop,Spoken Word,Social Media,JuHu – Challenge
+CODE196,Graffiti,JuHu – Challenge,Mini Quiz-Show,HipHop Tanzworkshop,Spoken Word
+CODE197,HipHop Tanzworkshop,Ultimate Frisbee,Social Media,Bloom it yourself - kreatives Nähen von Hand,Gefühlchaos und Handlungskompetenzen
+CODE198,Spiel & Spaß Olympiade,JuHu – Challenge,Social Media,Graffiti,Schauspiel
+CODE199,Spiel & Spaß Olympiade,Batiken,Social Media,Mini Quiz-Show,Ultimate Frisbee
+CODE200,Spoken Word,Social Media,HipHop Tanzworkshop,Batiken,Selbstverteidigung
+CODE201,Graffiti,Spiel & Spaß Olympiade,HipHop Tanzworkshop,JuHu – Challenge,Ultimate Frisbee
+CODE202,Graffiti,Schauspiel,Bloom it yourself - kreatives Nähen von Hand,JuHu – Challenge,Selbstverteidigung
+CODE203,Social Media,Mini Quiz-Show,Selbstverteidigung,JuHu – Challenge,Graffiti
+CODE204,Social Media,Spiel & Spaß Olympiade,Selbstverteidigung,Batiken,Gefühlchaos und Handlungskompetenzen
+CODE205,HipHop Tanzworkshop,Selbstverteidigung,Batiken,Spoken Word,Mini Quiz-Show
+CODE206,Mini Quiz-Show,Spiel & Spaß Olympiade,Selbstverteidigung,HipHop Tanzworkshop,Bloom it yourself - kreatives Nähen von Hand
+CODE207,Gefühlchaos und Handlungskompetenzen,Spiel & Spaß Olympiade,Graffiti,Ultimate Frisbee,JuHu – Challenge
+CODE208,Graffiti,Batiken,Schauspiel,Bloom it yourself - kreatives Nähen von Hand,JuHu – Challenge
+CODE209,Mini Quiz-Show,Bloom it yourself - kreatives Nähen von Hand,Ultimate Frisbee,Graffiti,Selbstverteidigung
+CODE210,Ultimate Frisbee,Batiken,HipHop Tanzworkshop,Graffiti,Mini Quiz-Show
+CODE211,Spoken Word,Graffiti,Mini Quiz-Show,Ultimate Frisbee,JuHu – Challenge
+CODE212,Spiel & Spaß Olympiade,Mini Quiz-Show,Bloom it yourself - kreatives Nähen von Hand,Social Media,Graffiti
+CODE213,Spiel & Spaß Olympiade,Schauspiel,Spoken Word,Social Media,Batiken
+CODE214,Schauspiel,Gefühlchaos und Handlungskompetenzen,HipHop Tanzworkshop,Social Media,Batiken
+CODE215,Spoken Word,Social Media,Schauspiel,Spiel & Spaß Olympiade,JuHu – Challenge
+CODE216,Ultimate Frisbee,Graffiti,Batiken,Selbstverteidigung,Social Media
+CODE217,Ultimate Frisbee,Batiken,Spoken Word,Selbstverteidigung,Spiel & Spaß Olympiade
+CODE218,Spoken Word,Mini Quiz-Show,Spiel & Spaß Olympiade,Schauspiel,Social Media
+CODE219,Mini Quiz-Show,Gefühlchaos und Handlungskompetenzen,Selbstverteidigung,Spoken Word,Graffiti
+CODE220,Graffiti,Mini Quiz-Show,Ultimate Frisbee,Spoken Word,Schauspiel
+CODE221,Spiel & Spaß Olympiade,Schauspiel,Selbstverteidigung,HipHop Tanzworkshop,Graffiti
+CODE222,Batiken,JuHu – Challenge,Graffiti,Bloom it yourself - kreatives Nähen von Hand,Spoken Word
+CODE223,Spoken Word,Graffiti,Gefühlchaos und Handlungskompetenzen,JuHu – Challenge,Ultimate Frisbee
+CODE224,Gefühlchaos und Handlungskompetenzen,HipHop Tanzworkshop,Social Media,Spiel & Spaß Olympiade,Selbstverteidigung
+CODE225,Graffiti,Batiken,Spoken Word,Mini Quiz-Show,Selbstverteidigung
+CODE226,Spoken Word,JuHu – Challenge,Graffiti,Selbstverteidigung,Bloom it yourself - kreatives Nähen von Hand
+CODE227,HipHop Tanzworkshop,Social Media,Selbstverteidigung,Ultimate Frisbee,Bloom it yourself - kreatives Nähen von Hand
+CODE228,Social Media,Schauspiel,HipHop Tanzworkshop,Spiel & Spaß Olympiade,Bloom it yourself - kreatives Nähen von Hand
+CODE229,Spiel & Spaß Olympiade,JuHu – Challenge,Social Media,Mini Quiz-Show,Schauspiel
+CODE230,Graffiti,Bloom it yourself - kreatives Nähen von Hand,Spiel & Spaß Olympiade,Mini Quiz-Show,JuHu – Challenge
+CODE231,Graffiti,Social Media,Gefühlchaos und Handlungskompetenzen,Schauspiel,HipHop Tanzworkshop
+CODE232,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop,Spiel & Spaß Olympiade,Batiken,JuHu – Challenge
+CODE233,Gefühlchaos und Handlungskompetenzen,Mini Quiz-Show,HipHop Tanzworkshop,Schauspiel,Graffiti
+CODE234,Spiel & Spaß Olympiade,Spoken Word,JuHu – Challenge,Schauspiel,HipHop Tanzworkshop
+CODE235,Social Media,Schauspiel,Selbstverteidigung,Spiel & Spaß Olympiade,Mini Quiz-Show
+CODE236,Batiken,Spiel & Spaß Olympiade,Schauspiel,JuHu – Challenge,Graffiti
+CODE237,Spoken Word,Mini Quiz-Show,Social Media,JuHu – Challenge,Schauspiel
+CODE238,Bloom it yourself - kreatives Nähen von Hand,Mini Quiz-Show,Graffiti,Schauspiel,JuHu – Challenge
+CODE239,Spiel & Spaß Olympiade,JuHu – Challenge,Batiken,Mini Quiz-Show,Ultimate Frisbee
+CODE240,Gefühlchaos und Handlungskompetenzen,Graffiti,Schauspiel,Batiken,Spiel & Spaß Olympiade
+CODE241,Bloom it yourself - kreatives Nähen von Hand,Mini Quiz-Show,Spiel & Spaß Olympiade,Social Media,Gefühlchaos und Handlungskompetenzen
+CODE242,Ultimate Frisbee,Mini Quiz-Show,Spiel & Spaß Olympiade,Schauspiel,Batiken
+CODE243,Ultimate Frisbee,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop,Social Media,Spiel & Spaß Olympiade
+CODE244,Graffiti,Spiel & Spaß Olympiade,Gefühlchaos und Handlungskompetenzen,JuHu – Challenge,Spoken Word
+CODE245,Ultimate Frisbee,Bloom it yourself - kreatives Nähen von Hand,HipHop Tanzworkshop,Schauspiel,JuHu – Challenge
+CODE246,Social Media,Graffiti,Schauspiel,HipHop Tanzworkshop,Mini Quiz-Show
+CODE247,Mini Quiz-Show,Spoken Word,Gefühlchaos und Handlungskompetenzen,Selbstverteidigung,Ultimate Frisbee
+CODE248,Selbstverteidigung,HipHop Tanzworkshop,Graffiti,Mini Quiz-Show,Bloom it yourself - kreatives Nähen von Hand
+CODE249,Schauspiel,Gefühlchaos und Handlungskompetenzen,Selbstverteidigung,Mini Quiz-Show,Spoken Word
+CODE250,Schauspiel,Selbstverteidigung,Batiken,Spoken Word,JuHu – Challenge

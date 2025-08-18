@@ -1,4 +1,3 @@
-
 import os
 import json
 import logging
@@ -9,7 +8,10 @@ from dataclasses import dataclass, field
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
+
+import csv
+from io import StringIO
 
 # -----------------------------------------------------------------------------
 # Config
@@ -21,6 +23,9 @@ DRUPAL_PASS = os.getenv("DRUPAL_PASS", "")
 MATCHING_SEED = os.getenv("MATCHING_SEED")  # optional fixed seed
 HTTP_TIMEOUT = float(os.getenv("HTTP_TIMEOUT", "10"))
 MAX_PAGE_LIMIT = int(os.getenv("MAX_PAGE_LIMIT", "2000"))
+
+# Optional: pro Runde je Workshop-Zuweisungs-Limit (z. B. 1 für stärkere Streuung in Runde 1–N)
+PER_ROUND_PER_WS_LIMIT = int(os.getenv("PER_ROUND_PER_WS_LIMIT", "0"))
 
 # JSON:API endpoints
 EP_WORKSHOP = f"{DRUPAL_URL}/node/workshop"
@@ -82,16 +87,22 @@ class Workshop:
 @dataclass
 class Participant:
     id: str
-    wishes: List[str] = field(default_factory=list)  # ordered by priority (1..N)
+    wishes: List[str] = field(default_factory=list)  # ordered priority (1..N)
     assigned: List[str] = field(default_factory=list)
     current_assigned: List[str] = field(default_factory=list)  # what Drupal currently has
-    tie_break: int = 0  # deterministic random for fairness order
+    tie_break: int = 0
+
+    # Meta for exports
+    first_name: str = ""
+    last_name: str = ""
+    code: str = ""
+    region: str = ""
 
 
 @dataclass
 class MatchingConfig:
     num_wishes: int
-    num_assign: int
+    num_assign: int  # = number of slots
 
 
 # -----------------------------------------------------------------------------
@@ -117,10 +128,9 @@ def _fetch_all(url: str, extra_params: Dict[str, str] = None) -> List[Dict[str, 
         if isinstance(data, dict):
             data = [data]
         items.extend(data)
-        # JSON:API pagination might use 'links' with 'next'
         links = payload.get("links", {})
         next_link = links.get("next", {}).get("href")
-        if not next_link or len(data) < int(params["page[limit]"]):
+        if not next_link or len(data) < int((params or {}).get("page[limit]", MAX_PAGE_LIMIT)):
             break
         next_url = next_link
         params = None  # already encoded into next_link
@@ -176,40 +186,39 @@ def load_workshops() -> Dict[str, Workshop]:
 
 
 def load_participants_and_wishes(workshops: Dict[str, Workshop], cfg: MatchingConfig) -> Dict[str, Participant]:
-    # Load participants
     participant_items = _fetch_all(EP_TEILNEHMER)
-    participants: Dict[str, Participant] = {
-        it["id"]: Participant(
-            id=it["id"],
-            current_assigned=[rid["id"] for rid in (it.get("relationships", {})
-                                                    .get("field_zugewiesen", {})
-                                                    .get("data", []) or [])]
-        )
-        for it in participant_items
-    }
+    participants: Dict[str, Participant] = {}
 
-    # Load 'wunsch' nodes; if multiple per participant, keep the latest by created
+    for it in participant_items:
+        pid = it["id"]
+        attr = it.get("attributes", {}) or {}
+        rels = it.get("relationships", {}) or {}
+        current = [rid["id"] for rid in (rels.get("field_zugewiesen", {}).get("data", []) or [])]
+        participants[pid] = Participant(
+            id=pid,
+            current_assigned=current,
+            first_name=(attr.get("field_vorname") or "").strip(),
+            last_name=(attr.get("field_name") or "").strip(),
+            code=(attr.get("field_code") or "").strip(),
+            region=(attr.get("field_regionalverband") or "").strip(),
+        )
+
+    # Wünsche – neueste je Teilnehmer
     wunsch_items = _fetch_all(EP_WUNSCH, {"sort": "-created"})
     seen_pids = set()
     for wn in wunsch_items:
-        rel = wn.get("relationships", {})
+        rel = wn.get("relationships", {}) or {}
         teil_rel = rel.get("field_teilnehmer", {}).get("data")
         if not teil_rel:
             continue
         pid = teil_rel.get("id")
-        if not pid:
+        if not pid or pid in seen_pids or pid not in participants:
             continue
-        if pid in seen_pids:
-            continue  # we already took the latest
         seen_pids.add(pid)
 
         wish_rel = rel.get("field_wuensche", {}).get("data", []) or []
         wish_ids = [r["id"] for r in wish_rel if r.get("id") in workshops]
-        # Enforce configured max wishes
         wish_ids = wish_ids[: cfg.num_wishes]
-        if pid not in participants:
-            # Some wish may refer to a participant that isn't published; skip
-            continue
         participants[pid].wishes = wish_ids
 
     return participants
@@ -224,9 +233,7 @@ def compute_seed(workshops: Dict[str, Workshop], participants: Dict[str, Partici
         try:
             return int(MATCHING_SEED)
         except ValueError:
-            # fall back to hash of provided string
             pass
-
     hasher = hashlib.sha256()
     hasher.update(str(cfg.num_wishes).encode())
     hasher.update(str(cfg.num_assign).encode())
@@ -235,70 +242,67 @@ def compute_seed(workshops: Dict[str, Workshop], participants: Dict[str, Partici
         hasher.update(w.id.encode())
         hasher.update(str(w.capacity_total).encode())
         hasher.update((w.title or "").encode())
-
     for pid in sorted(participants):
         p = participants[pid]
         hasher.update(p.id.encode())
         for w in p.wishes:
             hasher.update(w.encode())
-
-    return int.from_bytes(hasher.digest()[:8], "big")  # 64-bit int
+    return int.from_bytes(hasher.digest()[:8], "big")
 
 
 # -----------------------------------------------------------------------------
-# Matching algorithm: layered rounds (priority 1..N), fairness by tie-break & fewest assigned first
+# Matching algorithm
+#   - Round r = 0..num_assign-1 assigns priority (r+1) wishes fairly
+#   - Per-round optional workshop-assign limit (PER_ROUND_PER_WS_LIMIT)
+#   - Fill phase to ensure everyone reaches num_assign (if total capacity suffices)
 # -----------------------------------------------------------------------------
 
 def run_matching(workshops: Dict[str, Workshop], participants: Dict[str, Participant], cfg: MatchingConfig) -> Dict[str, Any]:
-    # Determine deterministic tie-break order
     seed = compute_seed(workshops, participants, cfg)
-    rnd = hashlib.sha256(f"{seed}".encode()).digest()
-    # Assign a stable integer tie-break per participant from the digest stream
-    # (This avoids relying on random.shuffle order across Python versions.)
-    # We chunk the digest as needed; if more participants than bytes, re-hash.
-    pids = list(participants.keys())
+    # Deterministische Tie-Break-Werte
+    digest = hashlib.sha256(f"{seed}".encode()).digest()
     tiebreak_map: Dict[str, int] = {}
-    digest = rnd
     di = 0
-    for pid in pids:
+    for pid in participants.keys():
         if di + 4 > len(digest):
             digest = hashlib.sha256(digest).digest()
             di = 0
-        val = int.from_bytes(digest[di:di+4], "big")
-        tiebreak_map[pid] = val
+        tiebreak_map[pid] = int.from_bytes(digest[di:di+4], "big")
         di += 4
 
     for pid, p in participants.items():
         p.assigned = []
         p.tie_break = tiebreak_map[pid]
 
-    # Metrics
     per_priority_fulfilled: Dict[int, int] = {}
-    total_capacity = sum(w.capacity_remaining for w in workshops.values())
+    capacity_total = sum(w.capacity_total for w in workshops.values())
+    total_capacity = capacity_total
 
-    # Rounds: at most cfg.num_assign, but cannot exceed the max wishes anyone made
+    # Vorab: Workshops mit 0 Kapazität bleiben drin (für Metrik), werden aber nicht befüllt.
     max_possible_rounds = min(cfg.num_assign, cfg.num_wishes)
-    for r in range(max_possible_rounds):  # r = 0 -> priority 1
+
+    for r in range(max_possible_rounds):  # r=0 => Priorität 1
         if total_capacity <= 0:
             break
 
-        # Order: fewest assigned first, then tie-break
         order = sorted(participants.values(), key=lambda p: (len(p.assigned), p.tie_break))
-
         round_assignments = 0
+        round_ws_counts: Dict[str, int] = {}
+
         for p in order:
             if len(p.assigned) >= cfg.num_assign:
                 continue
             if r >= len(p.wishes):
                 continue
+
             desired_wid = p.wishes[r]
             w = workshops.get(desired_wid)
-            if not w:
-                # wish references non-existing/filtered workshop
-                continue
-            if w.capacity_remaining <= 0:
+            if not w or w.capacity_remaining <= 0:
                 continue
             if desired_wid in p.assigned:
+                continue
+
+            if PER_ROUND_PER_WS_LIMIT > 0 and round_ws_counts.get(desired_wid, 0) >= PER_ROUND_PER_WS_LIMIT:
                 continue
 
             # Assign
@@ -306,15 +310,63 @@ def run_matching(workshops: Dict[str, Workshop], participants: Dict[str, Partici
             w.capacity_remaining -= 1
             total_capacity -= 1
             round_assignments += 1
+            round_ws_counts[desired_wid] = round_ws_counts.get(desired_wid, 0) + 1
             per_priority_fulfilled[r + 1] = per_priority_fulfilled.get(r + 1, 0) + 1
 
         log.info(f"Round {r+1}: assigned {round_assignments} slots. Remaining capacity: {total_capacity}")
 
-        # Early exit if nobody got anything in this round
-        if round_assignments == 0:
-            continue
+    # Füllphase: Jeder Teilnehmer soll genau num_assign Slots bekommen (wenn möglich)
+    filler_assignments = 0
+    if total_capacity > 0:
+        changed = True
+        while changed:
+            changed = False
+            # Fairness: zuerst die mit wenigen Zuteilungen
+            order = sorted([p for p in participants.values() if len(p.assigned) < cfg.num_assign],
+                           key=lambda p: (len(p.assigned), p.tie_break))
+            if not order:
+                break
 
-    # Build metrics
+            for p in order:
+                if len(p.assigned) >= cfg.num_assign:
+                    continue
+
+                # 1) Versuche restliche Wünsche in Prioritätsreihenfolge
+                chosen = None
+                for wid in p.wishes:
+                    if wid in p.assigned:
+                        continue
+                    w = workshops.get(wid)
+                    if not w or w.capacity_remaining <= 0:
+                        continue
+                    chosen = wid
+                    break
+
+                # 2) Fallback: irgendein Workshop mit freier Kapazität (nicht doppelt, ausbalanciert)
+                if not chosen:
+                    # Sortierung deterministic: max remaining, dann Titel, dann ID
+                    candidates = [
+                        w for w in workshops.values()
+                        if w.capacity_remaining > 0 and w.id not in p.assigned
+                    ]
+                    if candidates:
+                        candidates.sort(key=lambda ww: (-ww.capacity_remaining, ww.title, ww.id))
+                        chosen = candidates[0].id
+
+                if chosen:
+                    w = workshops[chosen]
+                    p.assigned.append(chosen)
+                    w.capacity_remaining -= 1
+                    total_capacity -= 1
+                    filler_assignments += 1
+                    changed = True
+                    if total_capacity <= 0:
+                        break
+
+            if total_capacity <= 0:
+                break
+
+    # Metriken
     assigned_counts = [len(p.assigned) for p in participants.values()]
     dist = {k: assigned_counts.count(k) for k in range(0, cfg.num_assign + 1)}
     by_workshop = {
@@ -326,7 +378,6 @@ def run_matching(workshops: Dict[str, Workshop], participants: Dict[str, Partici
         }
         for wid, w in workshops.items()
     }
-
     by_participant = {
         pid: {
             "requested": participants[pid].wishes,
@@ -336,19 +387,77 @@ def run_matching(workshops: Dict[str, Workshop], participants: Dict[str, Partici
         for pid in participants
     }
 
+    # Slot-Statistik & Exportvorbereitung
+    slots = cfg.num_assign
+    assignments_by_slot: Dict[int, Dict[str, List[str]]] = {i: {} for i in range(1, slots + 1)}
+    per_slot_assigned_counts: Dict[int, int] = {i: 0 for i in range(1, slots + 1)}
+
+    for p in participants.values():
+        for idx, wid in enumerate(p.assigned[:slots]):
+            slot = idx + 1  # 1-indexiert
+            bucket = assignments_by_slot[slot].setdefault(wid, [])
+            bucket.append(p.id)
+            per_slot_assigned_counts[slot] += 1
+
+    capacity_remaining_total = sum(w.capacity_remaining for w in workshops.values())
+    unfilled_workshops = [
+        {"id": wid, "title": w.title, "remaining": w.capacity_remaining}
+        for wid, w in workshops.items() if w.capacity_remaining > 0
+    ]
+    unfilled_workshops.sort(key=lambda x: (-x["remaining"], x["title"]))
+
+    participants_without_wishes = [pid for pid, p in participants.items() if not p.wishes]
+    participants_without_wishes = participants_without_wishes[:500]
+
     summary = {
         "participants_total": len(participants),
         "assignments_total": sum(len(p.assigned) for p in participants.values()),
         "participants_no_wishes": sum(1 for p in participants.values() if len(p.wishes) == 0),
         "per_priority_fulfilled": {str(k): v for k, v in sorted(per_priority_fulfilled.items())},
-        "assignment_distribution": dist,  # how many participants have 0/1/.. assignments
+        "assignment_distribution": dist,
         "seed": str(seed),
+        "capacity_total": capacity_total,
+        "capacity_remaining_total": capacity_remaining_total,
+        "per_slot_assigned_counts": per_slot_assigned_counts,
+        "unfilled_workshops_count": len(unfilled_workshops),
+        "filler_assignments": filler_assignments,
+        "target_assignments_total": len(participants) * slots,
+        "all_filled_to_slots": (dist.get(slots, 0) == len(participants)),
+        "warning_capacity_deficit": max(0, (len(participants) * slots) - (capacity_total)),
     }
+
+    # Exportzeilen (alle Slots)
+    export_rows = []
+    def pinfo(pid: str) -> Dict[str, str]:
+        q = participants[pid]
+        return {
+            "participant_id": q.id,
+            "first_name": q.first_name,
+            "last_name": q.last_name,
+            "code": q.code,
+            "region": q.region,
+        }
+
+    for slot in range(1, slots + 1):
+        for wid, pids in assignments_by_slot[slot].items():
+            w = workshops[wid]
+            for pid in pids:
+                pi = pinfo(pid)
+                export_rows.append({
+                    "slot": slot,
+                    "workshop_id": wid,
+                    "workshop_title": w.title,
+                    **pi
+                })
 
     return {
         "summary": summary,
         "workshops": by_workshop,
         "by_participant": by_participant,
+        "assignments_by_slot": assignments_by_slot,
+        "unfilled_workshops": unfilled_workshops,
+        "participants_without_wishes": participants_without_wishes,
+        "export_rows": export_rows,
     }
 
 
@@ -369,22 +478,14 @@ def _compute() -> Dict[str, Any]:
     workshops = load_workshops()
     participants = load_participants_and_wishes(workshops, cfg)
 
-    # Log basic counts
     log.info(f"Loaded {len(workshops)} workshops, {len(participants)} participants, cfg(num_wishes={cfg.num_wishes}, num_assign={cfg.num_assign})")
-
-    # Remove workshops with zero capacity from consideration
-    zero_caps = [w.id for w in workshops.values() if w.capacity_total <= 0]
-    if zero_caps:
-        log.info(f"Skipping {len(zero_caps)} workshops with capacity 0.")
-    # (We still keep them in the dict to report metrics, the algorithm won't assign to them anyway.)
-
     result = run_matching(workshops, participants, cfg)
 
-    # Log summary
     s = result["summary"]
-    log.info(f"Summary: participants={s['participants_total']} assignments={s['assignments_total']} no_wishes={s['participants_no_wishes']}")
-    log.info(f"Per-priority fulfilled: {s['per_priority_fulfilled']}")
-    # Log remaining capacity per workshop (only those with remaining > 0 for brevity)
+    log.info(f"Summary: participants={s['participants_total']} assignments={s['assignments_total']} no_wishes={s['participants_no_wishes']} filler={s['filler_assignments']} all_filled={s['all_filled_to_slots']}")
+    if s.get("warning_capacity_deficit", 0) > 0:
+        log.warning(f"Capacity deficit: total capacity {s['capacity_total']} < required {s['target_assignments_total']}")
+
     remaining = {wid: w for wid, w in result["workshops"].items() if w["capacity_remaining"] > 0}
     if remaining:
         log.info(f"Workshops with remaining capacity ({len(remaining)}): " +
@@ -408,7 +509,6 @@ def run_endpoint():
         result = _compute()
         by_participant = result["by_participant"]
 
-        # Only PATCH when assignments actually change
         changed = 0
         errors: List[str] = []
         for pid, info in by_participant.items():
@@ -426,13 +526,125 @@ def run_endpoint():
 
         payload = {"status": "ok", "mode": "run", "patched": changed, **result}
         if errors:
-            payload["patch_errors"] = errors[:50]  # do not explode the payload
+            payload["patch_errors"] = errors[:50]
         return jsonify(payload)
     except Exception as e:
         log.exception("run failed")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# ---------------------------- CSV helpers & exports --------------------------
+
+def _csv_response(rows: List[Dict[str, Any]], fieldnames: List[str], filename: str) -> Response:
+    sio = StringIO()
+    w = csv.DictWriter(sio, fieldnames=fieldnames)
+    w.writeheader()
+    for r in rows:
+        w.writerow({k: r.get(k, "") for k in fieldnames})
+    out = sio.getvalue()
+    return Response(out, mimetype="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+@app.get("/export/slots.csv")
+def export_all_slots():
+    try:
+        result = _compute()
+        rows = result["export_rows"]
+        fields = ["slot", "workshop_title", "workshop_id", "participant_id",
+                  "first_name", "last_name", "code", "region"]
+        return _csv_response(rows, fields, "assignments_by_slots.csv")
+    except Exception as e:
+        log.exception("export slots failed")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.get("/export/slot/<int:slot_index>.csv")
+def export_one_slot(slot_index: int):
+    try:
+        result = _compute()
+        if slot_index < 1:
+            slot_index = 1
+        rows = [r for r in result["export_rows"] if int(r["slot"]) == int(slot_index)]
+        fields = ["slot", "workshop_title", "workshop_id", "participant_id",
+                  "first_name", "last_name", "code", "region"]
+        return _csv_response(rows, fields, f"slot_{slot_index}.csv")
+    except Exception as e:
+        log.exception("export slot failed")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.get("/export/regions.csv")
+def export_regions():
+    try:
+        result = _compute()
+        byp = result["by_participant"]
+        slots = len(result["summary"].get("per_slot_assigned_counts", {})) or 3
+        rows = []
+        # Teilnehmer-Metadaten pro Teilnehmer einmalig sammeln:
+        meta_map = {}
+        for r in result["export_rows"]:
+            meta_map[r["participant_id"]] = {
+                "first_name": r["first_name"], "last_name": r["last_name"],
+                "code": r["code"], "region": r["region"]
+            }
+        for pid, info in byp.items():
+            meta = meta_map.get(pid, {"first_name": "", "last_name": "", "code": "", "region": ""})
+            assigned = info.get("assigned", [])
+            row = {
+                "participant_id": pid,
+                "first_name": meta["first_name"],
+                "last_name": meta["last_name"],
+                "code": meta["code"],
+                "region": meta["region"],
+            }
+            for i in range(slots):
+                row[f"slot_{i+1}"] = ""
+            for i, wid in enumerate(assigned[:slots]):
+                title = result["workshops"].get(wid, {}).get("title", wid[:8])
+                row[f"slot_{i+1}"] = title
+            rows.append(row)
+        fields = ["region", "last_name", "first_name", "code", "participant_id"] + [f"slot_{i+1}" for i in range(slots)]
+        rows.sort(key=lambda r: (r["region"], r["last_name"], r["first_name"]))
+        return _csv_response(rows, fields, "participants_by_region.csv")
+    except Exception as e:
+        log.exception("export regions failed")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.get("/export/overview.csv")
+def export_overview():
+    try:
+        result = _compute()
+        rows = []
+        for wid, w in result["workshops"].items():
+            rows.append({
+                "workshop_title": w["title"],
+                "workshop_id": wid,
+                "capacity_total": w["capacity_total"],
+                "capacity_used": w["capacity_used"],
+                "capacity_remaining": w["capacity_remaining"],
+            })
+        rows.sort(key=lambda r: (r["workshop_title"]))
+        fields = ["workshop_title", "workshop_id", "capacity_total", "capacity_used", "capacity_remaining"]
+        return _csv_response(rows, fields, "workshops_overview.csv")
+    except Exception as e:
+        log.exception("export overview failed")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.get("/export/pending.csv")
+def export_pending():
+    """Teilnehmer ohne Wünsche (für Nachfassen)."""
+    try:
+        result = _compute()
+        ids = set(result["participants_without_wishes"])
+        # Meta aus export_rows (falls niemand exportiert wurde, direkt aus TEILNEHMER ziehen):
+        rows = []
+        # Fallback: einfache Liste mit IDs; Metadaten nicht garantiert verfügbar
+        for pid in ids:
+            rows.append({"participant_id": pid})
+        fields = ["participant_id"]
+        return _csv_response(rows, fields, "participants_without_wishes.csv")
+    except Exception as e:
+        log.exception("export pending failed")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 if __name__ == "__main__":
-    # For local dev only; use Gunicorn in production.
     app.run(host="0.0.0.0", port=5001, debug=False)

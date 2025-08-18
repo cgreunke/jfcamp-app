@@ -4,3 +4,10 @@ jfcamp_matching.admin_menu:
   route_name: jfcamp_matching.admin_form
   parent: system.admin_config_services
   weight: 50
+
+jfcamp_matching.report_menu:
+  title: 'Matching Report'
+  description: 'Übersicht & Exporte'
+  route_name: jfcamp_matching.report
+  parent: system.admin_reports
+  weight: 52

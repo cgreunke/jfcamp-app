@@ -6,6 +6,15 @@ jfcamp_matching.admin_form:
   requirements:
     _permission: 'run jfcamp matching'
 
+jfcamp_matching.report:
+  path: '/admin/reports/jfcamp/matching'
+  defaults:
+    _controller: '\Drupal\jfcamp_matching\Controller\MatchingReportController::report'
+    _title: 'Matching – Report & Exports'
+  requirements:
+    _permission: 'run jfcamp matching'
+
+# Optionaler direkter Run-Endpunkt (wird von der Form nicht zwingend genutzt)
 jfcamp_matching.run_now:
   path: '/admin/config/jfcamp/matching/run'
   defaults:

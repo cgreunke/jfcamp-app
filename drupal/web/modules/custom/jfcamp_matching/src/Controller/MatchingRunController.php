@@ -21,16 +21,15 @@ final class MatchingRunController extends ControllerBase {
       $result = $this->client->run();
       $sum = $result['summary'] ?? [];
       $msg = sprintf(
-        'Matching OK: %d Teilnehmer, %d Zuteilungen, keine Wünsche: %d. (Seed %s)',
+        'Matching OK: %d TN, %d Zuteilungen, alle gefüllt: %s.',
         $sum['participants_total'] ?? 0,
         $sum['assignments_total'] ?? 0,
-        $sum['participants_no_wishes'] ?? 0,
-        $sum['seed'] ?? 'n/a'
+        !empty($sum['all_filled_to_slots']) ? 'ja' : 'nein'
       );
       $this->messenger()->addStatus($msg);
       if (!empty($result['patch_errors'])) {
-        $this->messenger()->addWarning('Einige PATCH-Fehler traten auf (siehe Logs).');
-        $this->getLogger('jfcamp_matching')->warning('Patch-Fehler: @errs', ['@errs' => print_r($result['patch_errors'], true)]);
+        $this->messenger()->addWarning('PATCH-Fehler aufgetreten (siehe Logs).');
+        $this->getLogger('jfcamp_matching')->warning('Patch-Fehler: @errs', ['@errs' => print_r($result['patch_errors'], TRUE)]);
       }
     }
     catch (\Throwable $e) {

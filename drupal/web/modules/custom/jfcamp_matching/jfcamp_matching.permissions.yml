@@ -1,4 +1,4 @@
 run jfcamp matching:
   title: 'Matching ausführen'
-  description: 'Erlaubt das Starten des Matching-Laufs aus dem Backend.'
+  description: 'Erlaubt das Starten des Matching-Laufs und Reports.'
   restrict access: true

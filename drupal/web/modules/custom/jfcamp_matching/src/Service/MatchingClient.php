@@ -3,22 +3,24 @@
 namespace Drupal\jfcamp_matching\Service;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Site\Settings;
 use Psr\Log\LoggerInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 
 final class MatchingClient {
 
-  private ClientInterface $http;
-  private string $baseUrl;
-  private LoggerInterface $logger;
+  public function __construct(
+    private ClientInterface $http,
+    private ConfigFactoryInterface $configFactory,
+    private LoggerInterface $logger,
+    private Settings $settings,
+  ) {}
 
-  public function __construct(ClientInterface $http, ConfigFactoryInterface $configFactory, LoggerInterface $logger) {
-    $this->http = $http;
-    $cfg = $configFactory->get('jfcamp_matching.settings');
-    $default = \Drupal::service('settings')->get('jfcamp_matching_default_endpoint', 'http://matching:5001');
-    $this->baseUrl = rtrim($cfg->get('endpoint') ?: $default, '/');
-    $this->logger = $logger;
+  private function baseUrl(): string {
+    $cfg = $this->configFactory->get('jfcamp_matching.settings');
+    $default = $this->settings->get('jfcamp_matching_default_endpoint', 'http://matching:5001');
+    return rtrim($cfg->get('endpoint') ?: $default, '/');
   }
 
   public function run(): array {
@@ -29,17 +31,18 @@ final class MatchingClient {
     return $this->post('/matching/dry-run');
   }
 
+  public function exportUrl(string $path): string {
+    return $this->baseUrl() . $path;
+  }
+
   private function post(string $path): array {
-    $url = $this->baseUrl . $path;
+    $url = $this->baseUrl() . $path;
     try {
       $res = $this->http->request('POST', $url, [
-        'timeout' => 30,
-        'headers' => [
-          'Accept' => 'application/json',
-        ],
+        'timeout' => 45,
+        'headers' => ['Accept' => 'application/json'],
       ]);
-      $body = (string) $res->getBody();
-      $data = json_decode($body, true);
+      $data = json_decode((string) $res->getBody(), true);
       if (!is_array($data)) {
         throw new \RuntimeException('Ungültige JSON-Antwort vom Matching-Service.');
       }

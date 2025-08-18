@@ -31,9 +31,8 @@ final class MatchingAdminForm extends ConfigFormBase {
     $form['endpoint'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Matching Base URL'),
-      '#default_value' => $cfg->get('endpoint') ?: 'http://matching:5001',
-      '#description' => $this->t('Basis-URL des Matching-Services (z. B. http://matching:5001).'),
-      '#required' => TRUE,
+      '#default_value' => $cfg->get('endpoint') ?: '',
+      '#description' => $this->t('Basis-URL des Matching-Services (z. B. http://matching:5001). Leer lassen für Default aus settings.php'),
     ];
 
     $form['actions']['dry'] = [
@@ -54,7 +53,6 @@ final class MatchingAdminForm extends ConfigFormBase {
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state): void {
-    // Speichern der Endpoint-URL.
     $this->configFactory->getEditable('jfcamp_matching.settings')
       ->set('endpoint', rtrim((string) $form_state->getValue('endpoint'), '/'))
       ->save();
@@ -63,16 +61,16 @@ final class MatchingAdminForm extends ConfigFormBase {
   }
 
   public function submitDryRun(array &$form, FormStateInterface $form_state): void {
-    // Erst speichern, damit der Client mit dem neuen Endpoint arbeitet.
     $this->submitForm($form, $form_state);
     try {
       $res = $this->client->dryRun();
       $sum = $res['summary'] ?? [];
-      $this->messenger()->addStatus($this->t('Dry-Run OK: @p Teilnehmer, @a Zuteilungen, keine Wünsche: @nw. (Seed @seed)', [
+      $this->messenger()->addStatus($this->t('Dry-Run OK: @p TN, @a Zuteilungen, ohne Wünsche: @nw, alle gefüllt: @af, Restplätze gesamt: @rem', [
         '@p' => $sum['participants_total'] ?? 0,
         '@a' => $sum['assignments_total'] ?? 0,
         '@nw' => $sum['participants_no_wishes'] ?? 0,
-        '@seed' => $sum['seed'] ?? 'n/a',
+        '@af' => !empty($sum['all_filled_to_slots']) ? 'ja' : 'nein',
+        '@rem' => $sum['capacity_remaining_total'] ?? 0,
       ]));
     }
     catch (\Throwable $e) {
@@ -80,42 +78,30 @@ final class MatchingAdminForm extends ConfigFormBase {
     }
   }
 
-    public function submitRun(array &$form, FormStateInterface $form_state): void {
-    // 1) Einstellungen speichern, damit evtl. geänderter Endpoint gilt.
+  public function submitRun(array &$form, FormStateInterface $form_state): void {
     $this->submitForm($form, $form_state);
-
     try {
-        // 2) ECHTER RUN: POST /matching/run
-        $res = $this->client->run();
-
-        // 3) Zusammenfassung zeigen
-        $sum = $res['summary'] ?? [];
-        $patched = (int) ($res['patched'] ?? 0);
-        $msg = $this->t('Matching OK: @p Teilnehmer, @a Zuteilungen, keine Wünsche: @nw, geänderte Teilnehmer: @patched. (Seed @seed)', [
+      $res = $this->client->run();
+      $sum = $res['summary'] ?? [];
+      $patched = (int) ($res['patched'] ?? 0);
+      $this->messenger()->addStatus($this->t('Matching OK: @p TN, @a Zuteilungen, geändert: @patched, alle gefüllt: @af', [
         '@p' => $sum['participants_total'] ?? 0,
         '@a' => $sum['assignments_total'] ?? 0,
-        '@nw' => $sum['participants_no_wishes'] ?? 0,
         '@patched' => $patched,
-        '@seed' => $sum['seed'] ?? 'n/a',
-        ]);
-        $this->messenger()->addStatus($msg);
-
-        // 4) Patch-Fehler ggf. anzeigen + loggen (gekürzt)
-        if (!empty($res['patch_errors'])) {
+        '@af' => !empty($sum['all_filled_to_slots']) ? 'ja' : 'nein',
+      ]));
+      if (!empty($res['patch_errors'])) {
         $max = 5;
         $shown = array_slice($res['patch_errors'], 0, $max);
-        $this->messenger()->addWarning($this->t('Einige PATCH-Fehler aufgetreten (zeige @n von @total). Details im Log.', [
-            '@n' => count($shown), '@total' => count($res['patch_errors'])
-        ]));
+        $this->messenger()->addWarning($this->t('PATCH-Fehler (zeige @n von @t). Details im Log.', ['@n' => count($shown), '@t' => count($res['patch_errors'])]));
         foreach ($shown as $line) {
-            $this->messenger()->addWarning(substr((string) $line, 0, 300));
+          $this->messenger()->addWarning(substr((string) $line, 0, 300));
         }
-        $this->logger('jfcamp_matching')->warning('PATCH errors: @errs', ['@errs' => print_r($res['patch_errors'], TRUE)]);
-        }
+      }
     }
     catch (\Throwable $e) {
-        $this->messenger()->addError($this->t('Matching fehlgeschlagen: @m', ['@m' => $e->getMessage()]));
+      $this->messenger()->addError($this->t('Matching fehlgeschlagen: @m', ['@m' => $e->getMessage()]));
     }
-    }
+  }
 
 }

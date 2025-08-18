@@ -1,0 +1,31 @@
+code;w1;w2;w3;w4;w5
+TST001;Hip-Hop;Klettern;Theater;Graffiti;Fotografie
+TST002;Klettern;Hip-Hop;Parkour;Erste Hilfe;Theater
+TST003;Theater;Improtheater;Chor & Gesang;Film;Graffiti
+TST004;Graffiti;Fotografie;Hip-Hop;Programmieren (Python);Robotik
+TST005;Fotografie;Graffiti;Film;Hip-Hop;Contemporary Dance
+TST006;Film;Theater;Improtheater;DJ Basics;Chor & Gesang
+TST007;Erste Hilfe;Klettern;Parkour;Hip-Hop;Kochen & Backen
+TST008;Kochen & Backen;Erste Hilfe;Hip-Hop;Chor & Gesang;Film
+TST009;Parkour;Klettern;Hip-Hop;Contemporary Dance;Improtheater
+TST010;Contemporary Dance;Hip-Hop;Theater;Graffiti;Chor & Gesang
+TST011;Improtheater;Theater;Film;Hip-Hop;DJ Basics
+TST012;Robotik;Programmieren (Python);Film;Graffiti;Klettern
+TST013;Programmieren (Python);Robotik;Film;Hip-Hop;Theater
+TST014;Chor & Gesang;Hip-Hop;Theater;Kochen & Backen;Film
+TST015;DJ Basics;Hip-Hop;Film;Graffiti;Klettern
+TST016;Hip-Hop;Theater;Chor & Gesang;Contemporary Dance;Kochen & Backen
+TST017;Klettern;Parkour;Erste Hilfe;Robotik;Hip-Hop
+TST018;Theater;Improtheater;Graffiti;Fotografie;Film
+TST019;Graffiti;Hip-Hop;Film;Programmieren (Python);Robotik
+TST020;Fotografie;Graffiti;Theater;Hip-Hop;Chor & Gesang
+TST021;Film;DJ Basics;Hip-Hop;Improtheater;Klettern
+TST022;Erste Hilfe;Kochen & Backen;Klettern;Parkour;Hip-Hop
+TST023;Kochen & Backen;Chor & Gesang;Hip-Hop;Theater;Film
+TST024;Parkour;Klettern;Contemporary Dance;Hip-Hop;Erste Hilfe
+TST025;Contemporary Dance;Hip-Hop;Graffiti;Theater;Film
+TST026;Improtheater;Theater;Hip-Hop;Chor & Gesang;DJ Basics
+TST027;Robotik;Programmieren (Python);Hip-Hop;Film;Graffiti
+TST028;Programmieren (Python);Robotik;Graffiti;Film;Hip-Hop
+TST029;Chor & Gesang;Kochen & Backen;Hip-Hop;Theater;Improtheater
+TST030;DJ Basics;Film;Hip-Hop;Graffiti;Klettern

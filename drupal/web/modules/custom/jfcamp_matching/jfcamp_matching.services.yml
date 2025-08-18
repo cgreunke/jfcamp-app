@@ -1,0 +1,8 @@
+services:
+  jfcamp_matching.client:
+    class: 'Drupal\jfcamp_matching\Service\MatchingClient'
+    arguments: ['@http_client', '@config.factory', '@logger.channel.jfcamp_matching']
+
+  logger.channel.jfcamp_matching:
+    parent: 'logger.channel_base'
+    arguments: ['jfcamp_matching']

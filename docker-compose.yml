@@ -35,6 +35,7 @@ services:
       DRUPAL_API_USER: "apiuser"
       DRUPAL_API_PASS: "apipassword"
       DRUPAL_API_ROLE: "api_writer"
+      MATCHING_BASE_URL: "http://matching:5001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,6 +75,11 @@ services:
     depends_on:
       - drupal
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5001/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
 
   vue-prod:
     image: nginx:alpine

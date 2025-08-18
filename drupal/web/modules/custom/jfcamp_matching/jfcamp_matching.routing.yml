@@ -1,0 +1,16 @@
+jfcamp_matching.admin_form:
+  path: '/admin/config/jfcamp/matching'
+  defaults:
+    _form: '\Drupal\jfcamp_matching\Form\MatchingAdminForm'
+    _title: 'Matching – Ausführen & Einstellungen'
+  requirements:
+    _permission: 'run jfcamp matching'
+
+jfcamp_matching.run_now:
+  path: '/admin/config/jfcamp/matching/run'
+  defaults:
+    _controller: '\Drupal\jfcamp_matching\Controller\MatchingRunController::run'
+    _title: 'Matching jetzt ausführen'
+  requirements:
+    _permission: 'run jfcamp matching'
+  methods: [POST]

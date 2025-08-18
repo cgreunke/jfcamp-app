@@ -869,3 +869,6 @@ $databases['default']['default'] = array (
   'autoload' => 'core/modules/pgsql/src/Driver/Database/pgsql/',
 );
 $settings['config_sync_directory'] = 'sites/default/files/config_siSF-8YbJM8nvFwaRzTKEH1qngYbafXyvvRdxb-xSX_YV_XTSKonLwFJXoZhc08D4TEN-jHSAQ/sync';
+
+// Default-Endpoint aus ENV (falls konfiguriert), sonst http://matching:5001
+$settings['jfcamp_matching_default_endpoint'] = getenv('MATCHING_BASE_URL') ?: 'http://matching:5001';

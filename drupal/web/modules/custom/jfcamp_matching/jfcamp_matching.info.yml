@@ -1,0 +1,7 @@
+name: JFCamp Matching
+type: module
+description: "Trigger Matching-Service aus Drupal (Button + Drush) und zeige Ergebnisse."
+core_version_requirement: ^11
+package: "JFCamp"
+dependencies:
+  - drupal:system

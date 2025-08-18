@@ -1,21 +1,25 @@
 # JFCamp App
 
-Containerisierte Anwendung für das JugendFEIER-Camp mit **Drupal (Headless)**, **Vue 3 + Vite** und einem optionalen **Matching-Service (Python)**. Teilnehmer geben im Frontend ihre Workshop-Wünsche ab; Drupal speichert Inhalte und stellt JSON:API + eine kleine **Custom-API** bereit.
+Containerisierte Anwendung für das JugendFEIER-Camp mit **Drupal (Headless)**, **Vue 3 + Vite** und einem optionalen **Matching-Service (Python)**. 
+Teilnehmer geben im Frontend ihre Workshop-Wünsche ab; Drupal speichert Inhalte und stellt **JSON:API** + eine kleine **Custom-API** bereit. 
+CSV-Import für Workshops/Teilnehmer/Wünsche ist integriert.
 
 ---
 
 ## Architektur
 
 ```
-[ Vue Frontend ]  ───(REST)──▶  [ Drupal JSON:API + Custom API ]  ───▶  [ Postgres ]
-                                   │
-                                   └──(optional)──▶ [ Matching-Service (Python) ]
+[ Vue Frontend ] ──(REST)──▶ [ Drupal JSON:API + Custom API ] ──▶ [ Postgres ]
+                                 │
+                                 ├── Admin-CSV-Import (im Drupal-Backend)
+                                 └── (optional) ──▶ [ Matching-Service (Python) ]
 ```
 
-- **Vue**: Wunschformular ohne Klarnamen, Anmeldung via Teilnehmer-Code.
-- **Drupal**: Content-Model (Teilnehmer, Workshop, Wunsch, Matching-Config), speichert Daten in **Postgres**, liefert JSON:API und Custom-Endpoints.
-- **Matching (optional)**: Python-Container holt Daten via JSON:API und schreibt Zuordnungen zurück.
+- **Vue**: Wunschformular ohne Klarnamen, Anmeldung via Teilnehmer‑Code.
+- **Drupal**: Content-Model (*Teilnehmer, Workshop, Wunsch, Matching-Config*), speichert Daten in **Postgres**, liefert JSON:API und Custom-Endpoints.
+- **Matching (optional)**: Python holt Daten via JSON:API (Basic Auth) und schreibt Zuteilungen zurück.
 - **Adminer**: DB-GUI für lokale Entwicklung.
+- **CSV-Import**: Backend-Formular zum Importieren von Teilnehmern/Workshops/Wünschen.
 
 ---
 
@@ -24,23 +28,29 @@ Containerisierte Anwendung für das JugendFEIER-Camp mit **Drupal (Headless)**, 
 ```
 jfcamp-app/
 ├─ docker-compose.yml
-├─ .gitignore
+├─ csv-examples/                    # Beispiel-CSV-Dateien (Teilnehmer/Workshops/Wünsche)
 ├─ drupal/
-│  ├─ custom/
-│  │  └─ modules/
-│  │     └─ jfcamp_api/
-│  │        ├─ jfcamp_api.info.yml
-│  │        ├─ jfcamp_api.routing.yml
-│  │        └─ src/Controller/WunschController.php
-│  ├─ web/
-│  │  └─ sites/default/
-│  │     ├─ settings.php
-│  │     ├─ cors.local.yml              # CORS für das Vue-Dev-Frontend
-│  │     └─ (settings.local.php)        # lokal (gitignored)
-│  └─ (weitere Drupal-/Composer-Dateien)
+│  ├─ Dockerfile
+│  ├─ start-drupal.sh               # installiert/konfiguriert Drupal + legt Bundles/Felder/Displays an
+│  └─ web/
+│     ├─ modules/
+│     │  └─ custom/
+│     │     └─ jfcamp_api/
+│     │        ├─ jfcamp_api.info.yml
+│     │        ├─ jfcamp_api.routing.yml
+│     │        ├─ jfcamp_api.links.menu.yml        # Menüpunkt für CSV-Import
+│     │        ├─ src/
+│     │        │  ├─ Controller/WunschController.php
+│     │        │  └─ Form/CsvImportForm.php        # CSV-Import-Formular
+│     │        └─ scripts/
+│     │           └─ ensure_displays.php           # setzt Form-/View-Displays (Drupal 11-kompatibel)
+│     └─ sites/default/
+│        ├─ settings.php
+│        ├─ cors.local.yml                         # CORS für das Vue-Dev-Frontend
+│        └─ (settings.local.php)                   # lokal (gitignored, optional)
 ├─ vue-frontend/
 │  ├─ .env.example
-│  ├─ .env.development                  # lokal, gitignored
+│  ├─ .env.development                             # lokal, gitignored
 │  ├─ vite.config.js
 │  └─ src/
 │     ├─ api/
@@ -51,6 +61,10 @@ jfcamp-app/
 │     └─ components/
 │        └─ WunschForm.vue
 └─ matching/ (optional, Python)
+   ├─ Dockerfile
+   ├─ requirements.txt
+   ├─ matching_server.py
+   └─ README.md
 ```
 
 ---
@@ -63,97 +77,80 @@ jfcamp-app/
 
 ### Starten
 ```bash
-docker compose up --build
+docker compose up -d --build
 ```
 
-**Endpoints (lokal, Standard-Ports):**
-- Drupal: `http://localhost:8080`
-- Vue Dev-Server: `http://localhost:5173`
-- Adminer (DB GUI): `http://localhost:8081`
-- (optional) Matching-Service: z. B. `http://localhost:5000`
+**Lokale Endpoints (Standard-Ports):**
+- **Drupal**: `http://localhost:8080`
+- **Vue Dev-Server**: `http://localhost:5173`
+- **Adminer (DB GUI)**: `http://localhost:8081`
+- **Matching-Service** (optional): `http://localhost:5001` (Proxy auf Gunicorn:5000)
+
+> Tipp: Logs ansehen: `docker compose logs -f drupal` bzw. `... matching`
 
 ---
 
-## Drupal – Ersteinrichtung (lokal)
+## Drupal – Automatisierte Einrichtung
 
-> Diese Schritte sind in der Regel einmalig pro frischem Container/DB nötig.
+Die Datei **`drupal/start-drupal.sh`** übernimmt beim Containerstart:
 
-### 1) `settings.local.php` anlegen (lokal, gitignored)
-`drupal/web/sites/default/settings.local.php`
-```php
-<?php
-$settings['file_public_path'] = 'sites/default/files';
-$settings['file_private_path'] = '/opt/drupal/private';
-$settings['file_temp_path'] = '/tmp';
-```
+1. **Warten auf Postgres** (psql vorhanden).
+2. **Installation** von Drupal (Standard-Profil) auf **Deutsch** (`--locale=de`).
+3. Aktiviert **jsonapi**, **basic_auth**, **dblog**, **field_ui**; setzt `jsonapi.settings: read_only = 0`.
+4. Legt Inhaltstypen + Felder **idempotent** an:
+   - **workshop**: `field_maximale_plaetze` (Integer), `field_ext_id` (optional)
+   - **teilnehmer**: `field_code`, `field_vorname`, `field_name`, `field_regionalverband`, `field_zugewiesen` (Ref → *workshop*, mehrfach)
+   - **wunsch**: `field_teilnehmer` (Ref → *teilnehmer*), `field_wuensche` (Ref → *workshop*, mehrfach, Reihenfolge = Priorität)
+   - **matching_config**: `field_num_wuensche`, `field_num_zuteilung` (z. B. 5 / 3)
+5. Setzt **Form-/View-Displays** über `scripts/ensure_displays.php` (Drupal‑11‑kompatibel).
+6. Erstellt **API-Rolle** (`api_writer`) mit Rechten:
+   - `access content`
+   - `edit any teilnehmer content`
+   - `access user profiles` (optional)
+7. Erstellt **API-User** (`apiuser`/`apipassword`) und weist Rolle zu.
+8. Vergibt Recht **„import jfcamp csv“** an **administrator** und **api_writer**.
+9. Löscht/füllt Caches.
 
-### 2) Ordner & Rechte im Container setzen
-```bash
-docker compose exec drupal bash -lc '
-  mkdir -p /opt/drupal/private /opt/drupal/web/sites/default/files &&
-  chown -R www-data:www-data /opt/drupal/private /opt/drupal/web/sites/default/files &&
-  chmod 0775 /opt/drupal/private /opt/drupal/web/sites/default/files &&
-  vendor/bin/drush cr &&
-  vendor/bin/drush ev "echo \"private path: \".(\\Drupal::service(\"file_system\")->realpath(\"private://\")?:\"<empty>\").PHP_EOL;"
-'
-```
-
-### 3) Module aktivieren & Caches leeren
-```bash
-docker compose exec drupal bash -lc '
-  vendor/bin/drush en jsonapi -y &&
-  vendor/bin/drush en dblog -y &&
-  vendor/bin/drush en jfcamp_api -y || true &&
-  vendor/bin/drush cr
-'
-```
-
-### 4) CORS für das Vue-Frontend freischalten
-`drupal/web/sites/default/cors.local.yml`
-```yaml
-cors.config:
-  enabled: true
-  allowedHeaders: ['x-csrf-token','content-type','accept','origin']
-  allowedMethods: ['GET','POST','PATCH','DELETE','OPTIONS']
-  allowedOrigins: ['http://localhost:5173']
-  exposedHeaders: false
-  maxAge: 1000
-  supportsCredentials: true
-```
-
-> Nach Änderung: `drush cr`.
+> Ergebnis: **Felder sind im Backend-Formular sichtbar**, JSON:API ist schreibbar, und der CSV‑Import steht bereit.
 
 ---
 
-## Content-Model in Drupal
+## CSV-Import (Backend)
 
-**Inhaltstyp „Workshop“**
-- `field_ext_id` (Text, optional)
-- `field_maximale_plaetze` (Integer, optional)
+- Menü: **Konfiguration → Entwicklung → JFCamp CSV‑Import**  
+  (Route: `/admin/config/jfcamp-import`)
+- Unterstützt **Teilnehmer**, **Workshops** und **Wünsche** (Upsert).  
+- Beispiel-Dateien: im Ordner **`csv-examples/`** (im Repo).
 
-**Inhaltstyp „Teilnehmer“**
-- Titelbeschriftung: „Name“ (nur interne Hilfe)
-- `field_code` (Text, **eindeutig**, für Login im Frontend)
-- `field_vorname` (Text)
-- `field_name` (Text)
-- `field_regionalverband` (Text)
-- `field_zugewiesen` (Entity Reference → *Workshop*, **mehrfach**), optional: Zuteilungsergebnis
+### CSV-Formate (Kurzform)
+**Teilnehmer (`teilnehmer.csv`)**
+```
+code,vorname,name,regionalverband
+TST001,Max,Schneider,Berlin
+...
+```
 
-**Inhaltstyp „Wunsch“**
-- `field_teilnehmer` (Entity Reference → *Teilnehmer*, **einfach**, Pflicht)
-- `field_wuensche` (Entity Reference → *Workshop*, **mehrfach**, Reihenfolge = Priorität)
+**Workshops (`workshops.csv`)**
+```
+titel,max_plaetze,ext_id
+Hip-Hop,12,WS001
+...
+```
 
-**Inhaltstyp „matching_config“**
-- `field_num_wuensche` (Integer, z. B. 3–5)
-- `field_num_zuteilung` (Integer, z. B. 3)
+**Wünsche (`wuensche.csv`)** — referenziert Teilnehmer per Code, Workshops per Titel oder ext_id
+```
+code,w1,w2,w3,w4,w5
+TST001,Hip-Hop,Theater,Klettern, ...
+...
+```
 
-> Stelle sicher, dass genau **ein veröffentlichter** `matching_config`-Node existiert (der neueste wird genommen).
+> Der Import ist idempotent (Upsert) und kürzt die Anzahl der Wünsche auf `matching_config.field_num_wuensche`.
 
 ---
 
 ## Custom-API (für das Frontend)
 
-Modul **`jfcamp_api`** stellt zwei Endpunkte bereit:
+Modul **`jfcamp_api`** stellt bereit:
 
 ### 1) Teilnehmer-ID anhand Code
 ```
@@ -166,7 +163,6 @@ Antwort:
 ```json
 { "ok": true, "id": "UUID-DES-TEILNEHMERS" }
 ```
-Fehlerfälle: 400 (kein Code), 404 (unbekannt)
 
 ### 2) Wunsch abgeben (Upsert)
 ```
@@ -179,16 +175,11 @@ Content-Type: application/json
 }
 ```
 - dedupliziert automatisch
-- kürzt auf `field_num_wuensche` der veröffentlichten **matching_config**
+- kürzt auf `field_num_wuensche`
 - legt genau **einen** Wunsch-Node pro Teilnehmer an/aktualisiert ihn
 
-Antwort:
-```json
-{ "ok": true, "wunsch_uuid": "<UUID-DES-WUNSCHES>" }
-```
-Fehlerfälle: 400 (Validierung), 403 (Code ungültig), 500 (fehlende Felder am Content-Typ)
-
-> Die Routen sind für anonyme Nutzer freigeschaltet (`_access: TRUE`), d. h. kein Login nötig.
+Fehlerfälle: `400` (Validierung), `403` (Code ungültig), `500` (fehlende Felder).  
+Routen sind für anonyme Nutzer freigeschaltet (`_access: TRUE`).
 
 ---
 
@@ -201,132 +192,99 @@ Fehlerfälle: 400 (Validierung), 403 (Code ungültig), 500 (fehlende Felder am C
 VITE_DRUPAL_BASE=http://localhost:8080
 ```
 
-> **.env.development** (lokal, **gitignored**) überschreibt `.env` im Dev-Mode und **wird automatisch verwendet**.
+> **.env.development** (lokal, **gitignored**) überschreibt `.env` im Dev-Mode und **wird automatisch verwendet**.  
 > Nur Variablen mit **`VITE_`**-Präfix sind im Frontend verfügbar.
 
 ### API-Calls (bereitgestellt)
 - `src/api/matchingConfig.js`: lädt die aktuelle Matching-Konfiguration per JSON:API (published, newest)
 - `src/api/workshops.js`: lädt veröffentlichte Workshops
-- `src/api/teilnehmer.js`: findet Teilnehmer-UUID per `field_code` (JSON:API)
+- `src/api/teilnehmer.js`: findet Teilnehmer‑UUID per `field_code` (JSON:API)
 - `src/api/wunsch.js`: postet an **Custom-API** `/jfcamp/wunsch` (kein CSRF nötig)
 
 ### Wunschformular
 `src/components/WunschForm.vue`
-- Zeigt N Dropdowns gemäß `field_num_wuensche`
+- Zeigt **N** Dropdowns gemäß `field_num_wuensche`
 - Verhindert doppelte Auswahl
 - Validiert „Code vorhanden“ und „mind. 1 Workshop“
-
-> Falls CORS Probleme macht, wahlweise **Proxy** in `vite.config.js` setzen, der `/jsonapi` und `/jfcamp` an `VITE_DRUPAL_BASE` weiterleitet – oder CORS (s. oben) aktivieren.
+- Funktioniert mit CORS (**`cors.local.yml`**) oder Dev‑Proxy in `vite.config.js`
 
 ---
 
 ## (Optional) Matching-Service (Python)
 
-- Holt Teilnehmer, Workshops, Wünsche via JSON:API
-- Berechnet Zuteilungen (Algorithmus frei)
-- Schreibt Ergebnis als Referenzen in `field_zugewiesen` beim **Teilnehmer** oder als separaten Node/Entity
-- Läuft als eigener Container; Konfig via Env (Base-URL, Auth/Keys falls nötig)
+- Holt **Teilnehmer**, **Workshops**, **Wünsche** via JSON:API (Basic Auth: `apiuser:apipassword`)
+- Berechnet Zuteilungen (greedy; Algorithmus frei erweiterbar)
+- Schreibt Ergebnis als Referenzen in `field_zugewiesen` beim **Teilnehmer**
 
----
-
-## Beispiel: Seed-Script (lokal)
-
-Lege (falls gewünscht) `drupal/scripts/seed_jfcamp.php` an und führe es aus:
-```php
-<?php
-use Drupal\node\Entity\Node;
-
-function ensureWorkshop(string $title): void {
-  $ids = \Drupal::entityQuery('node')->accessCheck(FALSE)
-    ->condition('type','workshop')->condition('title',$title)->range(0,1)->execute();
-  if ($ids) return;
-  $n = Node::create(['type'=>'workshop','title'=>$title,'status'=>1]);
-  $n->save();
-}
-
-function ensureTeilnehmer(string $code, string $vor, string $name, string $rv=''): void {
-  $ids = \Drupal::entityQuery('node')->accessCheck(FALSE)
-    ->condition('type','teilnehmer')->condition('field_code',$code)->range(0,1)->execute();
-  if ($ids) return;
-  $n = Node::create(['type'=>'teilnehmer','title'=>"$vor $name".($rv?" ($rv)":"") ,'status'=>1]);
-  $n->set('field_code',$code);
-  $n->set('field_vorname',$vor);
-  $n->set('field_name',$name);
-  $n->set('field_regionalverband',$rv);
-  $n->save();
-}
-
-ensureWorkshop('Hip-Hop');
-ensureWorkshop('Klettern');
-ensureWorkshop('Theater');
-ensureTeilnehmer('TEST123','Max','Mustermann','Berlin');
-
-echo "Seed done.\n";
+**Konfiguration (ENV im Compose):**
+```
+DRUPAL_URL=http://drupal/jsonapi
+# optional: DRUPAL_TOKEN (nicht genutzt, da Basic Auth)
 ```
 
-Ausführen:
+**Endpoints**
+- `GET  /health` – Healthcheck
+- `POST /matching/dry-run` – Matching simulieren, Ergebnis nicht schreiben
+- `POST /matching/run` – Matching durchführen und Zuteilungen PATCHen
+
+**Beispiele**
 ```bash
-docker compose exec drupal bash -lc 'vendor/bin/drush scr scripts/seed_jfcamp.php'
+# Dry-Run (host):
+curl -X POST http://localhost:5001/matching/dry-run | jq
+
+# Schreiben (host):
+curl -X POST http://localhost:5001/matching/run | jq
 ```
 
 ---
 
-## Git-Workflow (Kurz)
+## CORS (lokal)
 
-Feature-Branch → PR/Merge nach `main`:
-```bash
-# im Feature-Branch (z. B. vue-form)
-git add -A
-git commit -m "Wunschformular + jfcamp_api Endpoints"
-git push -u origin vue-form
-
-# Merge in main (per PR oder lokal)
-git checkout main
-git pull
-git merge --no-ff vue-form -m "Merge vue-form"
-git push
+`drupal/web/sites/default/cors.local.yml`
+```yaml
+cors.config:
+  enabled: true
+  allowedHeaders: ['x-csrf-token','content-type','accept','origin','authorization']
+  allowedMethods: ['GET','POST','PATCH','DELETE','OPTIONS']
+  allowedOrigins: ['http://localhost:5173']
+  exposedHeaders: false
+  maxAge: 1000
+  supportsCredentials: true
 ```
-
-**Env-Dateien ignorieren** (im Repo-Root `.gitignore`):
-```gitignore
-**/.env
-**/.env.*
-!**/.env.example
-```
-Falls bereits getrackt:
-```bash
-git ls-files | grep -E '\.env(\..+)?$' | xargs -I{} git rm --cached "{}"
-git commit -m "Stop tracking env files"
-```
+> Nach Änderungen: `drush cr`
 
 ---
 
 ## Troubleshooting
 
-- **JSON:API 500**  
-  `vendor/bin/drush ws --severity=3 --count=50` (Logs), `vendor/bin/drush cr`.  
-  Prüfe Felder/Content-Typen und ob `jfcamp_api` aktiv ist.
+- **Felder im Formular nicht sichtbar**  
+  Displays setzen:  
+  `drush php:script web/modules/custom/jfcamp_api/scripts/ensure_displays.php && drush cr`
 
-- **CORS-Fehler im Frontend**  
-  `cors.local.yml` prüfen (Origins/Headers/Methods, `supportsCredentials: true`), `drush cr`.  
-  Alternativ: Dev-Proxy in Vite.
+- **JSON:API PATCH = 405 (Method Not Allowed)**  
+  `drush cset -y jsonapi.settings read_only 0` und Rolle hat `edit any teilnehmer content`.
+
+- **JSON:API 500**  
+  `vendor/bin/drush ws --severity=3 --count=50`, dann `drush cr`.  
+  Felder/Content-Typen & `jfcamp_api` prüfen.
+
+- **CORS-Probleme**  
+  `cors.local.yml` prüfen (Origin/Header/Methods, `supportsCredentials: true`) / Dev‑Proxy verwenden.
 
 - **private:// nicht eingerichtet**  
-  `settings.local.php` + Ordnerrechte (siehe oben) und `drush cr`.  
-  Prüfen: `drush ev 'use Drupal\\Core\\Site\\Settings; var_dump(Settings::get("file_private_path"));'`
+  `settings.php` + Ordnerrechte (siehe Startscript) und `drush cr`.
 
 - **Route nicht gefunden (/jfcamp/...)**  
-  `vendor/bin/drush cr`, `vendor/bin/drush r:list | grep jfcamp_api`  
-  (Bei älteren Drush: `drush ev "print_r(array_keys(\\Drupal::service('router.builder')->getRouteCollection()->all()));"`)
+  `drush cr`, dann `drush r:list | grep jfcamp_api`.
 
 ---
 
-## Stand
+## Aktueller Stand
 
-- Wunschformular funktioniert end-to-end gegen **Custom-API** (keine Klarnamen im UI).
-- Anzahl der Wunsch-Dropdowns wird aus **matching_config** gelesen.
-- Workshops kommen aus JSON:API (published).
-- Private Filesystem ist für spätere CSV-Uploads vorbereitet (falls benötigt).
+- ✅ **Felder** sind im Backend sichtbar (Form-/View-Displays gesetzt).
+- ✅ **CSV-Import** funktioniert (Beispiele unter `csv-examples/`).
+- ✅ **Frontend-Wunschformular** funktioniert end‑to‑end gegen Custom-API.
+- ✅ **Matching-Service Dry-Run** liefert sinnvolle Vorschau; **Run** schreibt Zuteilungen.
 
 ---
 

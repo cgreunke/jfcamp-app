@@ -66,19 +66,14 @@ services:
     build:
       context: ./matching
       dockerfile: Dockerfile
-    container_name: matching
-    environment:
-      DRUPAL_URL: http://drupal/jsonapi
-      DRUPAL_USER: apiuser
-      DRUPAL_PASS: apipassword
-      # alternativ: DRUPAL_TOKEN: <bearer-token>
+    container_name: jfcamp-matching
     ports:
-      - "5001:5000"
-    volumes:
-      - ./matching:/app
+      - "5001:5001"
+    env_file:
+      - .env.development
     depends_on:
-      drupal:
-        condition: service_started
+      - drupal
+    restart: unless-stopped
 
   vue-prod:
     image: nginx:alpine

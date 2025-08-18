@@ -15,3 +15,11 @@ jfcamp_api.teilnehmer_id:
   methods: [POST]
   requirements:
     _access: 'TRUE'
+
+jfcamp_api.csv_import:
+  path: '/admin/config/jfcamp/csv-import'
+  defaults:
+    _form: '\Drupal\jfcamp_api\Form\CsvImportForm'
+    _title: 'JFCamp CSV-Import'
+  requirements:
+    _permission: 'import jfcamp csv'

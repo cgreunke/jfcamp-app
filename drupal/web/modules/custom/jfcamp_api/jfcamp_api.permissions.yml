@@ -1,0 +1,3 @@
+import jfcamp csv:
+  title: 'JFCamp: CSV-Import ausführen'
+  description: 'Erlaubt Zugriff auf das Admin-Formular zum CSV-Import.'

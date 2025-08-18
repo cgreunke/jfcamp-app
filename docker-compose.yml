@@ -5,13 +5,17 @@ services:
       POSTGRES_DB: drupal
       POSTGRES_USER: drupal
       POSTGRES_PASSWORD: drupal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drupal -d drupal || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     volumes:
       - db_data:/var/lib/postgresql/data
 
   drupal:
     build:
       context: ./drupal
-      dockerfile: Dockerfile
     container_name: drupal
     ports:
       - "8080:80"
@@ -25,21 +29,29 @@ services:
       DRUPAL_ADMIN_MAIL: admin@example.com
       DRUPAL_TRUSTED_HOSTS: "^localhost$,^drupal$,^127\\.0\\.0\\.1$"
       DRUPAL_SITE_NAME: "JF Startercamp - App"
-    volumes:
-      # Persistentes Composer-Projekt (Core + vendor + web)
-      - drupal_project:/opt/drupal
-      # Nur Custom-Entwicklung binden
-      - ./drupal/custom/modules:/opt/drupal/web/modules/custom
-      - ./drupal/custom/themes:/opt/drupal/web/themes/custom
-      # Optional: Config-Verzeichnis
-      # - ./drupal/config:/opt/drupal/config
+      # Optional: Steuerung der Auto-Installation (auto|skip)
+      # DRUPAL_INSTALL: "auto"
+      # API-User für Matching (werden im Startscript angelegt/aktualisiert)
+      DRUPAL_API_USER: "apiuser"
+      DRUPAL_API_PASS: "apipassword"
+      DRUPAL_API_ROLE: "api_writer"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost/jsonapi"]
       interval: 20s
       timeout: 5s
       retries: 15
+    volumes:
+      # Persistentes Composer-Projekt (Core + vendor + web + private)
+      - drupal_project:/opt/drupal
+      # Bind-Mounts für deine Custom-Arbeit im Repo (überschreiben die Inhalte im Volume):
+      - ./drupal/web/modules/custom:/opt/drupal/web/modules/custom
+      - ./drupal/web/themes/custom:/opt/drupal/web/themes/custom
+      # Konfiguration & privates Filesystem auf Host sichtbar halten
+      - ./drupal/config:/opt/drupal/config
+      - ./drupal/private:/opt/drupal/private
 
   adminer:
     image: adminer
@@ -55,8 +67,8 @@ services:
       dockerfile: Dockerfile
     container_name: matching
     environment:
+      # Matching-Service spricht Drupal über internen Hostnamen an
       DRUPAL_URL: http://drupal/jsonapi
-      # DRUPAL_TOKEN: your_token_if_applicable
     ports:
       - "5001:5000"
     volumes:
@@ -65,7 +77,6 @@ services:
       drupal:
         condition: service_started
 
-  # Produktion: statisch via Nginx
   vue-prod:
     image: nginx:alpine
     container_name: vue-prod

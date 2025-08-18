@@ -1,5 +1,10 @@
 name: JFCamp API
 type: module
-description: API-Endpunkte für Wunsch-Submit ohne Login
-core_version_requirement: "^10 || ^11"
-package: JFCamp
+description: Custom JSON-Endpunkte und CSV-Importe für das JugendFEIER Startercamp.
+core_version_requirement: ^10 || ^11
+package: Custom
+dependencies:
+  - drupal:node
+  - drupal:user
+  - drupal:file
+  - drupal:system

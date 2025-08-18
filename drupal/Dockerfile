@@ -2,11 +2,11 @@
 FROM drupal:11-apache
 
 # ---- Systempakete ----
-# curl/git/unzip für Composer; Build-Deps für GD; libpq-dev für PostgreSQL
+# curl/git/unzip für Composer; Build-Deps für GD; libpq-dev & postgresql-client für PostgreSQL
 RUN apt-get update && apt-get install -y \
     git unzip curl \
     libjpeg62-turbo-dev libpng-dev libfreetype6-dev libwebp-dev libavif-dev \
-    libpq-dev \
+    libpq-dev postgresql-client \
  && rm -rf /var/lib/apt/lists/*
 
 # ---- PHP-Extensions ----
@@ -19,8 +19,6 @@ RUN curl -sS https://getcomposer.org/installer \
  | php -- --install-dir=/usr/local/bin --filename=composer
 
 # ---- Apache korrekt konfigurieren ----
-# DocumentRoot auf /opt/drupal/web umbiegen, mod_rewrite aktivieren,
-# Directory-Rechte erlauben, ServerName warnung abstellen.
 RUN a2enmod rewrite \
  && sed -ri -e 's!/var/www/html!/opt/drupal/web!g' /etc/apache2/sites-available/000-default.conf \
  && sed -ri -e 's!/var/www/!/opt/drupal/web/!g' /etc/apache2/apache2.conf
@@ -39,6 +37,4 @@ COPY start-drupal.sh /usr/local/bin/start-drupal.sh
 RUN chmod +x /usr/local/bin/start-drupal.sh
 
 EXPOSE 80
-
-# Start: Composer-Setup (falls nötig) -> Apache
 CMD ["bash", "/usr/local/bin/start-drupal.sh"]

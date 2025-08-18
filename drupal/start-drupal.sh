@@ -140,6 +140,8 @@ vendor/bin/drush locale:update || true
 vendor/bin/drush en jsonapi dblog -y || true
 vendor/bin/drush en basic_auth -y || true
 
+vendor/bin/drush cset -y jsonapi.settings read_only 0 || true
+
 if [ -d "web/modules/custom/jfcamp_api" ]; then
   echo "[start] jfcamp_api gefunden – aktiviere Modul…"
   vendor/bin/drush en jfcamp_api -y || true

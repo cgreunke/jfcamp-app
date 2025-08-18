@@ -145,6 +145,30 @@ if [ -d "web/modules/custom/jfcamp_api" ]; then
   vendor/bin/drush en jfcamp_api -y || true
 fi
 
+if [ -d "web/modules/custom/jfcamp_matching" ]; then
+  echo "[start] jfcamp_matching gefunden – aktiviere Modul…"
+  vendor/bin/drush en jfcamp_matching -y || true
+fi
+
+# ===== Admin-UX & Login-Handling (Gin, r4032login, Admin Toolbar) =====
+echo "[Drupal] Install + enable Gin, r4032login, Admin Toolbar"
+
+DRUPAL_ROOT="/opt/drupal"
+DRUSH="$DRUPAL_ROOT/vendor/bin/drush"
+
+# Pakete nur installieren, wenn Gin noch fehlt
+docker exec -i drupal bash -lc "if [ ! -d '$DRUPAL_ROOT/web/themes/contrib/gin' ] && [ ! -d '$DRUPAL_ROOT/themes/contrib/gin' ]; then \
+  cd '$DRUPAL_ROOT' && COMPOSER_MEMORY_LIMIT=-1 composer require \
+    drupal/gin:^3 drupal/r4032login:^2 drupal/admin_toolbar:^3 -W ; \
+fi"
+
+# Enable & Konfiguration (fehlertolerant)
+docker exec -i drupal bash -lc "$DRUSH theme:enable gin -y || true"
+docker exec -i drupal bash -lc "$DRUSH en r4032login admin_toolbar -y || true"
+docker exec -i drupal bash -lc "$DRUSH config:set system.theme admin gin -y || true"
+docker exec -i drupal bash -lc "$DRUSH config:set system.site page.403 r4032login -y || true"
+docker exec -i drupal bash -lc "$DRUSH cr || true"
+
 # ===== 8) Inhaltstypen + Felder idempotent anlegen =====
 vendor/bin/drush ev '
 use Drupal\node\Entity\NodeType;

@@ -1,25 +1,65 @@
+# Einstellungen (Config-Form)
 jfcamp_matching.admin_form:
   path: '/admin/config/jfcamp/matching'
   defaults:
     _form: '\Drupal\jfcamp_matching\Form\MatchingAdminForm'
-    _title: 'Matching – Ausführen & Einstellungen'
+    _title: 'Matching – Einstellungen'
   requirements:
     _permission: 'run jfcamp matching'
 
-jfcamp_matching.report:
+# Zentrales Dashboard (eine Seite für alles)
+jfcamp_matching.dashboard:
   path: '/admin/reports/jfcamp/matching'
   defaults:
-    _controller: '\Drupal\jfcamp_matching\Controller\MatchingReportController::report'
-    _title: 'Matching – Report & Exports'
+    _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::dashboard'
+    _title: 'Matching – Dry‑Run, Festschreiben & Exporte'
   requirements:
     _permission: 'run jfcamp matching'
 
-# Optionaler direkter Run-Endpunkt (wird von der Form nicht zwingend genutzt)
-jfcamp_matching.run_now:
-  path: '/admin/config/jfcamp/matching/run'
+# Aktionen (POST) vom Dashboard
+jfcamp_matching.action_dry_run:
+  path: '/admin/reports/jfcamp/matching/dry-run'
   defaults:
-    _controller: '\Drupal\jfcamp_matching\Controller\MatchingRunController::run'
-    _title: 'Matching jetzt ausführen'
+    _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::actionDryRun'
   requirements:
     _permission: 'run jfcamp matching'
   methods: [POST]
+
+jfcamp_matching.action_apply:
+  path: '/admin/reports/jfcamp/matching/apply'
+  defaults:
+    _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::actionApply'
+  requirements:
+    _permission: 'run jfcamp matching'
+  methods: [POST]
+
+jfcamp_matching.action_reset:
+  path: '/admin/reports/jfcamp/matching/reset'
+  defaults:
+    _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::actionReset'
+  requirements:
+    _permission: 'run jfcamp matching'
+  methods: [POST]
+
+# CSV-Exporte (lesen aus den in Drupal gespeicherten Zuteilungen)
+jfcamp_matching.export_attendance_all:
+  path: '/admin/reports/jfcamp/matching/export/slots.csv'
+  defaults:
+    _controller: '\Drupal\jfcamp_matching\Controller\ExportController::attendanceAll'
+  requirements:
+    _permission: 'run jfcamp matching'
+
+jfcamp_matching.export_attendance_slot:
+  path: '/admin/reports/jfcamp/matching/export/slot/{slot}.csv'
+  defaults:
+    _controller: '\Drupal\jfcamp_matching\Controller\ExportController::attendanceSlot'
+  requirements:
+    _permission: 'run jfcamp matching'
+    slot: '^\d+$'
+
+jfcamp_matching.export_regions:
+  path: '/admin/reports/jfcamp/matching/export/regions.csv'
+  defaults:
+    _controller: '\Drupal\jfcamp_matching\Controller\ExportController::regions'
+  requirements:
+    _permission: 'run jfcamp matching'

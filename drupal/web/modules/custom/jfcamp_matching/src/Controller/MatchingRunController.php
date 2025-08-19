@@ -4,6 +4,7 @@ namespace Drupal\jfcamp_matching\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\jfcamp_matching\Service\MatchingClient;
+use Drupal\jfcamp_matching\Batch\ApplyAssignmentsBatch;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Drupal\Core\Url;
@@ -18,26 +19,43 @@ final class MatchingRunController extends ControllerBase {
 
   public function run() {
     try {
-      $result = $this->client->run();
+      // 1) Dry-Run holen (ist unser "Echtlauf"-Ergebnis)
+      $result = $this->client->dryRun();
       $sum = $result['summary'] ?? [];
-      $msg = sprintf(
-        'Matching OK: %d TN, %d Zuteilungen, alle gefüllt: %s.',
-        $sum['participants_total'] ?? 0,
-        $sum['assignments_total'] ?? 0,
-        !empty($sum['all_filled_to_slots']) ? 'ja' : 'nein'
-      );
-      $this->messenger()->addStatus($msg);
-      if (!empty($result['patch_errors'])) {
-        $this->messenger()->addWarning('PATCH-Fehler aufgetreten (siehe Logs).');
-        $this->getLogger('jfcamp_matching')->warning('Patch-Fehler: @errs', ['@errs' => print_r($result['patch_errors'], TRUE)]);
+      $byParticipant = $result['by_participant'] ?? [];
+      if (!is_array($byParticipant) || empty($byParticipant)) {
+        $this->messenger()->addWarning($this->t('Keine Zuweisungen im Ergebnis.'));
+        $url = Url::fromRoute('jfcamp_matching.admin_form')->toString();
+        return new RedirectResponse($url);
       }
+
+      // 2) Konfiguration für Schreiblogik holen
+      $cfg = \Drupal::config('jfcamp_matching.settings');
+      $config = [
+        'participant_bundle' => $cfg->get('participant_bundle') ?? 'teilnehmer',
+        'workshop_bundle' => $cfg->get('workshop_bundle') ?? 'workshop',
+        'assignment_mode' => $cfg->get('assignment_mode') ?? 'auto',
+        'slot_fields_prefix' => $cfg->get('slot_fields_prefix') ?? 'field_slot_',
+        'num_slots' => (int) ($cfg->get('num_slots') ?? 3),
+        'assigned_field' => $cfg->get('assigned_field') ?? 'field_zugewiesen',
+      ];
+
+      // 3) Batch setzen & starten
+      $batch = ApplyAssignmentsBatch::build($config, $byParticipant);
+      batch_set($batch);
+
+      $this->messenger()->addStatus($this->t(
+        'Matching OK: @p TN, @a Zuteilungen. Wende Zuweisungen in Drupal an …',
+        ['@p' => $sum['participants_total'] ?? 0, '@a' => $sum['assignments_total'] ?? 0]
+      ));
+
+      return batch_process(Url::fromRoute('jfcamp_matching.admin_form'));
     }
     catch (\Throwable $e) {
       $this->messenger()->addError('Matching fehlgeschlagen: ' . $e->getMessage());
+      $url = Url::fromRoute('jfcamp_matching.admin_form')->toString();
+      return new RedirectResponse($url);
     }
-
-    $url = Url::fromRoute('jfcamp_matching.admin_form')->toString();
-    return new RedirectResponse($url);
   }
 
 }

@@ -1,13 +1,13 @@
-jfcamp_matching.admin_menu:
-  title: 'Matching'
-  description: 'Matching ausführen und Endpoint konfigurieren'
-  route_name: jfcamp_matching.admin_form
-  parent: system.admin_config_services
+jfcamp_matching.dashboard_menu:
+  title: 'Matching Dashboard'
+  description: 'Dry-Run, Festschreiben & Exporte'
+  route_name: jfcamp_matching.dashboard
+  parent: system.admin_reports
   weight: 50
 
-jfcamp_matching.report_menu:
-  title: 'Matching Report'
-  description: 'Übersicht & Exporte'
-  route_name: jfcamp_matching.report
-  parent: system.admin_reports
-  weight: 52
+jfcamp_matching.settings_menu:
+  title: 'Matching Einstellungen'
+  description: 'Endpoint & Feld-Mapping konfigurieren'
+  route_name: jfcamp_matching.admin_form
+  parent: system.admin_config_services
+  weight: 51

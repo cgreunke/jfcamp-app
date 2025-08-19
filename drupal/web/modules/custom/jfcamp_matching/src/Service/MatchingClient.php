@@ -8,6 +8,10 @@ use Psr\Log\LoggerInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 
+/**
+ * Client für den externen Matching-Service (Flask).
+ * Der Service hat KEIN /matching/run → wir verwenden für "Run" den Dry-Run.
+ */
 final class MatchingClient {
 
   public function __construct(
@@ -23,35 +27,52 @@ final class MatchingClient {
     return rtrim($cfg->get('endpoint') ?: $default, '/');
   }
 
-  public function run(): array {
-    return $this->post('/matching/run');
+  /** GET /matching/stats */
+  public function stats(): array {
+    $url = $this->baseUrl() . '/matching/stats';
+    try {
+      $res = $this->http->request('GET', $url, ['timeout' => 60, 'headers' => ['Accept' => 'application/json']]);
+      $data = json_decode((string) $res->getBody(), true);
+      if (!is_array($data)) {
+        throw new \RuntimeException('Ungültige JSON-Antwort von /matching/stats.');
+      }
+      return $data;
+    } catch (GuzzleException $e) {
+      $this->logger->error('HTTP Fehler /matching/stats: @msg', ['@msg' => $e->getMessage()]);
+      throw new \RuntimeException('Matching-Service nicht erreichbar: ' . $e->getMessage(), 0, $e);
+    }
   }
 
+  /** POST /matching/dry-run */
   public function dryRun(): array {
     return $this->post('/matching/dry-run');
   }
 
-  public function exportUrl(string $path): string {
-    return $this->baseUrl() . $path;
+  /**
+   * "Run" = Dry-Run (Service hat keinen echten /matching/run).
+   * Wir behalten die Methode bei, damit Form/Drush weiter funktionieren.
+   */
+  public function run(): array {
+    $this->logger->notice('MatchingClient::run nutzt /matching/dry-run (kein /matching/run im Service vorhanden).');
+    return $this->post('/matching/dry-run');
   }
 
   private function post(string $path): array {
     $url = $this->baseUrl() . $path;
     try {
       $res = $this->http->request('POST', $url, [
-        'timeout' => 45,
+        'timeout' => 60,
         'headers' => ['Accept' => 'application/json'],
+        'json' => new \stdClass(),
       ]);
       $data = json_decode((string) $res->getBody(), true);
       if (!is_array($data)) {
         throw new \RuntimeException('Ungültige JSON-Antwort vom Matching-Service.');
       }
       return $data;
-    }
-    catch (GuzzleException $e) {
-      $this->logger->error('HTTP Fehler beim Matching-Service: @msg', ['@msg' => $e->getMessage()]);
+    } catch (GuzzleException $e) {
+      $this->logger->error('HTTP Fehler @path: @msg', ['@path' => $path, '@msg' => $e->getMessage()]);
       throw new \RuntimeException('Matching-Service nicht erreichbar: ' . $e->getMessage(), 0, $e);
     }
   }
-
 }

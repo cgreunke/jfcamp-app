@@ -71,7 +71,7 @@ if [ ! -f "$SETTINGS_FILE" ]; then
   chmod 644 "$SETTINGS_FILE"
 fi
 
-# Trusted Hosts
+# Trusted Hosts via ENV in settings.php schreiben (nur falls nicht bereits vorhanden)
 if ! grep -q "trusted_host_patterns" "$SETTINGS_FILE"; then
   {
     echo ""
@@ -80,22 +80,6 @@ if ! grep -q "trusted_host_patterns" "$SETTINGS_FILE"; then
     for h in "${HOSTS[@]}"; do echo "  '$h',"; done
     echo "];"
   } >> "$SETTINGS_FILE"
-fi
-
-# DB-Config
-if ! grep -q "\$databases\['default']\['default']" "$SETTINGS_FILE"; then
-  cat <<PHP >> "$SETTINGS_FILE"
-
-\$databases['default']['default'] = [
-  'database' => '$DB_NAME',
-  'username' => '$DB_USER',
-  'password' => '$DB_PASS',
-  'host' => '$DB_HOST',
-  'port' => '5432',
-  'driver' => 'pgsql',
-  'prefix' => '',
-];
-PHP
 fi
 
 # Files & private Pfad
@@ -110,13 +94,33 @@ if ! grep -q "file_private_path" "$SETTINGS_FILE"; then
   } >> "$SETTINGS_FILE"
 fi
 
+# settings.env.php & settings.local.php ggf. aus /opt/drupal/ befüllen (falls im Image hinterlegt)
+if [ -f "/opt/drupal/settings.env.php" ] && [ ! -f "${SETTINGS_DIR}/settings.env.php" ]; then
+  cp "/opt/drupal/settings.env.php" "${SETTINGS_DIR}/settings.env.php"
+fi
+if [ -f "/opt/drupal/settings.local.php" ] && [ ! -f "${SETTINGS_DIR}/settings.local.php" ]; then
+  cp "/opt/drupal/settings.local.php" "${SETTINGS_DIR}/settings.local.php"
+fi
+
+# ensure includes in settings.php (idempotent)
+if ! grep -q "settings.env.php" "${SETTINGS_FILE}"; then
+  cat >> "${SETTINGS_FILE}" <<'PHP'
+if (file_exists(__DIR__ . '/settings.env.php')) {
+  include __DIR__ . '/settings.env.php';
+}
+if (file_exists(__DIR__ . '/settings.local.php')) {
+  include __DIR__ . '/settings.local.php';
+}
+PHP
+fi
+
 # ------------------------ 3) Installation (DE) --------------------------------------
 if [ "$INSTALL_MODE" != "skip" ]; then
   if ! vendor/bin/drush status --fields=bootstrap --format=list 2>/dev/null | grep -q "Successful"; then
     echo "[start] Drupal nicht installiert – führe Installation (deutsch) aus…"
     for attempt in 1 2 3; do
       if vendor/bin/drush site:install standard -y \
-        --db-url="pgsql://${DB_USER}:${DB_PASS}@${DB_HOST}:5432/${DB_NAME}" \
+        --db-url="pgsql://${DRUPAL_DB_USER}:${DRUPAL_DB_PASS}@${DRUPAL_DB_HOST}:5432/${DRUPAL_DB_NAME}" \
         --site-name="${SITE_NAME}" \
         --account-name="${ADMIN_USER}" \
         --account-pass="${ADMIN_PASS}" \
@@ -140,7 +144,7 @@ else
   echo "[start] INSTALL_MODE=skip – Installation wird übersprungen."
 fi
 
-# Sprache fix auf DE & Übersetzungen
+# Sprache & Übersetzungen
 vendor/bin/drush en language locale -y || true
 vendor/bin/drush language:add de || true
 vendor/bin/drush language:default de -y || true
@@ -174,7 +178,6 @@ if [ -d "${WEB_ROOT}/modules/custom/jfcamp_matching" ]; then
   echo "[start] Aktiviere Modul jfcamp_matching…"
   vendor/bin/drush en jfcamp_matching -y || true
 fi
-# (falls du ein separates Import-Modul hast)
 if [ -d "${WEB_ROOT}/modules/custom/jfcamp_import" ]; then
   echo "[start] Aktiviere Modul jfcamp_import…"
   vendor/bin/drush en jfcamp_import -y || true
@@ -272,7 +275,7 @@ ensure_field("node","matching_config","field_num_zuteilung","Anzahl Zuteilungen 
 ensure_field_storage("node","field_seed","string",["max_length"=>32],1,false);
 ensure_field("node","matching_config","field_seed","Seed (optional, leer = Zufall)");
 
-/* Slicing-Mode: korrektes Key=>Label Array + Auto-Fix falls falsch vorhanden */
+/* Slicing-Mode */
 $allowed = [
   "off" => "Off (kein Slicing)",
   "relative" => "Relative (z.B. 50% pro Slot)",
@@ -284,7 +287,6 @@ if (!$fs) {
   ensure_field_storage("node","field_slicing_mode","list_string",["allowed_values"=>$allowed],1,false);
 } else {
   $current = $fs->getSetting("allowed_values");
-  // Falls alte (falsche) Struktur entdeckt wird (numerische Keys oder Arrays), reparieren.
   $numericKeys = array_keys($current ?? []);
   if (!$current || (count($numericKeys) && is_int($numericKeys[0]))) {
     $fs->setSetting("allowed_values", $allowed);
@@ -337,9 +339,7 @@ if (empty($ids)) {
 }
 '
 
-
 # ------------------------ 8) Displays (Form & View) ---------------------------------
-# Direkt im Startscript: Form- & View-Displays setzen/reparieren (idempotent)
 vendor/bin/drush ev '
 use Drupal\field\Entity\FieldConfig;
 
@@ -347,18 +347,11 @@ function field_exists_for_bundle(string $bundle, string $field): bool {
   return FieldConfig::loadByName("node", $bundle, $field) !== NULL;
 }
 
-/**
- * WICHTIG: Diese Liste spiegelt 1:1 die in Abschnitt 7 angelegten Felder wider.
- * Wenn du dort Felder änderst/hinzufügst, passe hier die entsprechenden Zeilen an.
- *
- * Syntax: [field_name, widget_type, formatter_type]
- */
 $bundles = [
   "workshop" => [
     ["field_maximale_plaetze", "number",            "number_integer"],
     ["field_ext_id",           "string_textfield",  "string"],
   ],
-
   "teilnehmer" => [
     ["field_code",             "string_textfield",  "string"],
     ["field_vorname",          "string_textfield",  "string"],
@@ -366,12 +359,10 @@ $bundles = [
     ["field_regionalverband",  "string_textfield",  "string"],
     ["field_zugewiesen",       "entity_reference_autocomplete_tags", "entity_reference_label"],
   ],
-
   "wunsch" => [
     ["field_teilnehmer",       "entity_reference_autocomplete",      "entity_reference_label"],
     ["field_wuensche",         "entity_reference_autocomplete_tags", "entity_reference_label"],
   ],
-
   "matching_config" => [
     ["field_num_wuensche",       "number",            "number_integer"],
     ["field_num_zuteilung",      "number",            "number_integer"],
@@ -390,7 +381,6 @@ $bundles = [
 $repo = \Drupal::service("entity_display.repository");
 
 foreach ($bundles as $bundle => $components) {
-  // ----- Form display -----
   $form = $repo->getFormDisplay("node", $bundle, "default");
   $w = 0;
   foreach ($components as [$field, $widget, $formatter]) {
@@ -400,7 +390,6 @@ foreach ($bundles as $bundle => $components) {
   }
   $form->save();
 
-  // ----- View display -----
   $view = $repo->getViewDisplay("node", $bundle, "default");
   $w = 0;
   foreach ($components as [$field, $widget, $formatter]) {
@@ -418,19 +407,15 @@ foreach ($bundles as $bundle => $components) {
 print "Displays repariert (konsistent zu Schritt 7)\n";
 ' || true
 
-
 # ------------------------ 9) Rollen, Rechte, API-User -------------------------------
-# Rollen
 vendor/bin/drush role:create team "Team" || true
 vendor/bin/drush role:create "$API_ROLE" "API Writer" || true
 
-# Team-Basisrechte
 vendor/bin/drush role:perm:add team "access administration pages" || true
 vendor/bin/drush role:perm:add team "access toolbar" || true
 vendor/bin/drush role:perm:add team "access content overview" || true
 vendor/bin/drush role:perm:add team "view published content" || true
 
-# CRUD pro Bundle
 for B in workshop teilnehmer wunsch; do
   vendor/bin/drush role:perm:add team "create ${B} content" || true
   vendor/bin/drush role:perm:add team "edit own ${B} content" || true
@@ -440,18 +425,15 @@ for B in workshop teilnehmer wunsch; do
   vendor/bin/drush role:perm:add team "view ${B} revisions" || true
 done
 
-# Custom-Permissions für deine Module
 vendor/bin/drush role:perm:add team "import jfcamp csv" || true
 vendor/bin/drush role:perm:add team "run jfcamp matching" || true
 vendor/bin/drush role:perm:add administrator "import jfcamp csv" || true
 vendor/bin/drush role:perm:add administrator "run jfcamp matching" || true
 
-# API-Rolle – Rechte für Matching
 vendor/bin/drush role:perm:add "$API_ROLE" "access content" || true
 vendor/bin/drush role:perm:add "$API_ROLE" "access user profiles" || true
 vendor/bin/drush role:perm:add "$API_ROLE" "edit any teilnehmer content" || true
 
-# API-User anlegen/aktualisieren & Rolle zuweisen
 if ! vendor/bin/drush user:information "$API_USER" >/dev/null 2>&1; then
   vendor/bin/drush user:create "$API_USER" --mail="$API_MAIL" --password="$API_PASS"
 fi

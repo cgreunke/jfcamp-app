@@ -1,4 +1,6 @@
+# --------------------------
 # Node / Vue
+# --------------------------
 node_modules/
 **/node_modules/
 dist/
@@ -10,40 +12,69 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# --------------------------
 # Drupal (Composer + Webroot)
+# --------------------------
 drupal/vendor/
 drupal/web/core/
 drupal/web/modules/contrib/
 drupal/web/themes/contrib/
 drupal/web/profiles/
+
+# Public & Private Files (Webroot & Projektwurzel)
 drupal/web/sites/default/files/
 drupal/web/sites/default/private/
+drupal/private/
+
+# Lokale Settings (DEV-only)
 drupal/web/sites/default/settings.local.php
 
+# Wenn ihr Config-Management NICHT versioniert:
+# (Empfehlung ist: DOCH versionieren → dann diese 2 Zeilen AUSKOMMENTIEREN!)
+# drupal/config/sync/*
+# !drupal/config/sync/.keep
+
+# --------------------------
 # Composer / Drush
+# --------------------------
 composer.phar
 drush/
 .drush/
 .drushrc.php
 
+# --------------------------
 # Python (Matching)
+# --------------------------
 matching/__pycache__/
 matching/*.pyc
 venv/
 .pytest_cache/
 
+# --------------------------
 # Docker / Volumes
+# --------------------------
 db_data/
 
+# --------------------------
 # IDE / OS
+# --------------------------
 .DS_Store
 .vscode/
 .idea/
+
+# --------------------------
+# Environment Files
+# --------------------------
+# globale .env-Dateien ignorieren
 .env
 .env.local
 
-# Env-Dateien überall ignorieren
+# env-Dateien überall ignorieren (Dev/Prod), außer Beispielen
 **/.env
 **/.env.*
 !**/.env.example
 
+# Optionale Beispiele explizit erlauben:
+# (Lege bei Bedarf .env.development.example & .env.production.example ins Repo)
+!.env.development.example
+!.env.production.example

@@ -1,3 +1,4 @@
+
 # JF Camp App
 
 Die **JF Camp App** ist eine containerisierte Webanwendung für die Organisation des **JugendFEIER-Camps**.  
@@ -24,8 +25,8 @@ Die App besteht aus mehreren Modulen:
    - Bereitstellung von Inhalten (Workshops, Teilnehmer, Wünsche).
    - JSON:API für den Datenaustausch.
    - Custom-Module:
-     - CSV-Import (Teilnehmer, Workshops, Wünsche).
-     - Verwaltung von Matching-Ergebnissen.
+     - **jfcamp_api** → CSV-Import (Teilnehmer, Workshops, Wünsche).
+     - **jfcamp_matching** → Dashboard für Matching, Statistiken und Exporte.
    - Container im Ordner `/drupal`.
 
 2. **Vue Frontend**
@@ -43,6 +44,7 @@ Die App besteht aus mehreren Modulen:
    - REST-API mit Endpunkten:
      - `/matching/dry-run` → Testlauf ohne Speicherung.
      - `/matching/run` → echte Zuweisung und Rückspeicherung nach Drupal.
+     - `/matching/stats` → Statistiken & Happy Index.
    - Container im Ordner `/matching`.
 
 4. **Nginx**
@@ -71,11 +73,37 @@ Die App besteht aus mehreren Modulen:
 3. **Matching**
    - Matching-Service ruft Teilnehmer, Wünsche und Kapazitäten aus Drupal ab.
    - Führt einen **fairen Verteilungsalgorithmus** aus.
-   - Ergebnisse werden zurück in Drupal gespeichert.
+   - Ergebnisse können als **Dry-Run** simuliert oder im **Echtlauf** in Drupal gespeichert werden.
 
-4. **Verwaltung**
+4. **Dashboard & Verwaltung**
    - Admins sehen Ergebnisse und Reports in Drupal.
-   - Exportfunktionen verfügbar.
+   - Exporte für Auswertung und Druck sind verfügbar.
+   - Anpassbare Matching-Configs (Parameter, Seeds, Gewichtungen).
+
+---
+
+## 📊 Matching-Dashboard (Drupal Modul jfcamp_matching)
+
+Das Matching-Dashboard ist der zentrale Punkt für die Admins:
+
+- **Pfad:** `/admin/config/jfcamp/matching`
+- **Funktionen:**
+  - **Endpoint konfigurieren** (Adresse des Matching-Service).
+  - **Dry-Run starten** → zeigt Simulation, ohne Änderungen in Drupal.
+  - **Echtlauf starten** → schreibt Zuteilungen in Drupal.
+  - **Happy Index** und Statistiken einsehen.
+  - **Exporte herunterladen:**
+    - Alle Slots (CSV)
+    - Slot 1/2/3 (CSV)
+    - Teilnehmer je Regionalverband (CSV)
+    - Übersicht Workshops & Restplätze (CSV)
+    - Teilnehmer ohne Wünsche (CSV)
+  - **Matching rückgängig machen** → löscht Zuweisungen in Drupal.
+
+- **Technik:**
+  - Implementiert als Drupal-Custom-Modul `jfcamp_matching`.
+  - Nutzt GuzzleHttp für die Kommunikation mit dem Python-Service.
+  - Reports im Menü: **Berichte → Matching Report**.
 
 ---
 
@@ -98,9 +126,10 @@ Die App besteht aus mehreren Modulen:
 - REST-Endpunkte für Matching-Läufe.
 - Konfigurierbar per `.env` (z. B. Sprache, Timeout, Seed).
 - Abbildung der Matching-Logik:
-  - Berücksichtigung von **Prio 1–3 Wünschen**.
+  - Berücksichtigung von **Prio-Wünschen**.
   - **Kapazitätsgrenzen** der Workshops.
   - Gleichverteilung & Fairness.
+  - Berechnung des **Happy Index**.
 
 ### Nginx
 - Konfiguriert als Reverse Proxy.
@@ -159,7 +188,5 @@ jfcamp-app/
 
 - Matching-Algorithmus weiter verfeinern (Fairness, Zufallsfaktoren, Prioritäten).
 - Frontend-UI für Eltern und Teilnehmende verbessern.
-- Admin-Dashboard in Drupal erweitern.
+- Admin-Dashboard in Drupal erweitern (mehr Filter & Analysen).
 - CI/CD-Pipeline für automatisiertes Deployment einrichten.
-
----

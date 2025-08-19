@@ -132,6 +132,21 @@ Für Wünsche gibt es entweder:
 
 ---
 
+## Config Management
+
+- Alle aktiven Drupal-Konfigurationen werden im Repo gespeichert: `drupal/config/sync/`
+- Export:  
+  ```bash
+  docker exec -it drupal vendor/bin/drush cex -y
+  ```
+- Import (z. B. auf Prod):  
+  ```bash
+  docker exec -it drupal vendor/bin/drush cim -y
+  docker exec -it drupal vendor/bin/drush cr
+  ```
+
+---
+
 ## ToDos / Next Steps
 
 - Auswertung im Backend:
@@ -141,5 +156,3 @@ Für Wünsche gibt es entweder:
 - Matching-Algorithmus weiter optimieren:
   - faire Verteilung bei knappen Kapazitäten
   - Reporting, welche Wünsche wie oft erfüllt wurden
-
----

@@ -1,168 +1,165 @@
-# JFCamp App
+# JF Camp App
 
-Containerisierte Anwendung für das JugendFEIER-Camp mit **Drupal (Headless)**, **Vue 3 + Vite** und einem optionalen **Matching-Service (Python)**.  
-Teilnehmer geben im Frontend ihre Workshop-Wünsche ab; Drupal speichert Inhalte und stellt JSON:API + eine kleine **Custom-API** bereit.  
-Das Matching-Script verteilt Teilnehmer fair auf Workshop-Slots.
+Die **JF Camp App** ist eine containerisierte Webanwendung für die Organisation des **JugendFEIER-Camps**.  
+Sie kombiniert **Drupal (Headless CMS)**, ein **Vue 3 Frontend** und einen optionalen **Python-Matching-Service**.  
+Alle Komponenten laufen in **Docker-Containern** und werden über `docker-compose` gesteuert.  
+
+Ziel ist es, die **Anmeldung und Zuweisung von Teilnehmenden zu Workshops** möglichst effizient, fair und transparent zu gestalten.
 
 ---
 
-## Architektur
+## 🚀 Architekturüberblick
 
 ```
-[ Vue Frontend ]  <->  [ Drupal JSON:API + Custom-API ]  <->  [ Matching-Service (Python) ]
-          |                        |
-          |                        +-- [ Postgres + Adminer ]
-          |
-       (Nginx Proxy)
+[ Vue Frontend ]  <--->  [ Drupal JSON:API ]  <--->  [ Matching-Service (Python) ]
+       |                          |                            |
+       v                          v                            v
+     Browser   <-------------->  Nginx Proxy  <-------------> Datenbank
 ```
 
-**Dienste:**
-- **Drupal**: Headless CMS, Content-Typen für Teilnehmer, Workshops, Wünsche, Matching Config.  
-- **Matching**: Python/Flask-Service, führt das Matching durch (nach Prioritäten und Kapazitäten).  
-- **Vue**: Frontend (Vue 3 + Vite), konsumiert JSON:API und Matching-Endpunkte.  
-- **Postgres**: Datenbank für Drupal.  
-- **Adminer**: GUI zum DB-Management.  
+Die App besteht aus mehreren Modulen:
+
+1. **Drupal (Backend & API)**
+   - Headless CMS, das als zentrale Datenquelle dient.
+   - Bereitstellung von Inhalten (Workshops, Teilnehmer, Wünsche).
+   - JSON:API für den Datenaustausch.
+   - Custom-Module:
+     - CSV-Import (Teilnehmer, Workshops, Wünsche).
+     - Verwaltung von Matching-Ergebnissen.
+   - Container im Ordner `/drupal`.
+
+2. **Vue Frontend**
+   - Single Page Application mit **Vue 3 + Vite**.
+   - Ermöglicht den Teilnehmenden die Eingabe und Verwaltung ihrer **Workshop-Wünsche**.
+   - Kommuniziert ausschließlich über die JSON:API von Drupal.
+   - Container im Ordner `/vue-frontend`.
+
+3. **Matching-Service (Python + Flask)**
+   - Implementiert in `/matching/matching_server.py`.
+   - Aufgabe: Zuweisung der Teilnehmer zu Workshops anhand von:
+     - **Wünschen & Prioritäten** der Teilnehmer.
+     - **Kapazitäten** der Workshops.
+     - Ziel: möglichst viele Wünsche erfüllen, faire Verteilung.
+   - REST-API mit Endpunkten:
+     - `/matching/dry-run` → Testlauf ohne Speicherung.
+     - `/matching/run` → echte Zuweisung und Rückspeicherung nach Drupal.
+   - Container im Ordner `/matching`.
+
+4. **Nginx**
+   - Reverse Proxy.
+   - Stellt das Vue-Frontend bereit.
+   - Leitet Anfragen korrekt an Drupal oder den Matching-Service weiter.
+   - Konfiguration unter `/nginx/vue-site.conf`.
+
+5. **Docker Compose**
+   - Steuerung der gesamten Infrastruktur.
+   - Services: `drupal`, `vue-frontend`, `matching`, `nginx`, `postgres` (DB).
+   - Konfigurationsdateien: `docker-compose.yml`, `docker-compose.override.yml`.
 
 ---
 
-## Inhaltstypen in Drupal
+## 📊 Datenfluss
 
-- **Workshop**
-  - `title` (Name des Workshops)
-  - `field_maximale_plaetze` (Kapazität pro Slot)
-  - optional: `field_ext_id`
+1. **CSV-Import**
+   - Admins importieren Teilnehmer- und Workshopdaten nach Drupal.
+   - Beispiele für CSV-Dateien: `/csv-examples`.
 
-- **Teilnehmer**
-  - `field_code` (eindeutiger Teilnehmer-Code)
-  - `field_vorname`, `field_name`
-  - `field_regionalverband`
-  - `field_zugewiesen` (Referenzen zu Workshops nach Matching)
+2. **Anmeldung & Wünsche**
+   - Teilnehmende melden sich über das **Vue-Frontend** an.
+   - Workshop-Wünsche werden über die **JSON:API** in Drupal gespeichert.
 
-- **Wunsch**
-  - `field_teilnehmer` (Referenz auf Teilnehmer)
-  - `field_wuensche` (geordnete Liste gewünschter Workshops, Priorität 1–N)
+3. **Matching**
+   - Matching-Service ruft Teilnehmer, Wünsche und Kapazitäten aus Drupal ab.
+   - Führt einen **fairen Verteilungsalgorithmus** aus.
+   - Ergebnisse werden zurück in Drupal gespeichert.
 
-- **Matching Config**
-  - `field_num_wuensche` (maximale Wünsche pro TN, z. B. 5)
-  - `field_num_zuteilung` (Anzahl Slots, z. B. 3)
+4. **Verwaltung**
+   - Admins sehen Ergebnisse und Reports in Drupal.
+   - Exportfunktionen verfügbar.
 
 ---
 
-## CSV-Import (im Backend)
+## ⚙️ Technische Details
 
-Unter **/admin/config/jfcamp/csvimport** gibt es ein UI zum Hochladen.  
-Unterstützte Formate (UTF-8, Komma oder Semikolon):
+### Drupal
+- Composer-basiertes Setup (`composer.json`).
+- Konfigurationsskripte für Bundles & Felder (`/drupal/scripts`).
+- Startskript `start-drupal.sh` automatisiert Installation und Basiskonfiguration.
+- Rollen & Berechtigungen für CSV-Import und Matching.
 
-- Workshops:  
-  ```
-  title,max
-  HipHop Tanzworkshop,40
-  Graffiti,10
-  ...
-  ```
+### Vue Frontend
+- Moderne SPA mit Vue 3.
+- Build- und Dev-Setup über Vite (`vite.config.js`).
+- `.env.example` für lokale Konfiguration.
+- API-Kommunikation mit Axios/Fetch.
 
-- Teilnehmer:  
-  ```
-  code,vorname,nachname,regionalverband
-  T001,Max,Muster,Barnim
-  T002,Lisa,Lustig,Oberhavel
-  ...
-  ```
+### Matching-Service
+- Flask-Anwendung (`matching_server.py`).
+- REST-Endpunkte für Matching-Läufe.
+- Konfigurierbar per `.env` (z. B. Sprache, Timeout, Seed).
+- Abbildung der Matching-Logik:
+  - Berücksichtigung von **Prio 1–3 Wünschen**.
+  - **Kapazitätsgrenzen** der Workshops.
+  - Gleichverteilung & Fairness.
 
-- Wünsche:  
-  ```
-  code,w1,w2,w3,w4,w5
-  T001,HipHop Tanzworkshop,Graffiti,Spoken Word,Batiken,Schauspiel
-  T002,Graffiti,Social Media,Mini Quiz-Show,HipHop Tanzworkshop,Ultimate Frisbee
-  ...
-  ```
+### Nginx
+- Konfiguriert als Reverse Proxy.
+- Verteilt Anfragen an das Frontend, Drupal oder den Matching-Service.
+- SSL/HTTPS kann eingebunden werden.
 
-Hinweise:
-- Wünsche können per **Workshop-UUID** oder **exaktem Titel** eingetragen werden.  
-- Pro Teilnehmer existiert genau **ein Wunsch-Node**.  
-- Wünsche werden auf die in `matching_config` hinterlegte Anzahl gekürzt.
+### Docker Compose
+- Einheitliches Setup für Entwicklung & Produktion.
+- Nutzung von Volumes für Persistenz (z. B. Datenbank, Drupal-Dateien).
+- Einfache Befehle:
+  - `docker-compose up -d` → Start
+  - `docker-compose down` → Stoppen
+  - `docker-compose build` → Neu bauen
 
 ---
 
-## Matching-Service
+## 📂 Projektstruktur
 
-**Endpoints:**
-- `POST /matching/dry-run` → Simulation, Rückgabe einer **Summary** mit Statistik
-- `POST /matching/run` → Führt Matching aus, speichert Zuweisungen in Drupal
-
-**Beispiel Dry-Run (macOS / zsh):**
-```bash
-curl -X POST http://localhost:5001/matching/dry-run | jq .
 ```
-
-Ergebnisse:
-- `all_filled_to_slots` → alle TN haben alle Slots gefüllt
-- `participants_no_wishes` → wie viele TN keine Wünsche abgegeben haben
-- `per_priority_fulfilled` → wie viele Zuteilungen je Priorität erfüllt wurden
-- `filler_assignments` → automatisch verteilte Plätze, wenn keine Wünsche vorhanden
-- `capacity_total` → Summe der Kapazitäten × Slots
-- `capacity_remaining_total` → Restkapazität nach Matching
-
----
-
-## Nützliche Drush-Befehle (im Drupal-Container)
-
-```bash
-# Cache leeren
-docker exec -it drupal bash -lc '/opt/drupal/vendor/bin/drush cr'
-
-# Alle Workshops löschen
-docker exec -it drupal bash -lc '/opt/drupal/vendor/bin/drush entity:delete node --bundle=workshop -y'
-
-# Alle Teilnehmer löschen
-docker exec -it drupal bash -lc '/opt/drupal/vendor/bin/drush entity:delete node --bundle=teilnehmer -y'
-
-# Alle Wünsche löschen
-docker exec -it drupal bash -lc '/opt/drupal/vendor/bin/drush entity:delete node --bundle=wunsch -y'
-```
-
----
-
-## Testdaten
-
-Zum Testen können über CSV ca. **250 Teilnehmer** und alle **Workshops (mit Kapazitäten)** importiert werden.  
-Für Wünsche gibt es entweder:
-- Zufalls-CSV (`wuensche.csv`), die allen Teilnehmern automatisch 5 Workshops zuordnet.  
-- oder automatischen Insert per Script (erstellt Wunsch-Nodes für alle ohne Wünsche).
-
----
-
-## Config Management
-
-- Alle aktiven Drupal-Konfigurationen werden im Repo gespeichert: `drupal/config/sync/`
-- Export:  
-  ```bash
-  docker exec -it drupal vendor/bin/drush cex -y
-  ```
-- Import (z. B. auf Prod):  
-  ```bash
-  docker exec -it drupal vendor/bin/drush cim -y
-  docker exec -it drupal vendor/bin/drush cr
-  ```
-
----
-
-## Container starten / neu aufbauen (macOS)
-
-```bash
-# Alles neu starten
-docker compose down -v
-docker compose up -d --build
+jfcamp-app/
+├── csv-examples/           # Beispiel-CSV-Dateien für Import
+├── drupal/                 # Drupal Headless CMS
+│   ├── config/             # Drupal-Konfiguration
+│   ├── scripts/            # Setup- und Utility-Skripte
+│   ├── web/                # Webroot (Drupal Core)
+│   └── start-drupal.sh     # Startskript
+├── matching/               # Python Matching-Service
+│   ├── matching_server.py  # Hauptservice (Flask)
+│   ├── requirements.txt    # Python-Abhängigkeiten
+│   └── Dockerfile
+├── nginx/                  # Proxy-Konfiguration
+│   └── vue-site.conf
+├── vue-frontend/           # Vue 3 Frontend
+│   ├── src/                # Quellcode
+│   ├── vite.config.js      # Build-Setup
+│   └── Dockerfile
+├── docker-compose.yml      # Haupt-Compose-Setup
+├── docker-compose.override.yml
+├── .gitignore
+└── README.md
 ```
 
 ---
 
-## ToDos / Next Steps
+## ✅ Vorteile für die Teamarbeit
 
-- Auswertung im Backend:
-  - Liste „Teilnehmer ohne Wünsche“
-  - Export: Workshops je Slot mit zugeteilten TN
-  - Export: Übersicht je Regionalverband mit allen zugewiesenen Workshops
-- Matching-Algorithmus weiter optimieren:
-  - faire Verteilung bei knappen Kapazitäten
-  - Reporting, welche Wünsche wie oft erfüllt wurden
+- **Klare Modularisierung**: Frontend, Backend und Matching-Service getrennt.
+- **Docker-basiert**: Einheitliche Umgebung für alle Entwickler.
+- **Datenimport flexibel**: CSV-Dateien für schnellen Start.
+- **Erweiterbar**: Matching-Logik unabhängig optimierbar.
+- **Transparenz**: Alle Schritte (Import → Wünsche → Matching → Ergebnisse) nachvollziehbar.
+
+---
+
+## 🔜 Nächste Schritte für das Team
+
+- Matching-Algorithmus weiter verfeinern (Fairness, Zufallsfaktoren, Prioritäten).
+- Frontend-UI für Eltern und Teilnehmende verbessern.
+- Admin-Dashboard in Drupal erweitern.
+- CI/CD-Pipeline für automatisiertes Deployment einrichten.
+
+---

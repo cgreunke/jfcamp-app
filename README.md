@@ -90,9 +90,9 @@ Hinweise:
 - `POST /matching/dry-run` → Simulation, Rückgabe einer **Summary** mit Statistik
 - `POST /matching/run` → Führt Matching aus, speichert Zuweisungen in Drupal
 
-**Beispiel Dry-Run:**
-```powershell
-Invoke-RestMethod -Method Post -Uri http://localhost:5001/matching/dry-run | Select-Object -ExpandProperty summary
+**Beispiel Dry-Run (macOS / zsh):**
+```bash
+curl -X POST http://localhost:5001/matching/dry-run | jq .
 ```
 
 Ergebnisse:
@@ -144,6 +144,16 @@ Für Wünsche gibt es entweder:
   docker exec -it drupal vendor/bin/drush cim -y
   docker exec -it drupal vendor/bin/drush cr
   ```
+
+---
+
+## Container starten / neu aufbauen (macOS)
+
+```bash
+# Alles neu starten
+docker compose down -v
+docker compose up -d --build
+```
 
 ---
 

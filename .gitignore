@@ -1,10 +1,10 @@
 # --------------------------
 # Node / Vue
 # --------------------------
-node_modules/
+# root-weit & rekursiv ignorieren
 **/node_modules/
-dist/
-dist-ssr/
+**/dist/
+**/dist-ssr/
 .vitepress/
 *.log
 logs/
@@ -21,18 +21,22 @@ drupal/web/modules/contrib/
 drupal/web/themes/contrib/
 drupal/web/profiles/
 
-# Public & Private Files (Webroot & Projektwurzel)
+# Public & Private Files (Webroot)
 drupal/web/sites/default/files/
 drupal/web/sites/default/private/
-drupal/private/
+
+# Optionaler Projekt-"private"-Ordner (außer Platzhalter)
+private/
+!private/.gitkeep
 
 # Lokale Settings (DEV-only)
 drupal/web/sites/default/settings.local.php
 
-# Wenn ihr Config-Management NICHT versioniert:
-# (Empfehlung ist: DOCH versionieren → dann diese 2 Zeilen AUSKOMMENTIEREN!)
-# drupal/config/sync/*
-# !drupal/config/sync/.keep
+# Core-Installer legt manchmal zufällige Config-Exportverzeichnisse an → niemals committen
+drupal/web/sites/default/files/config_*/sync/
+
+# Config-Management: wird versioniert! (NICHT ignorieren)
+# drupal/config/sync/ bleibt erlaubt
 
 # --------------------------
 # Composer / Drush
@@ -45,10 +49,11 @@ drush/
 # --------------------------
 # Python (Matching)
 # --------------------------
-matching/__pycache__/
-matching/*.pyc
-venv/
+**/__pycache__/
+*.pyc
 .pytest_cache/
+matching/venv/
+venv/
 
 # --------------------------
 # Docker / Volumes
@@ -58,7 +63,8 @@ db_data/
 # --------------------------
 # IDE / OS
 # --------------------------
-.DS_Store
+# global & verschachtelt
+**/.DS_Store
 .vscode/
 .idea/
 
@@ -74,7 +80,12 @@ db_data/
 **/.env.*
 !**/.env.example
 
-# Optionale Beispiele explizit erlauben:
-# (Lege bei Bedarf .env.development.example & .env.production.example ins Repo)
+# explizite Beispiel-Dateien erlauben (falls vorhanden)
 !.env.development.example
 !.env.production.example
+
+# --------------------------
+# Optionale Testdaten
+# --------------------------
+# wenn CSVs nur Demodaten sind, auskommentiert lassen um sie zu ignorieren:
+# csv-examples/

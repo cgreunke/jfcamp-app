@@ -1,9 +1,8 @@
-
 # JF Camp App
 
 Die **JF Camp App** ist eine containerisierte Webanwendung für die Organisation des **JugendFEIER-Camps**.  
 Sie kombiniert **Drupal (Headless CMS)**, ein **Vue 3 Frontend** und einen optionalen **Python-Matching-Service**.  
-Alle Komponenten laufen in **Docker-Containern** und werden über `docker-compose` gesteuert.  
+Alle Komponenten laufen in **Docker-Containern** und werden über `docker compose` gesteuert.  
 
 Ziel ist es, die **Anmeldung und Zuweisung von Teilnehmenden zu Workshops** möglichst effizient, fair und transparent zu gestalten.
 
@@ -18,132 +17,6 @@ Ziel ist es, die **Anmeldung und Zuweisung von Teilnehmenden zu Workshops** mög
      Browser   <-------------->  Nginx Proxy  <-------------> Datenbank
 ```
 
-Die App besteht aus mehreren Modulen:
-
-1. **Drupal (Backend & API)**
-   - Headless CMS, das als zentrale Datenquelle dient.
-   - Bereitstellung von Inhalten (Workshops, Teilnehmer, Wünsche).
-   - JSON:API für den Datenaustausch.
-   - Custom-Module:
-     - **jfcamp_api** → CSV-Import (Teilnehmer, Workshops, Wünsche).
-     - **jfcamp_matching** → Dashboard für Matching, Statistiken und Exporte.
-   - Container im Ordner `/drupal`.
-
-2. **Vue Frontend**
-   - Single Page Application mit **Vue 3 + Vite**.
-   - Ermöglicht den Teilnehmenden die Eingabe und Verwaltung ihrer **Workshop-Wünsche**.
-   - Kommuniziert ausschließlich über die JSON:API von Drupal.
-   - Container im Ordner `/vue-frontend`.
-
-3. **Matching-Service (Python + Flask)**
-   - Implementiert in `/matching/matching_server.py`.
-   - Aufgabe: Zuweisung der Teilnehmer zu Workshops anhand von:
-     - **Wünschen & Prioritäten** der Teilnehmer.
-     - **Kapazitäten** der Workshops.
-     - Ziel: möglichst viele Wünsche erfüllen, faire Verteilung.
-   - REST-API mit Endpunkten:
-     - `/matching/dry-run` → Testlauf ohne Speicherung.
-     - `/matching/run` → echte Zuweisung und Rückspeicherung nach Drupal.
-     - `/matching/stats` → Statistiken & Happy Index.
-   - Container im Ordner `/matching`.
-
-4. **Nginx**
-   - Reverse Proxy.
-   - Stellt das Vue-Frontend bereit.
-   - Leitet Anfragen korrekt an Drupal oder den Matching-Service weiter.
-   - Konfiguration unter `/nginx/vue-site.conf`.
-
-5. **Docker Compose**
-   - Steuerung der gesamten Infrastruktur.
-   - Services: `drupal`, `vue-frontend`, `matching`, `nginx`, `postgres` (DB).
-   - Konfigurationsdateien: `docker-compose.yml`, `docker-compose.override.yml`.
-
----
-
-## 📊 Datenfluss
-
-1. **CSV-Import**
-   - Admins importieren Teilnehmer- und Workshopdaten nach Drupal.
-   - Beispiele für CSV-Dateien: `/csv-examples`.
-
-2. **Anmeldung & Wünsche**
-   - Teilnehmende melden sich über das **Vue-Frontend** an.
-   - Workshop-Wünsche werden über die **JSON:API** in Drupal gespeichert.
-
-3. **Matching**
-   - Matching-Service ruft Teilnehmer, Wünsche und Kapazitäten aus Drupal ab.
-   - Führt einen **fairen Verteilungsalgorithmus** aus.
-   - Ergebnisse können als **Dry-Run** simuliert oder im **Echtlauf** in Drupal gespeichert werden.
-
-4. **Dashboard & Verwaltung**
-   - Admins sehen Ergebnisse und Reports in Drupal.
-   - Exporte für Auswertung und Druck sind verfügbar.
-   - Anpassbare Matching-Configs (Parameter, Seeds, Gewichtungen).
-
----
-
-## 📊 Matching-Dashboard (Drupal Modul jfcamp_matching)
-
-Das Matching-Dashboard ist der zentrale Punkt für die Admins:
-
-- **Pfad:** `/admin/config/jfcamp/matching`
-- **Funktionen:**
-  - **Endpoint konfigurieren** (Adresse des Matching-Service).
-  - **Dry-Run starten** → zeigt Simulation, ohne Änderungen in Drupal.
-  - **Echtlauf starten** → schreibt Zuteilungen in Drupal.
-  - **Happy Index** und Statistiken einsehen.
-  - **Exporte herunterladen:**
-    - Alle Slots (CSV)
-    - Slot 1/2/3 (CSV)
-    - Teilnehmer je Regionalverband (CSV)
-    - Übersicht Workshops & Restplätze (CSV)
-    - Teilnehmer ohne Wünsche (CSV)
-  - **Matching rückgängig machen** → löscht Zuweisungen in Drupal.
-
-- **Technik:**
-  - Implementiert als Drupal-Custom-Modul `jfcamp_matching`.
-  - Nutzt GuzzleHttp für die Kommunikation mit dem Python-Service.
-  - Reports im Menü: **Berichte → Matching Report**.
-
----
-
-## ⚙️ Technische Details
-
-### Drupal
-- Composer-basiertes Setup (`composer.json`).
-- Konfigurationsskripte für Bundles & Felder (`/drupal/scripts`).
-- Startskript `start-drupal.sh` automatisiert Installation und Basiskonfiguration.
-- Rollen & Berechtigungen für CSV-Import und Matching.
-
-### Vue Frontend
-- Moderne SPA mit Vue 3.
-- Build- und Dev-Setup über Vite (`vite.config.js`).
-- `.env.example` für lokale Konfiguration.
-- API-Kommunikation mit Axios/Fetch.
-
-### Matching-Service
-- Flask-Anwendung (`matching_server.py`).
-- REST-Endpunkte für Matching-Läufe.
-- Konfigurierbar per `.env` (z. B. Sprache, Timeout, Seed).
-- Abbildung der Matching-Logik:
-  - Berücksichtigung von **Prio-Wünschen**.
-  - **Kapazitätsgrenzen** der Workshops.
-  - Gleichverteilung & Fairness.
-  - Berechnung des **Happy Index**.
-
-### Nginx
-- Konfiguriert als Reverse Proxy.
-- Verteilt Anfragen an das Frontend, Drupal oder den Matching-Service.
-- SSL/HTTPS kann eingebunden werden.
-
-### Docker Compose
-- Einheitliches Setup für Entwicklung & Produktion.
-- Nutzung von Volumes für Persistenz (z. B. Datenbank, Drupal-Dateien).
-- Einfache Befehle:
-  - `docker-compose up -d` → Start
-  - `docker-compose down` → Stoppen
-  - `docker-compose build` → Neu bauen
-
 ---
 
 ## 📂 Projektstruktur
@@ -152,10 +25,10 @@ Das Matching-Dashboard ist der zentrale Punkt für die Admins:
 jfcamp-app/
 ├── csv-examples/           # Beispiel-CSV-Dateien für Import
 ├── drupal/                 # Drupal Headless CMS
-│   ├── config/             # Drupal-Konfiguration
-│   ├── scripts/            # Setup- und Utility-Skripte
+│   ├── config/             # Drupal-Konfiguration (Config-Management)
+│   ├── scripts/            # Setup- und Utility-Skripte (z. B. Rollen/Berechtigungen)
 │   ├── web/                # Webroot (Drupal Core)
-│   └── start-drupal.sh     # Startskript
+│   └── start-drupal.sh     # Startskript für Erstinstallation
 ├── matching/               # Python Matching-Service
 │   ├── matching_server.py  # Hauptservice (Flask)
 │   ├── requirements.txt    # Python-Abhängigkeiten
@@ -166,27 +39,137 @@ jfcamp-app/
 │   ├── src/                # Quellcode
 │   ├── vite.config.js      # Build-Setup
 │   └── Dockerfile
-├── docker-compose.yml      # Haupt-Compose-Setup
-├── docker-compose.override.yml
+├── docker-compose.yml          # Basis-Setup (Produktion)
+├── docker-compose.dev.yml      # Overrides für Entwicklung
 ├── .gitignore
 └── README.md
 ```
 
 ---
 
-## ✅ Vorteile für die Teamarbeit
+## ⚙️ Komponenten
 
-- **Klare Modularisierung**: Frontend, Backend und Matching-Service getrennt.
-- **Docker-basiert**: Einheitliche Umgebung für alle Entwickler.
-- **Datenimport flexibel**: CSV-Dateien für schnellen Start.
-- **Erweiterbar**: Matching-Logik unabhängig optimierbar.
-- **Transparenz**: Alle Schritte (Import → Wünsche → Matching → Ergebnisse) nachvollziehbar.
+### 1. Drupal (Backend & API)
+- Composer-basiertes Setup (`composer.json`).
+- Headless CMS als zentrale Datenquelle.
+- **Custom-Module**:
+  - `jfcamp_api` → CSV-Import (Teilnehmer, Workshops, Wünsche).
+  - `jfcamp_matching` → Dashboard für Matching, Statistiken und Exporte.
+- **Config-Management**: Alle Inhalte (Felder, Rollen, Moduleinstellungen) liegen in `/drupal/config/sync`.
+- Utility-Skripte:
+  - `start-drupal.sh` → automatisiert Installation & Basiskonfiguration.
+  - `scripts/jf-roles.sh` → legt Rollen & Berechtigungen an.
+
+### 2. Vue Frontend
+- Vue 3 + Vite SPA.
+- Kommuniziert ausschließlich über die JSON:API von Drupal.
+- API-URL via `.env.*` konfigurierbar.
+- Dev-Server (`vite`) und Docker-Container vorhanden.
+
+### 3. Matching-Service
+- Flask-App (`matching_server.py`).
+- Endpunkte:
+  - `/matching/dry-run` (Simulation)
+  - `/matching/run` (echte Zuweisung)
+  - `/matching/stats` (Statistiken & Happy Index)
+- Konfiguration über `.env` möglich (Sprache, Timeout, Seed).
+
+### 4. Nginx
+- Reverse Proxy.
+- Verteilt Requests an Frontend, Drupal oder Matching-Service.
+- Produktionstauglich, SSL/HTTPS einbindbar.
+
+### 5. Postgres
+- Zentrale Datenbank für Drupal.
+- Persistenz über Docker-Volume.
 
 ---
 
-## 🔜 Nächste Schritte für das Team
+## 📊 Datenfluss
 
-- Matching-Algorithmus weiter verfeinern (Fairness, Zufallsfaktoren, Prioritäten).
-- Frontend-UI für Eltern und Teilnehmende verbessern.
-- Admin-Dashboard in Drupal erweitern (mehr Filter & Analysen).
-- CI/CD-Pipeline für automatisiertes Deployment einrichten.
+1. **CSV-Import** → Admins importieren Teilnehmer- und Workshopdaten nach Drupal.
+2. **Anmeldung** → Teilnehmende geben Workshop-Wünsche im Vue-Frontend ein.
+3. **Matching** → Python-Service berechnet faire Zuteilungen anhand der Wünsche & Kapazitäten.
+4. **Dashboard** → Admins sehen Ergebnisse, Reports, Exporte und können Zuteilungen zurücksetzen.
+
+---
+
+## 🔧 Setup & Installation
+
+### 1. Repository klonen
+```bash
+git clone https://github.com/cgreunke/jfcamp-app.git
+cd jfcamp-app
+```
+
+### 2. Environment-Dateien erstellen
+```bash
+cp .env.example .env
+cp drupal/.env.example drupal/.env.development
+```
+→ Variablen (Passwörter, Mails, URLs) anpassen.
+
+---
+
+## 🖥 Entwicklung (DEV)
+
+### Start
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+```
+
+### Services
+- Drupal: http://localhost:8080
+- Vue Dev Server: http://localhost:5173
+- Matching API: http://localhost:5001
+- Adminer: http://localhost:8081 (DB-UI)
+
+### Initiale Einrichtung
+1. Datenbank ggf. droppen:
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml exec drupal ./vendor/bin/drush sql:drop -y
+   ```
+2. Drupal mit Config installieren:
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml exec drupal ./vendor/bin/drush site:install -y minimal
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml exec drupal ./vendor/bin/drush cim -y
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml exec drupal ./vendor/bin/drush cr -y
+   ```
+3. Rollen & Berechtigungen setzen:
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml exec drupal bash /opt/drupal/scripts/jf-roles.sh
+   ```
+
+---
+
+## 🌐 Produktion (PROD)
+
+### Build & Start
+```bash
+docker compose -f docker-compose.yml up --build -d
+```
+
+### Besonderheiten
+- Frontend wird im Container gebaut und über Nginx ausgeliefert.
+- Kein separater Dev-Server.
+- Drupal-Datenbank & Dateien liegen in Volumes.
+- Für SSL kann Nginx erweitert werden (`nginx/vue-site.conf`).
+
+---
+
+## ✅ Vorteile für das Team
+
+- Einheitliches Setup für **Dev & Prod**.
+- Vollständiges **Config-Management**: Felder, Module, Rollen.
+- **Skripte** für initiale Rollen & Berechtigungen.
+- Modular: Frontend, Backend, Matching-Service klar getrennt.
+- Docker: überall gleich lauffähig.
+
+---
+
+## 🔜 Nächste Schritte
+
+- Matching-Algorithmus optimieren.
+- Frontend-UX für Eltern/Teilnehmende verbessern.
+- Weitere Exporte/Reports für Admins.
+- CI/CD für automatisches Deployment.

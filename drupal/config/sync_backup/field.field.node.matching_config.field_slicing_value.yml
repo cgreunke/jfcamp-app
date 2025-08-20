@@ -1,0 +1,23 @@
+uuid: 7d412e32-2432-413f-b553-461fedcd8cdf
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_slicing_value
+    - node.type.matching_config
+id: node.matching_config.field_slicing_value
+field_name: field_slicing_value
+entity_type: node
+bundle: matching_config
+label: 'Slicing Value (relativ: Prozent, fixed: Anzahl)'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: integer

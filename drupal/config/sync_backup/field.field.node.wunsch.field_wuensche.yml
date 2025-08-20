@@ -1,0 +1,24 @@
+uuid: 52666d58-48ca-4b8b-9752-c4c12dd77585
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_wuensche
+    - node.type.workshop
+    - node.type.wunsch
+id: node.wunsch.field_wuensche
+field_name: field_wuensche
+entity_type: node
+bundle: wunsch
+label: Wünsche
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:node'
+  handler_settings:
+    target_bundles:
+      workshop: workshop
+field_type: entity_reference

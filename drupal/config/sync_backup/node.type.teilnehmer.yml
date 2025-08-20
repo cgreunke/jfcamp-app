@@ -1,0 +1,11 @@
+uuid: dcc19c31-f847-4da7-a8c3-7629f10fe725
+langcode: de
+status: true
+dependencies: {  }
+name: Teilnehmer
+type: teilnehmer
+description: null
+help: null
+new_revision: true
+preview_mode: 1
+display_submitted: true

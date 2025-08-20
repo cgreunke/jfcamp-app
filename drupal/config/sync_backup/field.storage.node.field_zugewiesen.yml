@@ -1,0 +1,19 @@
+uuid: 00883bd6-7fd9-4a53-a31b-38e88b9b1adc
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+id: node.field_zugewiesen
+field_name: field_zugewiesen
+entity_type: node
+type: entity_reference
+settings:
+  target_type: node
+module: core
+locked: false
+cardinality: -1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

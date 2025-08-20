@@ -1,0 +1,23 @@
+uuid: 9bfae3e1-3c52-43c1-9e1e-6c77b72d415c
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_weight_p4
+    - node.type.matching_config
+id: node.matching_config.field_weight_p4
+field_name: field_weight_p4
+entity_type: node
+bundle: matching_config
+label: 'Gewicht Prio 4'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: float

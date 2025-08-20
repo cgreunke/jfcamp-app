@@ -1,0 +1,20 @@
+uuid: 1f05307f-7863-4dd1-9061-6d185e4fad7a
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+id: node.field_num_wuensche
+field_name: field_num_wuensche
+entity_type: node
+type: integer
+settings:
+  unsigned: false
+  size: normal
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

@@ -1,0 +1,23 @@
+uuid: 14b4ca8f-e525-4c5b-9477-a7817f40b3e3
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_weight_p1
+    - node.type.matching_config
+id: node.matching_config.field_weight_p1
+field_name: field_weight_p1
+entity_type: node
+bundle: matching_config
+label: 'Gewicht Prio 1'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: float

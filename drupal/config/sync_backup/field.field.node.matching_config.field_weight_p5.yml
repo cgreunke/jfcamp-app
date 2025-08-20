@@ -1,0 +1,23 @@
+uuid: 005bd3c4-da97-4a2b-8fe7-01aa7f412d39
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_weight_p5
+    - node.type.matching_config
+id: node.matching_config.field_weight_p5
+field_name: field_weight_p5
+entity_type: node
+bundle: matching_config
+label: 'Gewicht Prio 5'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: float

@@ -1,0 +1,24 @@
+uuid: 4bc2ecb9-5d2c-4115-99a1-1ef843ed3ab9
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_zugewiesen
+    - node.type.teilnehmer
+    - node.type.workshop
+id: node.teilnehmer.field_zugewiesen
+field_name: field_zugewiesen
+entity_type: node
+bundle: teilnehmer
+label: 'Zugewiesene Workshops'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:node'
+  handler_settings:
+    target_bundles:
+      workshop: workshop
+field_type: entity_reference

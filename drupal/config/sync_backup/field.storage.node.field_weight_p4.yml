@@ -1,0 +1,18 @@
+uuid: d437042a-da8b-4ff0-8801-b4678881ff33
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+id: node.field_weight_p4
+field_name: field_weight_p4
+entity_type: node
+type: float
+settings: {  }
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

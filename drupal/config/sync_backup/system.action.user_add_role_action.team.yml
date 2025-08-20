@@ -1,0 +1,14 @@
+uuid: 2e710000-3189-4c35-85d3-95690370c5e6
+langcode: de
+status: true
+dependencies:
+  config:
+    - user.role.team
+  module:
+    - user
+id: user_add_role_action.team
+label: 'Den ausgewählten Benutzern die Rolle Team zuweisen'
+type: user
+plugin: user_add_role_action
+configuration:
+  rid: team

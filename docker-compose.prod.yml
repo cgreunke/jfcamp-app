@@ -1,0 +1,32 @@
+services:
+  drupal:
+    env_file:
+      - ./.env.production
+    # Kein Voll-Mount in PROD!
+    # Image enthält Startskript /opt/drupal/start-drupal.sh (aus deinem Dockerfile)
+    command: ["/bin/bash", "/opt/drupal/start-drupal.sh"]
+    restart: unless-stopped
+    # Persistente Verzeichnisse auf dem Server (anpassen!):
+    volumes:
+      # Config & private auf Serverpfad mounten (bind mounts):
+      - /srv/jfcamp/drupal/config:/opt/drupal/config
+      - /srv/jfcamp/drupal/private:/opt/drupal/private
+      # Optional: öffentliche Files, wenn genutzt (ansonsten bleiben in Container/Volume)
+      # - /srv/jfcamp/drupal/files:/opt/drupal/web/sites/default/files
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  matching:
+    env_file:
+      - ./.env.production
+    restart: unless-stopped
+    depends_on:
+      - drupal
+
+  # Für PROD-Web-Frontend (statisches Build via Nginx); Basis-compose enthält bereits "vue-prod"
+  vue-prod:
+    # Aktiv in PROD (deine Basis-compose setzt profiles: [prod])
+    restart: unless-stopped
+
+# Keine zusätzlichen Volumes nötig – benannte Volumes aus Basis-compose bleiben bestehen.

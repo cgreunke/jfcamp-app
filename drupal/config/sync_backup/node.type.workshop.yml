@@ -1,0 +1,11 @@
+uuid: 9138d4c5-7c05-44e9-93b1-4a10b4be9eae
+langcode: de
+status: true
+dependencies: {  }
+name: Workshop
+type: workshop
+description: null
+help: null
+new_revision: true
+preview_mode: 1
+display_submitted: true

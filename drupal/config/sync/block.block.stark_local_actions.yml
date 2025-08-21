@@ -1,0 +1,20 @@
+uuid: c45478e1-5909-4440-9eb0-3a630ee1aa75
+langcode: de
+status: true
+dependencies:
+  theme:
+    - stark
+_core:
+  default_config_hash: ABoKnlk20KHqZRw_2Qr4EvaFvH4lnQ2nuhunHeE1JIU
+id: stark_local_actions
+theme: stark
+region: content
+weight: -10
+provider: null
+plugin: local_actions_block
+settings:
+  id: local_actions_block
+  label: 'Primäre Verwaltungsaktionen'
+  label_display: '0'
+  provider: core
+visibility: {  }

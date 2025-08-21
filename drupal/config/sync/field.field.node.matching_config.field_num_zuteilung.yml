@@ -1,0 +1,23 @@
+uuid: 59193ff8-736b-401f-908a-16dab714611a
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_num_zuteilung
+    - node.type.matching_config
+id: node.matching_config.field_num_zuteilung
+field_name: field_num_zuteilung
+entity_type: node
+bundle: matching_config
+label: 'Anzahl Zuteilungen (Slots)'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: integer

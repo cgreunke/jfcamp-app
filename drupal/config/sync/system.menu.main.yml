@@ -1,0 +1,10 @@
+uuid: 4fe6b016-4cd8-4c18-9fd7-6938881761d5
+langcode: de
+status: true
+dependencies: {  }
+_core:
+  default_config_hash: Q2Ra3jfoIVk0f3SjxJX61byRQFVBAbpzYDQOiY-kno8
+id: main
+label: Hauptnavigation
+description: 'Das Hauptmenü mit mindestens allen Einstiegsseiten'
+locked: true

@@ -1,0 +1,11 @@
+uuid: 53bbb658-e5c8-4357-904e-24eb4f434de9
+langcode: de
+status: true
+dependencies: {  }
+name: 'Matching Config'
+type: matching_config
+description: null
+help: null
+new_revision: true
+preview_mode: 1
+display_submitted: true

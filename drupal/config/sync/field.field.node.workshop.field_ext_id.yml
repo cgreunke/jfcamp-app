@@ -1,0 +1,19 @@
+uuid: ba73fd22-8c64-4168-95f3-9400a5abaa0c
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_ext_id
+    - node.type.workshop
+id: node.workshop.field_ext_id
+field_name: field_ext_id
+entity_type: node
+bundle: workshop
+label: 'Externe ID'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

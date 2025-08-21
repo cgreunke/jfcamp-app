@@ -2,10 +2,18 @@ services:
   drupal:
     env_file:
       - ./.env.development
-    volumes:
-      # Komplettes Projekt (Composer, web, vendor, scripts, config, private)
-      - ./drupal:/opt/drupal
     command: ["/bin/bash", "/opt/drupal/scripts/start-drupal.sh"]
+    volumes:
+      # 🔁 Bind-Mounts (hier arbeitest du aktiv)
+      - ./drupal/config:/opt/drupal/config
+      - ./drupal/scripts:/opt/drupal/scripts
+      - ./drupal/web/modules/custom:/opt/drupal/web/modules/custom
+      - ./drupal/web/themes/custom:/opt/drupal/web/themes/custom
+      # 🧱 Behalte Rest als Named Volume aus base-compose (drupal_project)
+      # Option: files & private als eigenes Volume? Für DEV reicht das drupal_project-Volume.
+    environment:
+      DRUPAL_AUTO_IMPORT_ON_START: "1"
+      CONFIG_SYNC_DIRECTORY: "/opt/drupal/config/sync"
 
   matching:
     env_file:

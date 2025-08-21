@@ -1,0 +1,65 @@
+uuid: e3764cbc-9695-415b-aee7-a7ea7b690219
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.field.node.teilnehmer.field_code
+    - field.field.node.teilnehmer.field_name
+    - field.field.node.teilnehmer.field_regionalverband
+    - field.field.node.teilnehmer.field_vorname
+    - field.field.node.teilnehmer.field_zugewiesen
+    - node.type.teilnehmer
+  module:
+    - user
+id: node.teilnehmer.default
+targetEntityType: node
+bundle: teilnehmer
+mode: default
+content:
+  field_code:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 0
+    region: content
+  field_name:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 2
+    region: content
+  field_regionalverband:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 3
+    region: content
+  field_vorname:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 1
+    region: content
+  field_zugewiesen:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 4
+    region: content
+  links:
+    settings: {  }
+    third_party_settings: {  }
+    weight: 100
+    region: content
+hidden:
+  langcode: true

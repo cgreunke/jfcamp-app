@@ -1,0 +1,22 @@
+uuid: c031074b-29ed-49f0-b8e5-1eda6cd97922
+langcode: de
+status: true
+dependencies:
+  theme:
+    - gin
+_core:
+  default_config_hash: BCWhood0xXFQYqxFgL1spXdb9KeIuXH1YvTdjIEedDg
+id: gin_secondary_local_tasks
+theme: gin
+region: pre_content
+weight: 0
+provider: null
+plugin: local_tasks_block
+settings:
+  id: local_tasks_block
+  label: 'Sekundäre Reiter'
+  label_display: '0'
+  provider: core
+  primary: false
+  secondary: true
+visibility: {  }

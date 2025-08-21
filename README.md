@@ -1,20 +1,20 @@
 # JF Camp App
 
-Die **JF Camp App** ist eine containerisierte Webanwendung für die Organisation des **JugendFEIER-Camps**.  
-Sie kombiniert **Drupal (Headless CMS)**, ein **Vue 3 Frontend** und einen optionalen **Python-Matching-Service**.  
-Alle Komponenten laufen in **Docker-Containern** und werden über `docker compose` gesteuert.  
+Die **JF Camp App** ist eine containerisierte Webanwendung für die Organisation des **JugendFEIER‑Startercamps**.  
+Sie kombiniert **Drupal (Headless CMS)**, ein **Vue 3 Frontend** und einen optionalen **Python‑Matching‑Service**.  
+Alle Komponenten laufen in **Docker‑Containern** und werden über `docker compose` gesteuert.
 
-Ziel ist es, die **Anmeldung und Zuweisung von Teilnehmenden zu Workshops** möglichst effizient, fair und transparent zu gestalten.
+Ziel: **Anmeldung und Zuweisung von Teilnehmenden zu Workshops** effizient, fair und transparent.
 
 ---
 
-## 🚀 Architekturüberblick
+## 🚀 Architektur
 
 ```
 [ Vue Frontend ]  <--->  [ Drupal JSON:API ]  <--->  [ Matching-Service (Python) ]
        |                          |                            |
        v                          v                            v
-     Browser   <-------------->  Nginx Proxy  <-------------> Datenbank
+     Browser   <-------------->  Nginx (optional) <--------> Postgres
 ```
 
 ---
@@ -23,153 +23,214 @@ Ziel ist es, die **Anmeldung und Zuweisung von Teilnehmenden zu Workshops** mög
 
 ```
 jfcamp-app/
-├── csv-examples/           # Beispiel-CSV-Dateien für Import
-├── drupal/                 # Drupal Headless CMS
-│   ├── config/             # Drupal-Konfiguration (Config-Management)
-│   ├── scripts/            # Setup- und Utility-Skripte (z. B. Rollen/Berechtigungen)
-│   ├── web/                # Webroot (Drupal Core)
-│   └── start-drupal.sh     # Startskript für Erstinstallation
-├── matching/               # Python Matching-Service
-│   ├── matching_server.py  # Hauptservice (Flask)
-│   ├── requirements.txt    # Python-Abhängigkeiten
+├── csv-examples/
+├── drupal/
+│   ├── config/             # Config-Management (wird via drush cex/cim gefüllt)
+│   ├── scripts/
+│   │   ├── start-drupal.sh # Slim Start (Install + optional CIM)
+│   │   ├── init-drupal.sh  # Einmalige Initialisierung in DEV
+│   │   ├── ensure-bundles.php
+│   │   └── jf-roles.sh     # Rollen, Rechte, API-User (aus ENV)
+│   ├── web/                # Docroot (Core/Themes/Modules)
 │   └── Dockerfile
-├── nginx/                  # Proxy-Konfiguration
+├── matching/
+│   ├── matching_server.py
+│   ├── requirements.txt
+│   └── Dockerfile
+├── nginx/
 │   └── vue-site.conf
-├── vue-frontend/           # Vue 3 Frontend
-│   ├── src/                # Quellcode
-│   ├── vite.config.js      # Build-Setup
+├── vue-frontend/
+│   ├── src/
+│   ├── vite.config.js
 │   └── Dockerfile
-├── docker-compose.yml          # Basis-Setup (Produktion)
-├── docker-compose.dev.yml      # Overrides für Entwicklung
-├── .gitignore
+├── docker-compose.yml          # Basis (gemeinsam für DEV/PROD)
+├── docker-compose.dev.yml      # DEV-Overrides (Hybrid-Mount für macOS-Speed)
+├── docker-compose.prod.yml     # PROD-Overrides
+├── .env.development            # DEV-ENV (lokal)
+├── .env.production             # PROD-ENV (Server) – vom Beispiel kopieren
 └── README.md
 ```
 
 ---
 
-## ⚙️ Komponenten
+## ⚙️ Komponenten & Standards
 
-### 1. Drupal (Backend & API)
-- Composer-basiertes Setup (`composer.json`).
-- Headless CMS als zentrale Datenquelle.
-- **Custom-Module**:
-  - `jfcamp_api` → CSV-Import (Teilnehmer, Workshops, Wünsche).
-  - `jfcamp_matching` → Dashboard für Matching, Statistiken und Exporte.
-- **Config-Management**: Alle Inhalte (Felder, Rollen, Moduleinstellungen) liegen in `/drupal/config/sync`.
-- Utility-Skripte:
-  - `start-drupal.sh` → automatisiert Installation & Basiskonfiguration.
-  - `scripts/jf-roles.sh` → legt Rollen & Berechtigungen an.
+- **Drupal**  
+  - Composer‑Projekt unter `/opt/drupal` im Container  
+  - JSON:API + Basic Auth  
+  - Admin‑UX: Gin (Admin‑Theme), Admin Toolbar, r4032login  
+  - **Config‑Management**: `drupal/config/sync`  
+  - Skripte:
+    - `start-drupal.sh`: nur Installation + optional `drush cim`
+    - `init-drupal.sh`: DEV‑Einmal‑Setup (Module, Bundles/Felder, Rollen/Perms, API‑User, `drush cex`)
+    - `ensure-bundles.php`: Content‑Types/Felder/Displays (idempotent)
+    - `jf-roles.sh`: Rollen & Rechte, API‑User aus ENV
 
-### 2. Vue Frontend
-- Vue 3 + Vite SPA.
-- Kommuniziert ausschließlich über die JSON:API von Drupal.
-- API-URL via `.env.*` konfigurierbar.
-- Dev-Server (`vite`) und Docker-Container vorhanden.
+- **Vue 3 (Vite)**  
+  - DEV: Hot‑Reload auf Port `5173`  
+  - PROD: `npm run build` → statisches `dist/` via Nginx
 
-### 3. Matching-Service
-- Flask-App (`matching_server.py`).
-- Endpunkte:
-  - `/matching/dry-run` (Simulation)
-  - `/matching/run` (echte Zuweisung)
-  - `/matching/stats` (Statistiken & Happy Index)
-- Konfiguration über `.env` möglich (Sprache, Timeout, Seed).
+- **Matching‑Service (Flask)**  
+  - Endpunkte: `/matching/dry-run`, `/matching/run`, `/matching/stats`, `/health`  
+  - Auth gegen Drupal via API‑User (ENV)
 
-### 4. Nginx
-- Reverse Proxy.
-- Verteilt Requests an Frontend, Drupal oder Matching-Service.
-- Produktionstauglich, SSL/HTTPS einbindbar.
-
-### 5. Postgres
-- Zentrale Datenbank für Drupal.
-- Persistenz über Docker-Volume.
+- **Postgres**  
+  - Persistenz in Docker‑Volumes
 
 ---
 
-## 📊 Datenfluss
+## 🧰 Compose‑Dateien
 
-1. **CSV-Import** → Admins importieren Teilnehmer- und Workshopdaten nach Drupal.
-2. **Anmeldung** → Teilnehmende geben Workshop-Wünsche im Vue-Frontend ein.
-3. **Matching** → Python-Service berechnet faire Zuteilungen anhand der Wünsche & Kapazitäten.
-4. **Dashboard** → Admins sehen Ergebnisse, Reports, Exporte und können Zuteilungen zurücksetzen.
+- **Basis:** `docker-compose.yml`  
+  Enthält alle Dienste + **Named Volume** `drupal_project:/opt/drupal` für das komplette Drupal‑Projekt.
+
+- **DEV:** `docker-compose.dev.yml`  
+  Setzt **Hybrid‑Mount** (schnell auf macOS):  
+  Bind‑Mount **nur** für `drupal/config`, `drupal/scripts`, `drupal/web/modules/custom`, `drupal/web/themes/custom`.  
+  Core/Contrib/Vendor/Files bleiben im Container‑Volume → **deutlich bessere I/O‑Performance**.
+
+- **PROD:** `docker-compose.prod.yml`  
+  Keine Host‑Mounts außer `vue-frontend/dist` + Nginx‑Config.  
+  Drupal läuft vollständig aus dem Volume. Konfiguration via `drush cim`.
 
 ---
 
-## 🔧 Setup & Installation
+## 🔐 ENV‑Dateien
 
-### 1. Repository klonen
+### `.env.development` (lokal)
+Wichtige Keys:
+- `DRUPAL_DB_*`
+- `DRUPAL_SITE_NAME`, `DRUPAL_ADMIN_USER`, `DRUPAL_ADMIN_PASS`, `DRUPAL_ADMIN_MAIL`
+- `CONFIG_SYNC_DIRECTORY=/opt/drupal/config/sync`
+- `DRUPAL_AUTO_IMPORT_ON_START=1` (bequem im DEV)
+- `DRUPAL_TRUSTED_HOSTS=^drupal$,^localhost$,^127\.0\.0\.1$`
+- `MATCHING_BASE_URL=http://matching:5001`
+- **API‑User** für den Matching‑Service: `DRUPAL_API_USER`, `DRUPAL_API_PASS`, `DRUPAL_API_MAIL`, `DRUPAL_API_ROLE`
+
+### `.env.production` (Server)
+Vom Beispiel **`.env.production.example`** kopieren und anpassen:
+- sichere Passwörter!  
+- korrekte `DRUPAL_TRUSTED_HOSTS` Regex für deine Domains  
+- `DRUPAL_REVERSE_PROXY=1` + `DRUPAL_REVERSE_PROXY_ADDRESSES` wenn hinter LB/Proxy  
+- `DRUPAL_AUTO_IMPORT_ON_START=0` (PROD)  
+- `MATCHING_BASE_URL=http://matching:5001` (interner Service‑Name)  
+- API‑User‑Daten (für `jf-roles.sh`, falls du ihn in PROD anlegen willst)
+
+---
+
+## 🖥️ Entwicklungsmodus (DEV)
+
+> Einmal sauber aufsetzen und baseline‑Config exportieren.
+
+### 0) Clean Reset (optional)
 ```bash
-git clone https://github.com/cgreunke/jfcamp-app.git
-cd jfcamp-app
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v --remove-orphans
+docker image prune -f
 ```
 
-### 2. Environment-Dateien erstellen
+### 1) Starten
 ```bash
-cp .env.example .env
-cp drupal/.env.example drupal/.env.development
-```
-→ Variablen (Passwörter, Mails, URLs) anpassen.
-
----
-
-## 🖥 Entwicklung (DEV)
-
-### Start
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+docker compose logs -f drupal
 ```
 
-### Services
-- Drupal: http://localhost:8080
-- Vue Dev Server: http://localhost:5173
-- Matching API: http://localhost:5001
-- Adminer: http://localhost:8081 (DB-UI)
-
-### Initiale Einrichtung
-1. Datenbank ggf. droppen:
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.dev.yml exec drupal ./vendor/bin/drush sql:drop -y
-   ```
-2. Drupal mit Config installieren:
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.dev.yml exec drupal ./vendor/bin/drush site:install -y minimal
-   docker compose -f docker-compose.yml -f docker-compose.dev.yml exec drupal ./vendor/bin/drush cim -y
-   docker compose -f docker-compose.yml -f docker-compose.dev.yml exec drupal ./vendor/bin/drush cr -y
-   ```
-3. Rollen & Berechtigungen setzen:
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.dev.yml exec drupal bash /opt/drupal/scripts/jf-roles.sh
-   ```
-
----
-
-## 🌐 Produktion (PROD)
-
-### Build & Start
+### 2) Einmalige Initialisierung
 ```bash
-docker compose -f docker-compose.yml up --build -d
+docker compose exec drupal bash /opt/drupal/scripts/init-drupal.sh
+```
+Tut:
+- Composer‑Require (Gin, Admin Toolbar, r4032login, gin_toolbar)
+- Core/Contrib‑Module aktivieren
+- Gin als Admin‑Theme, r4032login, Admin Toolbar
+- **Content‑Types/Felder/Displays** (`ensure-bundles.php`)
+- **Rollen/Perms + API‑User** (`jf-roles.sh`, nimmt ENV)
+- `drush cex -y` → Config landet in `drupal/config/sync`
+
+### 3) Config committen
+```bash
+git add drupal/config
+git commit -m "Baseline Config nach Init"
 ```
 
-### Besonderheiten
-- Frontend wird im Container gebaut und über Nginx ausgeliefert.
-- Kein separater Dev-Server.
-- Drupal-Datenbank & Dateien liegen in Volumes.
-- Für SSL kann Nginx erweitert werden (`nginx/vue-site.conf`).
+### 4) Quick‑Checks
+```bash
+# Drupal
+docker compose exec drupal vendor/bin/drush status
+curl -s http://localhost:8080/jsonapi | head
+
+# Bundles/Felder
+docker compose exec drupal vendor/bin/drush ev "print_r(array_keys(\Drupal\node\Entity\NodeType::loadMultiple()));"
+docker compose exec drupal vendor/bin/drush ev "echo (Drupal\field\Entity\FieldConfig::loadByName('node','teilnehmer','field_zugewiesen') ? 'OK' : 'NO').PHP_EOL;"
+
+# Rollen/Perms
+docker compose exec drupal vendor/bin/drush role:perm:list team | grep -E 'import jfcamp csv|run jfcamp matching'
+docker compose exec drupal vendor/bin/drush user:information "${DRUPAL_API_USER:-apiuser}"
+
+# Matching
+curl -s http://localhost:5001/health
+```
 
 ---
 
-## ✅ Vorteile für das Team
+## 🌐 Produktionsmodus (PROD)
 
-- Einheitliches Setup für **Dev & Prod**.
-- Vollständiges **Config-Management**: Felder, Module, Rollen.
-- **Skripte** für initiale Rollen & Berechtigungen.
-- Modular: Frontend, Backend, Matching-Service klar getrennt.
-- Docker: überall gleich lauffähig.
+> **Kein** `init-drupal.sh` in PROD verwenden. PROD wird über **Config‑Management** reproduziert.
+
+### 0) Frontend bauen (CI oder lokal)
+```bash
+( cd vue-frontend && npm ci && npm run build )
+```
+→ erzeugt `vue-frontend/dist/`
+
+### 1) Server vorbereiten
+- Repo + `vue-frontend/dist` deployen
+- `.env.production` vom Beispiel kopieren und ausfüllen
+
+### 2) Container starten
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+### 3) Erstinstallation (nur bei frischer DB)
+Wenn deine PROD‑DB leer ist, einmalig installieren (ENV wird genutzt):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec drupal   vendor/bin/drush site:install minimal -y   --account-name="${DRUPAL_ADMIN_USER}"   --account-pass="${DRUPAL_ADMIN_PASS}"   --account-mail="${DRUPAL_ADMIN_MAIL}"   --site-name="${DRUPAL_SITE_NAME}"   --locale=de
+```
+
+> Alternativ macht das dein `start-drupal.sh` automatisch, falls noch **nicht** installiert und die ENV vorhanden ist.
+
+### 4) Config importieren
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec drupal vendor/bin/drush cim -y
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec drupal vendor/bin/drush cr -y
+```
+
+### 5) API‑User & Rollen (nur wenn noch nicht vorhanden)
+> Benutzer sind **Content**, nicht Config.  
+> Deshalb wird der API‑User nicht durch `drush cim` angelegt.  
+> Stattdessen legst du ihn **einmalig** via Skript an (nimmt Pass/Name/Mail aus ENV):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec drupal bash /opt/drupal/scripts/jf-roles.sh
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec drupal vendor/bin/drush cr -y
+```
+
+Danach bleibt der User in der PROD‑DB bestehen.
+
+### 6) Smoke‑Tests
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec drupal vendor/bin/drush status
+curl -s http://localhost:8080/jsonapi | head     # (oder via Domain/Proxy)
+curl -s http://localhost:5001/health
+```
 
 ---
 
-## 🔜 Nächste Schritte
+## 🔄 Änderungen & Deploy
 
-- Matching-Algorithmus optimieren.
-- Frontend-UX für Eltern/Teilnehmende verbessern.
-- Weitere Exporte/Reports für Admins.
-- CI/CD für automatisches Deployment.
+- **Config‑Änderung in DEV** → `drush cex -y` → commit → PROD: `drush cim -y`  
+- **Code‑Änderung (Custom‑Module/Themes/Matching/Vue)** → deployen, ggf. Container neu bauen, Cache leeren  
+- **Neue Module/Felder**: in DEV ausführen (Composer/Drush) → `cex` → PROD: `cim`
+
+---

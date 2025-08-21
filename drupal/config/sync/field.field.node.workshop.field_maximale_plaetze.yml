@@ -1,0 +1,23 @@
+uuid: a1e40ded-11f5-4946-bde0-45b6c1d6c29b
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_maximale_plaetze
+    - node.type.workshop
+id: node.workshop.field_maximale_plaetze
+field_name: field_maximale_plaetze
+entity_type: node
+bundle: workshop
+label: 'Maximale Plätze'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: integer

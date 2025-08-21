@@ -1,0 +1,21 @@
+uuid: 90989886-afa3-406c-8ee8-a0ab677f0220
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_slicing_mode
+    - node.type.matching_config
+  module:
+    - options
+id: node.matching_config.field_slicing_mode
+field_name: field_slicing_mode
+entity_type: node
+bundle: matching_config
+label: 'Slicing Mode'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

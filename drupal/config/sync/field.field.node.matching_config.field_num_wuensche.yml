@@ -1,0 +1,23 @@
+uuid: f2e30138-ffd9-42ac-be8c-b47b4f076657
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_num_wuensche
+    - node.type.matching_config
+id: node.matching_config.field_num_wuensche
+field_name: field_num_wuensche
+entity_type: node
+bundle: matching_config
+label: 'Anzahl Wünsche'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: integer

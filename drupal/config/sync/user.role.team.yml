@@ -1,0 +1,43 @@
+uuid: 5168303d-36e9-4817-b644-46f246938778
+langcode: de
+status: true
+dependencies:
+  config:
+    - node.type.teilnehmer
+    - node.type.workshop
+    - node.type.wunsch
+  module:
+    - jfcamp_api
+    - jfcamp_matching
+    - node
+    - system
+    - toolbar
+id: team
+label: Team
+weight: 2
+is_admin: false
+permissions:
+  - 'access administration pages'
+  - 'access content overview'
+  - 'access site reports'
+  - 'access toolbar'
+  - 'create teilnehmer content'
+  - 'create workshop content'
+  - 'create wunsch content'
+  - 'delete any teilnehmer content'
+  - 'delete any workshop content'
+  - 'delete any wunsch content'
+  - 'delete own teilnehmer content'
+  - 'delete own workshop content'
+  - 'delete own wunsch content'
+  - 'edit any teilnehmer content'
+  - 'edit any workshop content'
+  - 'edit any wunsch content'
+  - 'edit own teilnehmer content'
+  - 'edit own workshop content'
+  - 'edit own wunsch content'
+  - 'import jfcamp csv'
+  - 'run jfcamp matching'
+  - 'view teilnehmer revisions'
+  - 'view workshop revisions'
+  - 'view wunsch revisions'

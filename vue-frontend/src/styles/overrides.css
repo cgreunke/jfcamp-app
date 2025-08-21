@@ -1,0 +1,22 @@
+:root { --brand: #ee7203; }
+
+/* dünne Akzentlinie oben (dezent, aber wiedererkennbar) */
+.brand-topbar { height: 3px; background: var(--brand); }
+
+/* Karten mit feiner Akzentlinie am oberen Rand */
+.brand-card { border-top: 3px solid var(--brand); }
+
+/* Links in Markenfarbe */
+a, .brand-link { color: var(--brand); text-decoration: none; }
+a:hover, .brand-link:hover { text-decoration: underline; }
+
+/* Klarer Fokus für Tastatur-Nutzer */
+*:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand) 35%, transparent);
+  outline-offset: 2px;
+}
+
+/* Leicht kompaktere Abstände auf großen Screens */
+@media (min-width: 960px) {
+  .slim-vert { padding-top: 16px !important; padding-bottom: 16px !important; }
+}

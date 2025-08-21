@@ -1,0 +1,21 @@
+uuid: 57e4e2e4-b69e-4eac-a7dd-03c9aa4c117c
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_topk_equals_slots
+    - node.type.matching_config
+id: node.matching_config.field_topk_equals_slots
+field_name: field_topk_equals_slots
+entity_type: node
+bundle: matching_config
+label: 'Top-K = Slots'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  on_label: An
+  off_label: Aus
+field_type: boolean

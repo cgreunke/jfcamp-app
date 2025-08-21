@@ -1,0 +1,30 @@
+uuid: 12c3ae6a-9022-45a4-86bc-489451282eb7
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+    - options
+id: node.field_slicing_mode
+field_name: field_slicing_mode
+entity_type: node
+type: list_string
+settings:
+  allowed_values:
+    -
+      value: 'off'
+      label: 'Off (kein Slicing)'
+    -
+      value: relative
+      label: 'Relative (z.B. 50% pro Slot)'
+    -
+      value: fixed
+      label: 'Fixed (absolute Deckel pro Slot)'
+  allowed_values_function: ''
+module: options
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

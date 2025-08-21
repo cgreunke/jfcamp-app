@@ -1,0 +1,20 @@
+uuid: 47d9da30-1204-4ea3-bfa1-7e0e177b1a41
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+id: node.field_num_zuteilung
+field_name: field_num_zuteilung
+entity_type: node
+type: integer
+settings:
+  unsigned: false
+  size: normal
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

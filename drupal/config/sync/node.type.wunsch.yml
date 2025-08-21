@@ -1,0 +1,11 @@
+uuid: 509e6faf-56b6-41eb-b346-aae528bf97ac
+langcode: de
+status: true
+dependencies: {  }
+name: Wunsch
+type: wunsch
+description: null
+help: null
+new_revision: true
+preview_mode: 1
+display_submitted: true

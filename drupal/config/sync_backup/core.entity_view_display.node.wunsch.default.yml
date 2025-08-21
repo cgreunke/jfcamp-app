@@ -1,0 +1,38 @@
+uuid: 5e485946-d432-4aca-a3e4-b01be629ed44
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.field.node.wunsch.field_teilnehmer
+    - field.field.node.wunsch.field_wuensche
+    - node.type.wunsch
+  module:
+    - user
+id: node.wunsch.default
+targetEntityType: node
+bundle: wunsch
+mode: default
+content:
+  field_teilnehmer:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 0
+    region: content
+  field_wuensche:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 1
+    region: content
+  links:
+    settings: {  }
+    third_party_settings: {  }
+    weight: 100
+    region: content
+hidden:
+  langcode: true

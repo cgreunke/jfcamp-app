@@ -1,0 +1,10 @@
+uuid: cf6aa4c5-65a4-4623-a13f-5b1fff7b317e
+langcode: de
+status: true
+dependencies: {  }
+_core:
+  default_config_hash: iIBLu1j9n6Oo5PW-wpu5gdyNs9Kvv4LMRqtQUdJjRz8
+id: fallback
+label: Ersatz-Datumsformat
+locked: true
+pattern: 'D, j M Y - H:i'

@@ -1,0 +1,19 @@
+uuid: b9fe90b2-cc5f-4838-b3db-3e652687a871
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_seed
+    - node.type.matching_config
+id: node.matching_config.field_seed
+field_name: field_seed
+entity_type: node
+bundle: matching_config
+label: 'Seed (optional, leer = Zufall)'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

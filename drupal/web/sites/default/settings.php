@@ -27,7 +27,7 @@ $settings['update_free_access'] = FALSE;
 /**
  * Hash salt: aus deiner bestehenden Datei übernommen.
  */
-$settings['hash_salt'] = 'Pz6MUQsToP_3UsaPNePBGW2xbo2SJbr0_JvIwdYeH-sZeFQsBRPrKXku9yltxQJ84PUz2mZsDQ';
+$settings['hash_salt'] = 'Dg3mlK8bp-10qehnuM_w-9RzHtgtjMHF_wrEtBWADbhviNbHgcT_Zk9V884JPTBkRfxAx8cZOA';
 
 /**
  * Services & CORS: bleibt wie gehabt.
@@ -63,8 +63,6 @@ $settings['entity_update_backup'] = TRUE;
  * Falls du das Verzeichnis umziehst, hier anpassen.
  */
 # $settings['config_sync_directory'] = 'sites/default/files/config_siSF-8YbJM8nvFwaRzTKEH1qngYbafXyvvRdxb-xSX_YV_XTSKonLwFJXoZhc08D4TEN-jHSAQ/sync';
-$settings['config_sync_directory'] = '../drupal/config/sync';
-
 
 /**
  * JFCamp Matching Default Endpoint
@@ -83,3 +81,14 @@ if (file_exists(__DIR__ . '/settings.env.php')) {
 if (file_exists(__DIR__ . '/settings.local.php')) {
   include __DIR__ . '/settings.local.php';
 }
+$databases['default']['default'] = array (
+  'database' => 'drupal',
+  'username' => 'drupal',
+  'password' => 'drupal',
+  'prefix' => '',
+  'host' => 'postgres',
+  'port' => 5432,
+  'driver' => 'pgsql',
+  'namespace' => 'Drupal\\pgsql\\Driver\\Database\\pgsql',
+  'autoload' => 'core/modules/pgsql/src/Driver/Database/pgsql/',
+);

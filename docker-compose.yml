@@ -29,13 +29,8 @@ services:
       DRUPAL_ADMIN_MAIL: admin@example.com
       DRUPAL_TRUSTED_HOSTS: "^localhost$,^drupal$,^127\\.0\\.0\\.1$"
       DRUPAL_SITE_NAME: "JF Startercamp - App"
-      # Optional: Steuerung der Auto-Installation (auto|skip)
-      # DRUPAL_INSTALL: "auto"
-      # API-User für Matching (werden im Startscript angelegt/aktualisiert)
-      DRUPAL_API_USER: "apiuser"
-      DRUPAL_API_PASS: "apipassword"
-      DRUPAL_API_ROLE: "api_writer"
       MATCHING_BASE_URL: "http://matching:5001"
+      # nur PROD/basis – kein Auto-Import hier; DEV übernimmt das
     depends_on:
       postgres:
         condition: service_healthy
@@ -45,15 +40,8 @@ services:
       timeout: 5s
       retries: 15
     volumes:
-      # Persistentes Composer-Projekt (Core + vendor + web + private)
+      # 🧱 Named Volume für komplettes Projekt (schnell & persistent)
       - drupal_project:/opt/drupal
-      # Bind-Mounts für deine Custom-Arbeit im Repo (überschreiben die Inhalte im Volume):
-      - ./drupal/web/modules/custom:/opt/drupal/web/modules/custom
-      - ./drupal/web/modules/custom/jfcamp_api:/opt/drupal/web/modules/custom/jfcamp_api
-      - ./drupal/web/themes/custom:/opt/drupal/web/themes/custom
-      # Konfiguration & privates Filesystem auf Host sichtbar halten
-      - ./drupal/config:/opt/drupal/config
-      - ./drupal/private:/opt/drupal/private
 
   adminer:
     image: adminer

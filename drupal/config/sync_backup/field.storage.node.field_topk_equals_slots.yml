@@ -1,0 +1,18 @@
+uuid: 343c348b-7b16-4017-b4a7-bf7dc1c343fc
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+id: node.field_topk_equals_slots
+field_name: field_topk_equals_slots
+entity_type: node
+type: boolean
+settings: {  }
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

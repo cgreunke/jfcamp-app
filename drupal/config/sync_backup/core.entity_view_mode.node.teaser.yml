@@ -1,0 +1,13 @@
+uuid: 755d1ad4-8dea-4e56-a997-e7e00309c132
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+_core:
+  default_config_hash: KgGJDZFpMaz_8bTv6fN1bXS3Qi5LWmRJI9R53kEGsNQ
+id: node.teaser
+label: Anrisstext
+description: ''
+targetEntityType: node
+cache: true

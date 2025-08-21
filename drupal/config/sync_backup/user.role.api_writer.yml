@@ -1,0 +1,17 @@
+uuid: f35ed452-94d7-49bd-a4c9-9de0aa8c44e2
+langcode: de
+status: true
+dependencies:
+  config:
+    - node.type.teilnehmer
+  module:
+    - node
+    - system
+id: api_writer
+label: 'API Writer'
+weight: 5
+is_admin: false
+permissions:
+  - 'access content'
+  - 'access user profiles'
+  - 'edit any teilnehmer content'

@@ -1,0 +1,19 @@
+uuid: 05d2e2f2-c1da-4ee1-ba33-9564f93724f5
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_vorname
+    - node.type.teilnehmer
+id: node.teilnehmer.field_vorname
+field_name: field_vorname
+entity_type: node
+bundle: teilnehmer
+label: Vorname
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

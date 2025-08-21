@@ -1,0 +1,14 @@
+uuid: fdad577e-7cf2-4c11-8118-4dd467182e67
+langcode: de
+status: true
+dependencies:
+  config:
+    - user.role.api_writer
+  module:
+    - user
+id: user_remove_role_action.api_writer
+label: 'Den ausgewählten Benutzern die Rolle API Writer entziehen'
+type: user
+plugin: user_remove_role_action
+configuration:
+  rid: api_writer

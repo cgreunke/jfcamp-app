@@ -1,0 +1,39 @@
+uuid: 2a8d4605-7391-4adb-92fc-dcc39a27e737
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.field.node.workshop.field_ext_id
+    - field.field.node.workshop.field_maximale_plaetze
+    - node.type.workshop
+  module:
+    - user
+id: node.workshop.default
+targetEntityType: node
+bundle: workshop
+mode: default
+content:
+  field_ext_id:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 1
+    region: content
+  field_maximale_plaetze:
+    type: number_integer
+    label: above
+    settings:
+      thousand_separator: ''
+      prefix_suffix: true
+    third_party_settings: {  }
+    weight: 0
+    region: content
+  links:
+    settings: {  }
+    third_party_settings: {  }
+    weight: 100
+    region: content
+hidden:
+  langcode: true

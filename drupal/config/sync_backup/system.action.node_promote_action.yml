@@ -1,0 +1,13 @@
+uuid: cbf96317-e4bc-4a0c-a7ec-edfac9ccb73d
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+_core:
+  default_config_hash: N0RDBTqiK4dKoN4p4oW2j0SGWycdHyALUe9M-Ofp89U
+id: node_promote_action
+label: 'Inhalt auf der Startseite anzeigen'
+type: node
+plugin: node_promote_action
+configuration: {  }

@@ -1,0 +1,44 @@
+services:
+  drupal:
+    env_file:
+      - ./.env.development
+    command: ["/bin/bash", "/opt/drupal/scripts/start-drupal.sh"]
+    volumes:
+      # 🔁 Bind-Mounts (hier arbeitest du aktiv)
+      - ./drupal/config:/opt/drupal/config
+      - ./drupal/scripts:/opt/drupal/scripts
+      - ./drupal/web/modules/custom:/opt/drupal/web/modules/custom
+      - ./drupal/web/themes/custom:/opt/drupal/web/themes/custom
+      # 🧱 Behalte Rest als Named Volume aus base-compose (drupal_project)
+      # Option: files & private als eigenes Volume? Für DEV reicht das drupal_project-Volume.
+    environment:
+      DRUPAL_AUTO_IMPORT_ON_START: "1"
+      CONFIG_SYNC_DIRECTORY: "/opt/drupal/config/sync"
+
+  matching:
+    env_file:
+      - ./.env.development
+
+  vue:
+    build:
+      context: ./vue-frontend
+      dockerfile: Dockerfile
+      target: dev
+    container_name: vue-dev
+    working_dir: /app
+    volumes:
+      - ./vue-frontend:/app
+      - vue_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - drupal
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:5173/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  vue_node_modules:

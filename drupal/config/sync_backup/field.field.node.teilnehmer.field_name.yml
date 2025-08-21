@@ -1,0 +1,19 @@
+uuid: 0a60da2c-6f02-4d04-9824-ecb385d3c11a
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_name
+    - node.type.teilnehmer
+id: node.teilnehmer.field_name
+field_name: field_name
+entity_type: node
+bundle: teilnehmer
+label: Nachname
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

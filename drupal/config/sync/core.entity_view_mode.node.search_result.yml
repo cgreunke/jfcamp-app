@@ -1,0 +1,13 @@
+uuid: d6b4e57a-cf8f-48b1-987d-1373d38e7422
+langcode: de
+status: false
+dependencies:
+  module:
+    - node
+_core:
+  default_config_hash: d8wBEm7XvJ6H3S0IneDD9PfTBklPIH7GMpxElVemPf8
+id: node.search_result
+label: 'Suchergebnis mit Hervorhebung'
+description: ''
+targetEntityType: node
+cache: true

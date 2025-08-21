@@ -1,0 +1,20 @@
+uuid: baff3cd1-4d26-478a-9e83-db0a783fc644
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+id: node.field_slicing_value
+field_name: field_slicing_value
+entity_type: node
+type: integer
+settings:
+  unsigned: false
+  size: normal
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

@@ -1,0 +1,19 @@
+uuid: 8284d602-78b4-4758-9d77-a5ded2360d76
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+id: node.field_teilnehmer
+field_name: field_teilnehmer
+entity_type: node
+type: entity_reference
+settings:
+  target_type: node
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

@@ -1,0 +1,21 @@
+uuid: b11ce262-6e1e-4c12-8282-06c877deab0d
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+id: node.field_vorname
+field_name: field_vorname
+entity_type: node
+type: string
+settings:
+  max_length: 128
+  case_sensitive: false
+  is_ascii: false
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

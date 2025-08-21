@@ -1,0 +1,19 @@
+uuid: b3d7999a-0ca9-4d6d-b52f-68a9db5511f3
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_regionalverband
+    - node.type.teilnehmer
+id: node.teilnehmer.field_regionalverband
+field_name: field_regionalverband
+entity_type: node
+bundle: teilnehmer
+label: Regionalverband
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

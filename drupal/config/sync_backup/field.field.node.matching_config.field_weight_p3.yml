@@ -1,0 +1,23 @@
+uuid: 9a80bfcb-9572-4f6d-886d-c086ab631ed2
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_weight_p3
+    - node.type.matching_config
+id: node.matching_config.field_weight_p3
+field_name: field_weight_p3
+entity_type: node
+bundle: matching_config
+label: 'Gewicht Prio 3'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: float

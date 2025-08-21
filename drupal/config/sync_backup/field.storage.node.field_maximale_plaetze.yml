@@ -1,0 +1,20 @@
+uuid: 2da4a83e-684a-4de5-b04d-2b911f3639b1
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+id: node.field_maximale_plaetze
+field_name: field_maximale_plaetze
+entity_type: node
+type: integer
+settings:
+  unsigned: false
+  size: normal
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

@@ -1,0 +1,14 @@
+uuid: 19e4cef3-c621-47d8-bf8e-c54ca8c69e60
+langcode: de
+status: true
+dependencies:
+  config:
+    - user.role.team
+  module:
+    - user
+id: user_remove_role_action.team
+label: 'Den ausgewählten Benutzern die Rolle Team entziehen'
+type: user
+plugin: user_remove_role_action
+configuration:
+  rid: team

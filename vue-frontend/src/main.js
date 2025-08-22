@@ -7,3 +7,4 @@ import './styles/overrides.css';
 
 
 createApp(App).use(router).use(vuetify).mount('#app');
+

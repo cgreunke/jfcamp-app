@@ -6,8 +6,8 @@ import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  // Setze in .env.development z.B. VITE_PROXY_TARGET=http://drupal (wenn Vite im Container läuft)
-  // oder VITE_PROXY_TARGET=http://localhost:8080 (wenn Vite auf dem Host läuft)
+  // Wenn Vite im Container läuft: VITE_PROXY_TARGET=http://drupal
+  // Lokal ohne Docker: VITE_PROXY_TARGET=http://localhost:8080
   const target = env.VITE_PROXY_TARGET || 'http://localhost:8080'
 
   return {
@@ -19,25 +19,23 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       port: 5173,
       proxy: {
-        // JSON:API
+        // Public API
+        '/api': {
+          target,
+          changeOrigin: true,
+          secure: false,
+        },
+        // (Optional) JSON:API, falls gebraucht
         '/jsonapi': {
           target,
           changeOrigin: true,
           secure: false,
         },
-        // Deine Custom-API
-        '/jfcamp': {
-          target,
-          changeOrigin: true,
-          secure: false,
-        },
-        // CSRF
-        '/session': {
-          target,
-          changeOrigin: true,
-          secure: false,
-        },
       },
+    },
+    // Für PROD ist kein spezielles Setting nötig – build erzeugt /dist
+    build: {
+      sourcemap: mode === 'development',
     },
   }
 })

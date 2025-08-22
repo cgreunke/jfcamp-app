@@ -15,7 +15,6 @@ module:
   gin_toolbar: 0
   jfcamp_api: 0
   jfcamp_matching: 0
-  jfcamp_public_api: 0
   jsonapi: 0
   language: 0
   locale: 0
@@ -35,6 +34,5 @@ module:
 theme:
   stark: 0
   claro: 0
-  olivero: 0
   gin: 0
 profile: minimal

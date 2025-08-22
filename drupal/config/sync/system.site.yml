@@ -1,14 +1,14 @@
 _core:
   default_config_hash: HlN7eAN2N4JIHsYv56V4E7sqC9bS609KwvGFjyD_mgk
 langcode: de
-uuid: e5e9c822-3e7c-441b-a70e-9f9c6556aecb
+uuid: d91ae2a6-6576-45a8-a065-e0b53df25150
 name: 'JF Startercamp - App'
 mail: admin@example.com
 slogan: ''
 page:
-  403: ''
+  403: /user/login
   404: ''
-  front: /user/login
+  front: /admin/content
 admin_compact_mode: false
 weight_select_max: 100
 default_langcode: de

@@ -1,0 +1,7 @@
+name: JFCamp Public API
+type: module
+description: Öffentliche API-Endpunkte für das Vue-Frontend (Wunschabgabe, später Zuweisungen einsehen).
+core_version_requirement: ^10 || ^11
+package: JFCamp
+dependencies:
+  - drupal:node

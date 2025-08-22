@@ -6,8 +6,11 @@ import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  // Setze in .env.development z.B. VITE_PROXY_TARGET=http://drupal (wenn Vite im Container läuft)
-  // oder VITE_PROXY_TARGET=http://localhost:8080 (wenn Vite auf dem Host läuft)
+
+  // DEV-Flexibilität:
+  // - Wenn Vite AUF DEM HOST läuft: setze VITE_PROXY_TARGET=http://localhost:8080
+  // - Wenn Vite IM CONTAINER läuft: setze VITE_PROXY_TARGET=http://drupal:80
+  // - Default: localhost
   const target = env.VITE_PROXY_TARGET || 'http://localhost:8080'
 
   return {
@@ -18,26 +21,48 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: 5173,
+      strictPort: true,
       proxy: {
-        // JSON:API
+        // Neue Public-API in Drupal (ersetzt /jfcamp/*)
+        '/api': {
+          target,
+          changeOrigin: true,
+          secure: false,
+        },
+        // Falls du JSON:API etc. im FE brauchst, weiter erreichbar:
         '/jsonapi': {
           target,
           changeOrigin: true,
           secure: false,
         },
-        // Deine Custom-API
-        '/jfcamp': {
-          target,
-          changeOrigin: true,
-          secure: false,
-        },
-        // CSRF
+        // Session/CSRF (falls du das später einsetzt)
         '/session': {
           target,
           changeOrigin: true,
           secure: false,
         },
       },
+    },
+    // PROD unter Root-Pfad ausliefern (Nginx bedient /)
+    base: env.VITE_BASE || '/',
+    build: {
+      outDir: 'dist',
+      emptyOutDir: true,
+      sourcemap: mode !== 'production',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vue: ['vue'],
+          },
+        },
+      },
+    },
+    // HMR stabil, auch durch Reverse-Proxies
+    hmr: {
+      clientPort: 5173,
+    },
+    define: {
+      __APP_VERSION__: JSON.stringify(env.npm_package_version || 'dev'),
     },
   }
 })

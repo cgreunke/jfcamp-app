@@ -1,11 +1,14 @@
 <script setup>
-import WishForm from '@/components/WishForm.vue';
+import WishForm from '@/components/WishForm.vue'
 </script>
 
 <template>
-  <div class="mb-4">
-    <h1 class="text-h5 mb-1">Wunschabgabe</h1>
-  </div>
-
-  <WishForm />
+  <section class="container">
+    <h1>Wünsche abgeben</h1>
+    <WishForm />
+  </section>
 </template>
+
+<style scoped>
+.container { max-width: 800px; margin: 24px auto; padding: 0 16px; }
+</style>

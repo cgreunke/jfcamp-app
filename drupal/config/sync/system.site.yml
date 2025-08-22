@@ -6,9 +6,9 @@ name: 'JF Startercamp - App'
 mail: admin@example.com
 slogan: ''
 page:
-  403: /user/login
+  403: ''
   404: ''
-  front: /admin/content
+  front: /user/login
 admin_compact_mode: false
 weight_select_max: 100
 default_langcode: de

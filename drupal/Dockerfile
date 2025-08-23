@@ -1,8 +1,9 @@
 # drupal/Dockerfile
 FROM drupal:11-apache
 
-# Systemlibs: GD & PostgreSQL (libpq)
+# Systemlibs inkl. bash
 RUN apt-get update && apt-get install -y --no-install-recommends \
+      bash \
       libpng-dev \
       libjpeg62-turbo-dev \
       libfreetype6-dev \
@@ -14,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
  && docker-php-ext-install -j"$(nproc)" gd pdo_pgsql
 
-# Apache auf /opt/drupal/web umbiegen + Rewrite erlauben
+# Apache auf /opt/drupal/web umbiegen + Rewrite erlauben (deins ist okay)
 RUN a2enmod rewrite \
  && sed -ri -e 's!/var/www/html!/opt/drupal/web!g' /etc/apache2/sites-available/000-default.conf \
  && sed -ri -e 's!/var/www/!/opt/drupal/web/!g' /etc/apache2/apache2.conf \
@@ -26,7 +27,10 @@ RUN a2enmod rewrite \
 
 WORKDIR /opt/drupal
 
-# Startscript (in DEV meist gemountet, hier für PROD enthalten)
+# Composer bereitstellen (wichtig, sonst kein vendor/bin/drush)
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
+# Startscript (PROD mitkopieren; in DEV darfst du es mounten)
 COPY scripts/start-drupal.sh /opt/drupal/start-drupal.sh
 RUN chmod +x /opt/drupal/start-drupal.sh
 

@@ -1,7 +1,27 @@
 services:
+  postgres:
+    env_file:
+      - ./.env.production
+    environment:
+      POSTGRES_DB: drupal
+      POSTGRES_USER: drupal
+      POSTGRES_PASSWORD: drupal
+    
   drupal:
     env_file:
       - ./.env.development
+    environment:
+      DRUPAL_DB_HOST: postgres
+      DRUPAL_DB_NAME: drupal
+      DRUPAL_DB_USER: drupal
+      DRUPAL_DB_PASS: drupal
+      DRUPAL_ADMIN_USER: admin
+      DRUPAL_ADMIN_PASS: admin
+      DRUPAL_ADMIN_MAIL: admin@example.com
+      DRUPAL_TRUSTED_HOSTS: "^localhost$,^drupal$,^127\\.0\\.0\\.1$"
+      DRUPAL_SITE_NAME: "JF Startercamp - App"
+      MATCHING_BASE_URL: "http://matching:5001"
+      # nur PROD/basis – kein Auto-Import hier; DEV übernimmt das
     command: ["/bin/bash", "/opt/drupal/scripts/start-drupal.sh"]
     volumes:
       # 🔁 Bind-Mounts (hier arbeitest du aktiv)

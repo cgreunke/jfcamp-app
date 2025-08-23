@@ -1,10 +1,6 @@
 services:
   postgres:
     image: postgres:16
-    environment:
-      POSTGRES_DB: drupal
-      POSTGRES_USER: drupal
-      POSTGRES_PASSWORD: drupal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U drupal -d drupal || exit 1"]
       interval: 5s
@@ -19,18 +15,6 @@ services:
     container_name: drupal
     ports:
       - "8080:80"
-    environment:
-      DRUPAL_DB_HOST: postgres
-      DRUPAL_DB_NAME: drupal
-      DRUPAL_DB_USER: drupal
-      DRUPAL_DB_PASS: drupal
-      DRUPAL_ADMIN_USER: admin
-      DRUPAL_ADMIN_PASS: admin
-      DRUPAL_ADMIN_MAIL: admin@example.com
-      DRUPAL_TRUSTED_HOSTS: "^localhost$,^drupal$,^127\\.0\\.0\\.1$"
-      DRUPAL_SITE_NAME: "JF Startercamp - App"
-      MATCHING_BASE_URL: "http://matching:5001"
-      # nur PROD/basis – kein Auto-Import hier; DEV übernimmt das
     depends_on:
       postgres:
         condition: service_healthy

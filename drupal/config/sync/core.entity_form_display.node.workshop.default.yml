@@ -4,7 +4,9 @@ status: true
 dependencies:
   config:
     - field.field.node.workshop.field_ext_id
+    - field.field.node.workshop.field_kurzbeschreibung
     - field.field.node.workshop.field_maximale_plaetze
+    - field.field.node.workshop.field_room
     - node.type.workshop
 id: node.workshop.default
 targetEntityType: node
@@ -25,11 +27,27 @@ content:
       size: 60
       placeholder: ''
     third_party_settings: {  }
+  field_kurzbeschreibung:
+    type: string_textarea
+    weight: 122
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
   field_maximale_plaetze:
     type: number
     weight: 0
     region: content
     settings:
+      placeholder: ''
+    third_party_settings: {  }
+  field_room:
+    type: string_textfield
+    weight: 121
+    region: content
+    settings:
+      size: 60
       placeholder: ''
     third_party_settings: {  }
   langcode:

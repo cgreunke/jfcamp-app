@@ -3,10 +3,7 @@ services:
   postgres:
     env_file:
       - ./.env.production    
-    environment:
-      POSTGRES_DB: ${DRUPAL_DB_NAME}
-      POSTGRES_USER: ${DRUPAL_DB_USER}
-      POSTGRES_PASSWORD: ${DRUPAL_DB_PASS}
+    
   drupal:
     env_file:
       - ./.env.production

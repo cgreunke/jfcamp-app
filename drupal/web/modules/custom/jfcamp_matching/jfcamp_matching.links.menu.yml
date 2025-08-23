@@ -1,13 +1,22 @@
+# Unter unsere neue Kategorie einsortieren:
 jfcamp_matching.dashboard_menu:
+  title: 'Matching Dashboard'
+  description: 'Dry-Run, Festschreiben & Exporte'
+  route_name: jfcamp_matching.dashboard
+  parent: jfcamp_admin.overview
+  weight: 10
+
+jfcamp_matching.settings_menu:
+  title: 'Matching-Einstellungen'
+  description: 'Endpoint & Feld-Mapping konfigurieren'
+  route_name: jfcamp_matching.admin_form
+  parent: jfcamp_admin.overview
+  weight: 11
+
+# (Optional) Zusätzlich weiterhin unter "Berichte" spiegeln:
+jfcamp_matching.dashboard_menu_reports:
   title: 'Matching Dashboard'
   description: 'Dry-Run, Festschreiben & Exporte'
   route_name: jfcamp_matching.dashboard
   parent: system.admin_reports
   weight: 50
-
-jfcamp_matching.settings_menu:
-  title: 'Matching Einstellungen'
-  description: 'Endpoint & Feld-Mapping konfigurieren'
-  route_name: jfcamp_matching.admin_form
-  parent: system.admin_config_services
-  weight: 51

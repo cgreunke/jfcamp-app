@@ -1,6 +1,6 @@
 jfcamp_api.csv_import_link:
-  title: 'JFCamp CSV-Import'
+  title: 'CSV-Import'
   description: 'Workshops, Teilnehmer und Wünsche aus CSV importieren.'
   route_name: jfcamp_api.csv_import
-  parent: system.admin_config_system
-  weight: 100
+  parent: jfcamp_admin.overview
+  weight: 20

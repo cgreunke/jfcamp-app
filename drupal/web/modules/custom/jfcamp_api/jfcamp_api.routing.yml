@@ -23,3 +23,5 @@ jfcamp_api.csv_import:
     _title: 'JFCamp CSV-Import'
   requirements:
     _permission: 'import jfcamp csv'
+  options:
+    _admin_route: TRUE

@@ -2,7 +2,7 @@ name: JFCamp API
 type: module
 description: Custom JSON-Endpunkte und CSV-Importe für das JugendFEIER Startercamp.
 core_version_requirement: ^10 || ^11
-package: Custom
+package: JFCamp
 dependencies:
   - drupal:node
   - drupal:user

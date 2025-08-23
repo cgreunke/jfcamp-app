@@ -1,0 +1,5 @@
+name: 'JF Startercamp Admin'
+type: module
+description: 'Bündelt Admin-Seiten der JF Camp App unter /admin/config/jfcamp.'
+core_version_requirement: ^10 || ^11
+package: 'JF Camp'

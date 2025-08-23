@@ -12,6 +12,7 @@ module:
   field_ui: 0
   file: 0
   filter: 0
+  jfcamp_admin: 0
   jfcamp_api: 0
   jfcamp_matching: 0
   jfcamp_public_api: 0
@@ -22,6 +23,7 @@ module:
   options: 0
   page_cache: 0
   path_alias: 0
+  pgsql: 0
   r4032login: 0
   serialization: 0
   system: 0
@@ -32,7 +34,6 @@ module:
   views_ui: 0
   views: 10
   minimal: 1000
-  pgsql: 0
 theme:
   stark: 0
   claro: 0

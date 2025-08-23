@@ -204,7 +204,7 @@ if($ids){$st=\Drupal::entityTypeManager()->getStorage("node");$st->delete($st->l
 
 ## 📝 Changelog & Versionierung
 
-- Siehe `CHANGELOG.md`. Aktuelle Version: **v0.2.0** (2025-08-23).
+- Siehe `CHANGELOG.md`. Aktuelle Version: **v1.0.0** (2025-08-23).
 - Taggen:
   ```bash
   git tag v0.2.0

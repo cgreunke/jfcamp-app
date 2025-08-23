@@ -6,6 +6,8 @@ jfcamp_matching.admin_form:
     _title: 'Matching – Einstellungen'
   requirements:
     _permission: 'run jfcamp matching'
+  options:
+    _admin_route: TRUE
 
 # Zentrales Dashboard (eine Seite für alles)
 jfcamp_matching.dashboard:
@@ -15,6 +17,8 @@ jfcamp_matching.dashboard:
     _title: 'Matching – Dry‑Run, Festschreiben & Exporte'
   requirements:
     _permission: 'run jfcamp matching'
+  options:
+    _admin_route: TRUE
 
 # Aktionen (POST) vom Dashboard
 jfcamp_matching.action_dry_run:

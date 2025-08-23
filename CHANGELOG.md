@@ -5,6 +5,31 @@ Versionierung folgt **SemVer** (MAJOR.MINOR.PATCH).
 
 ---
 
+## [1.0.0] - 2025-08-24
+
+### Added
+- **CSV-Import** speichert jetzt auch optionale Felder `field_ext_id`, `field_room` und `field_kurzbeschreibung`.
+- **Admin-Kategorie „JF Startercamp“** im Drupal-Backend, bündelt:
+  - Matching-Einstellungen
+  - Matching-Dashboard
+  - CSV-Import
+- **Frontend (Wünsche):** Workshops im Dropdown nach `ext_id` aufsteigend sortiert; Workshops ohne `ext_id` werden alphabetisch nach Titel angehängt.
+
+### Changed
+- Workshop-Labels im Frontend einheitlich als `EXT_ID · Titel`.
+
+### Fixed
+- CSV-Import robust gegenüber Header-Varianten (`ext_id` oder `field_ext_id` usw.).
+- Konsistente Menülinks für alle Custom-Module.
+
+### Notes
+- Erster stabiler Release (**v1.0.0**) – die App ist funktionsfähig im geplanten MVP-Umfang:
+  - Wünsche abgeben
+  - Matching auslösen
+  - Zuweisungen mit Zeit & Raum anzeigen
+
+---
+
 ## [0.2.0] - 2025-08-23
 
 ### Added

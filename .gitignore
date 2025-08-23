@@ -21,9 +21,11 @@ drupal/web/modules/contrib/
 drupal/web/themes/contrib/
 drupal/web/profiles/
 
+
 # Public & Private Files (Webroot)
 drupal/web/sites/default/files/
 drupal/web/sites/default/private/
+drupal/web/sites/*/files/
 
 # Optionaler Projekt-"private"-Ordner (außer Platzhalter)
 private/
@@ -31,6 +33,8 @@ private/
 
 # Lokale Settings (DEV-only)
 drupal/web/sites/default/settings.local.php
+drupal/web/sites/default/settings.php
+drupal/web/sites/default/settings.env.php
 
 # Core-Installer legt manchmal zufällige Config-Exportverzeichnisse an → niemals committen
 drupal/web/sites/default/files/config_*/sync/

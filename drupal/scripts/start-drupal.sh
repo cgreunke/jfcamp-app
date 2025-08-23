@@ -93,6 +93,17 @@ ensure_settings() {
   fi
 }
 
+ensure_hash_salt() {
+  local TARGET="${SITES_DIR}/settings.env.php"
+  touch "${TARGET}"
+  if ! grep -q "hash_salt" "${TARGET}" 2>/dev/null; then
+    local SALT
+    SALT=$(php -r "echo bin2hex(random_bytes(32));")
+    printf "\n\$settings['hash_salt'] = '%s';\n" "${SALT}" >> "${TARGET}"
+    echo "[settings] hash_salt ergänzt."
+  fi
+}
+
 debug_config() {
   echo "[debug] CONFIG_SYNC_DIR=${CONFIG_SYNC_DIR}"
   if [ -d "${CONFIG_SYNC_DIR}" ]; then
@@ -239,6 +250,7 @@ start_apache() { echo "[start] Apache"; exec apache2-foreground; }
 wait_for_db
 ensure_composer
 ensure_settings
+ensure_hash_salt
 install_site_if_needed
 post_bootstrap_maintenance
 start_apache

@@ -5,6 +5,8 @@ services:
     command: ["/bin/bash", "/opt/drupal/scripts/start-drupal.sh"]
     volumes:
       # 🔁 Bind-Mounts (hier arbeitest du aktiv)
+      - ./drupal/composer.json:/opt/drupal/composer.json
+      - ./drupal/composer.lock:/opt/drupal/composer.lock
       - ./drupal/config:/opt/drupal/config
       - ./drupal/scripts:/opt/drupal/scripts
       - ./drupal/web/modules/custom:/opt/drupal/web/modules/custom

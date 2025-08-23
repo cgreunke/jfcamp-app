@@ -1,0 +1,19 @@
+uuid: 182bf361-b568-4ef5-b877-68e373f7732f
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_slot_end
+    - node.type.matching_config
+id: node.matching_config.field_slot_end
+field_name: field_slot_end
+entity_type: node
+bundle: matching_config
+label: 'Endzeit Slot'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

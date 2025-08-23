@@ -8,6 +8,8 @@ dependencies:
     - field.field.node.matching_config.field_seed
     - field.field.node.matching_config.field_slicing_mode
     - field.field.node.matching_config.field_slicing_value
+    - field.field.node.matching_config.field_slot_end
+    - field.field.node.matching_config.field_slot_start
     - field.field.node.matching_config.field_topk_equals_slots
     - field.field.node.matching_config.field_weight_p1
     - field.field.node.matching_config.field_weight_p2
@@ -64,6 +66,22 @@ content:
       prefix_suffix: true
     third_party_settings: {  }
     weight: 4
+    region: content
+  field_slot_end:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 102
+    region: content
+  field_slot_start:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 101
     region: content
   field_topk_equals_slots:
     type: boolean

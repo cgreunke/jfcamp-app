@@ -1,3 +1,4 @@
+# GET /api/config  – Matching-Konfiguration fürs Frontend
 jfcamp_public_api.config_get:
   path: '/api/config'
   defaults:
@@ -5,10 +6,12 @@ jfcamp_public_api.config_get:
     _title: 'Matching Konfiguration'
   requirements:
     _access: 'TRUE'
+  methods: [GET]
   options:
     _format: 'json'
     no_cache: TRUE
 
+# POST /api/wunsch – Wünsche speichern
 jfcamp_public_api.wunsch_submit:
   path: '/api/wunsch'
   defaults:
@@ -16,10 +19,25 @@ jfcamp_public_api.wunsch_submit:
     _title: 'Wunsch abgeben'
   requirements:
     _access: 'TRUE'
+  methods: [POST]
   options:
     _format: 'json'
     no_cache: TRUE
 
+# GET /api/wunsch – Wünsche lesen
+jfcamp_public_api.wunsch_read:
+  path: '/api/wunsch'
+  defaults:
+    _controller: '\Drupal\jfcamp_public_api\Controller\WunschController::read'
+    _title: 'Wunsch lesen'
+  requirements:
+    _access: 'TRUE'
+  methods: [GET]
+  options:
+    _format: 'json'
+    no_cache: TRUE
+
+# GET /api/zuweisungen – Workshops (mit Raum) je Slot-Index
 jfcamp_public_api.assignments_get:
   path: '/api/zuweisungen'
   defaults:
@@ -27,6 +45,20 @@ jfcamp_public_api.assignments_get:
     _title: 'Zuweisungen abfragen'
   requirements:
     _access: 'TRUE'
+  methods: [GET]
+  options:
+    _format: 'json'
+    no_cache: TRUE
+
+# GET /api/slots – Slot-Zeiten (start/end) aus matching_config
+jfcamp_public_api.slots_get:
+  path: '/api/slots'
+  defaults:
+    _controller: '\Drupal\jfcamp_public_api\Controller\SlotsController::list'
+    _title: 'Slots & Zeiten'
+  requirements:
+    _access: 'TRUE'
+  methods: [GET]
   options:
     _format: 'json'
     no_cache: TRUE

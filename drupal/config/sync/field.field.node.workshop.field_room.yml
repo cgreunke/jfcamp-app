@@ -1,0 +1,19 @@
+uuid: 29681016-109b-4d85-a47f-1e05f7039a33
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_room
+    - node.type.workshop
+id: node.workshop.field_room
+field_name: field_room
+entity_type: node
+bundle: workshop
+label: Raum/Ort
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

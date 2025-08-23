@@ -1,0 +1,19 @@
+uuid: 593d3678-f0bf-4714-83c7-772c3f1577d5
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_kurzbeschreibung
+    - node.type.workshop
+id: node.workshop.field_kurzbeschreibung
+field_name: field_kurzbeschreibung
+entity_type: node
+bundle: workshop
+label: Kurzbeschreibung
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string_long

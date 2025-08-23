@@ -1,7 +1,7 @@
 <script setup>
-const org = import.meta.env.VITE_CONTACT_ORG || 'JugendFEIER Nordbrandenburg';
-const addr = import.meta.env.VITE_CONTACT_ADDR || 'Adresse folgt';
-const mail = import.meta.env.VITE_CONTACT_MAIL || 'info@example.org';
+const org = import.meta.env.VITE_CONTACT_ORG || 'Humanistischer Verband Deutschlands, Landesverband Berlin-Brandenburg KdöR';
+const addr = import.meta.env.VITE_CONTACT_ADDR || 'Wallstr. 61-65, 10179 Berlin';
+const mail = import.meta.env.VITE_CONTACT_MAIL || 'info@jugendfeier.org';
 const phone = import.meta.env.VITE_CONTACT_PHONE || '';
 </script>
 

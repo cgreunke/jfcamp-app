@@ -10,7 +10,7 @@ use Drupal\node\Entity\Node;
  * Admin-Formular zum CSV-Import (nur UI, kein Drush).
  *
  * Unterstützte Typen:
- *  - workshops:  title,max
+ *  - workshops:  title,max,ext_id (optional),room (optional),kurzbeschreibung (optional)
  *  - teilnehmer: code,vorname,nachname,regionalverband
  *  - wuensche:   code,w1,w2,w3,...  (Werte = Workshop-UUID ODER exakter Workshop-Titel)
  *
@@ -63,7 +63,7 @@ class CsvImportForm extends FormBase {
       '#title' => $this->t('CSV-Formate (Beispiele)'),
       '#open' => FALSE,
       '#markup' => '<pre>'.
-        "workshops:  title,max\n".
+        "workshops:  title,max,ext_id,room,kurzbeschreibung\n".
         "teilnehmer: code,vorname,nachname,regionalverband\n".
         "wuensche:   code,w1,w2,w3\n".
         "</pre>",
@@ -119,7 +119,7 @@ class CsvImportForm extends FormBase {
       $this->messenger()->addError($this->t('Leere CSV.'));
       return [0, 1];
     }
-    $header = array_map('trim', $header);
+    $header = $this->normalizeHeader($header);
 
     $rownum = 1;
     while (($row = fgetcsv($h, 0, $delimiter)) !== FALSE) {
@@ -152,22 +152,62 @@ class CsvImportForm extends FormBase {
     return [$ok, $fail];
   }
 
+  /**
+   * Workshops upsert inkl. optionaler Felder:
+   * - field_maximale_plaetze
+   * - field_room
+   * - field_ext_id
+   * - field_kurzbeschreibung
+   */
   private function upsertWorkshop(array $data): void {
-    $title = (string)($data['title'] ?? '');
-    if ($title === '') throw new \InvalidArgumentException('Spalte "title" fehlt/leer.');
-    $max = $data['max'] ?? '';
-    $max = ($max === '' ? NULL : (int)$max);
+    // Pflichtfeld (Synonyme erlaubt)
+    $title = $this->pick($data, ['title', 'titel', 'name']);
+    if ($title === null || $title === '') {
+      throw new \InvalidArgumentException('Spalte "title" (oder "titel"/"name") fehlt/leer.');
+    }
 
+    // Optionale Felder (mehrere mögliche Header-Bezeichnungen)
+    $max  = $this->pick($data, ['max', 'kapazitaet', 'capacity']);
+    $room = $this->pick($data, ['room', 'raum', 'ort', 'location']);
+    $ext  = $this->pick($data, ['ext_id', 'ext id', 'extid', 'external_id', 'external id']);
+    $kurz = $this->pick($data, ['kurzbeschreibung', 'beschreibung', 'short', 'short_description']);
+
+    // vorhandenen Workshop per exakt gleichem Titel finden (Upsert)
     $ids = \Drupal::entityQuery('node')->accessCheck(FALSE)
-      ->condition('type', 'workshop')->condition('title', $title)
-      ->range(0, 1)->execute();
+      ->condition('type', 'workshop')
+      ->condition('title', $title)
+      ->range(0, 1)
+      ->execute();
 
-    $n = $ids ? Node::load(reset($ids)) : Node::create(['type'=>'workshop','title'=>$title,'status'=>1]);
-    if ($max !== NULL) {
-      $n->set('field_maximale_plaetze', $max);
+    $n = $ids
+      ? Node::load(reset($ids))
+      : Node::create(['type' => 'workshop', 'title' => $title, 'status' => 1]);
+
+    // Max (Ganzzahl oder NULL)
+    if ($max !== null && $max !== '') {
+      $n->set('field_maximale_plaetze', (int) $max);
     } else {
       $n->set('field_maximale_plaetze', NULL);
     }
+
+    // Raum/Ort (Text)
+    if ($room !== null) {
+      $n->set('field_room', $room);
+    }
+
+    // Externe ID (Text)
+    if ($ext !== null) {
+      $n->set('field_ext_id', $ext);
+    }
+
+    // Kurzbeschreibung (Text (unformatiert, lang))
+    if ($kurz !== null) {
+      // Für "Text (unformatiert, lang)" reicht ein String:
+      $n->set('field_kurzbeschreibung', $kurz);
+      // Falls zukünftig ein Text-mit-Format-Feld genutzt wird:
+      // $n->set('field_kurzbeschreibung', ['value' => $kurz, 'format' => 'plain_text']);
+    }
+
     $n->save();
   }
 
@@ -212,7 +252,7 @@ class CsvImportForm extends FormBase {
     // alle Spalten außer "code" → Wunschwerte
     $wishVals = [];
     foreach ($data as $k=>$v) {
-      if (strtolower($k) === 'code') continue;
+      if ($k === 'code') continue;
       if ($v === '' || $v === NULL) continue;
       $wishVals[] = (string)$v;
     }
@@ -259,4 +299,29 @@ class CsvImportForm extends FormBase {
     $wunsch->set('field_wuensche', $items);
     $wunsch->save();
   }
+
+  /* -------------------- Helpers -------------------- */
+
+  /**
+   * Header vereinheitlichen (lowercase, trim).
+   */
+  private function normalizeHeader(array $header): array {
+    return array_map(fn($h) => mb_strtolower(trim((string)$h)), $header);
+  }
+
+  /**
+   * Gibt den ersten nicht-leeren Wert aus $data für die angegebenen Keys zurück
+   * (case-insensitiv), sonst NULL.
+   */
+  private function pick(array $data, array $keys): ?string {
+    foreach ($keys as $k) {
+      $k = mb_strtolower($k);
+      if (array_key_exists($k, $data)) {
+        $v = trim((string)$data[$k]);
+        if ($v !== '') return $v;
+      }
+    }
+    return null;
+  }
+
 }

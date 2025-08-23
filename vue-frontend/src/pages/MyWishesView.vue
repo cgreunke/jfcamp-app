@@ -34,7 +34,7 @@
       <v-list-item
         v-for="(w, i) in wishes"
         :key="w.id || i"
-        :title="`${i+1}. ${w.title || 'Workshop'}`"
+        :title="`${i+1}. ${(w.ext_id ? w.ext_id + ' · ' : '')}${w.title || 'Workshop'}`"
       />
     </v-list>
   </v-container>
@@ -48,7 +48,7 @@ const code = ref(localStorage.getItem('jfcamp_code') || '')
 const loading = ref(false)
 const triedOnce = ref(false)
 const error = ref('')
-const wishes = ref([]) // [{id,title}]
+const wishes = ref([]) // [{id,ext_id,title}]
 
 async function loadWishes() {
   error.value = ''
@@ -60,9 +60,7 @@ async function loadWishes() {
   }
   loading.value = true
   try {
-    // GET /api/wunsch?code=... (siehe Backend unten)
     const res = await api.getMyWishes(theCode)
-    // Erwartet: { ok: true, wuensche: [{id,title}] }
     const list = Array.isArray(res?.wuensche) ? res.wuensche : (Array.isArray(res) ? res : [])
     wishes.value = list
     localStorage.setItem('jfcamp_code', theCode)

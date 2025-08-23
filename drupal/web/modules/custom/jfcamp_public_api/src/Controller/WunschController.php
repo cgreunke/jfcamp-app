@@ -83,7 +83,7 @@ class WunschController extends ControllerBase {
   /**
    * GET /api/wunsch?code=ABC123
    * Gibt die gespeicherten Wünsche (priorisierte Liste) des Teilnehmers zurück.
-   * Response: { ok: true, wuensche: [{ id, title }] }
+   * Response: { ok: true, wuensche: [{ id, ext_id, title }] }
    */
   public function read(Request $request): JsonResponse {
     $code = trim((string) $request->query->get('code', ''));
@@ -112,27 +112,37 @@ class WunschController extends ControllerBase {
     $node = Node::load(reset($ids));
     $out = [];
 
+    // Helper zum Pushen inkl. ext_id
+    $pushWorkshop = function (Node $w) use (&$out) {
+      if ($w->bundle() !== 'workshop') { return; }
+      $ext = ($w->hasField('field_ext_id') && !$w->get('field_ext_id')->isEmpty())
+        ? (string) $w->get('field_ext_id')->value
+        : '';
+      $out[] = [
+        'id'     => $w->uuid(),
+        'ext_id' => $ext,
+        'title'  => $w->label(),
+      ];
+    };
+
     if ($node->hasField('field_wuensche') && !$node->get('field_wuensche')->isEmpty()) {
       foreach ($node->get('field_wuensche')->referencedEntities() as $w) {
-        if ($w instanceof Node && $w->bundle() === 'workshop') {
-          $out[] = ['id' => $w->uuid(), 'title' => $w->label()];
-        }
+        if ($w instanceof Node) { $pushWorkshop($w); }
       }
     }
     elseif ($node->hasField('field_wuensche_json') && !empty($node->get('field_wuensche_json')->value)) {
       $nids = json_decode((string) $node->get('field_wuensche_json')->value, true) ?: [];
       if (!empty($nids)) {
         $workshops = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($nids);
-        // Reihenfolge anhand $nids erhalten
         $byId = [];
         foreach ($workshops as $w) {
           if ($w instanceof Node && $w->bundle() === 'workshop') {
-            $byId[$w->id()] = ['id' => $w->uuid(), 'title' => $w->label()];
+            $byId[$w->id()] = $w;
           }
         }
         foreach ($nids as $nid) {
           if (isset($byId[$nid])) {
-            $out[] = $byId[$nid];
+            $pushWorkshop($byId[$nid]);
           }
         }
       }
@@ -181,12 +191,7 @@ class WunschController extends ControllerBase {
     return $out;
   }
 
-  /**
-   * Workshop-UUIDs -> Workshop-NIDs (Reihenfolge wie Eingabe).
-   *
-   * @param string[] $uuids
-   * @return int[] NIDs
-   */
+  /** Workshop-UUIDs -> NIDs */
   protected function mapWorkshopUuidsToNids(array $uuids): array {
     if (empty($uuids)) {
       return [];
@@ -208,17 +213,11 @@ class WunschController extends ControllerBase {
     return $ordered;
   }
 
-  /**
-   * Workshop-Titel -> Workshop-NIDs (Reihenfolge wie Eingabe).
-   *
-   * @param string[] $labels
-   * @return int[] NIDs
-   */
+  /** Workshop-Titel -> NIDs */
   protected function mapWorkshopLabelsToNids(array $labels): array {
     if (empty($labels)) {
       return [];
     }
-    // Alle Workshops laden und per Label mappen (EntityQuery kann kein IN auf Title).
     $storage = \Drupal::entityTypeManager()->getStorage('node');
     $ids = \Drupal::entityQuery('node')
       ->accessCheck(FALSE)
@@ -246,9 +245,7 @@ class WunschController extends ControllerBase {
     return $out;
   }
 
-  /**
-   * Teilnehmer über field_code finden.
-   */
+  /** Teilnehmer über field_code finden. */
   protected function loadTeilnehmerByCode(string $code): ?int {
     $ids = \Drupal::entityQuery('node')
       ->accessCheck(FALSE)
@@ -267,9 +264,6 @@ class WunschController extends ControllerBase {
    *
    * Speichert die Reihenfolge der Wünsche in einem Feld, z.B. field_wuensche (Entity Reference)
    * oder als JSON in field_wuensche_json – passe ggf. an dein Content-Model an.
-   *
-   * @param int   $teilnehmerNid
-   * @param int[] $workshopNids
    */
   protected function createOrUpdateWunschNode(int $teilnehmerNid, array $workshopNids): void {
     // Bestehenden Wunsch zu Teilnehmer suchen:

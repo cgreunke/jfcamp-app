@@ -5,6 +5,7 @@ namespace Drupal\jfcamp_public_api\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Drupal\node\NodeInterface;
+use Drupal\node\Entity\Node;
 
 /**
  * Liefert die Matching-Konfiguration für das öffentliche Vue-Formular.
@@ -14,7 +15,7 @@ use Drupal\node\NodeInterface;
  *   "ok": true,
  *   "field_num_wuensche": 3,
  *   "max_wishes": 3,          // Alias für das Frontend (Kompatibilität)
- *   "workshops": [ { "id": "uuid", "title": "..." }, ... ]
+ *   "workshops": [ { "id": "uuid", "ext_id": "W01", "title": "..." }, ... ]
  * }
  */
 class ConfigController extends ControllerBase {
@@ -75,7 +76,7 @@ class ConfigController extends ControllerBase {
   }
 
   /**
-   * Liefert veröffentlichte Workshops als [{ id, title }].
+   * Liefert veröffentlichte Workshops als [{ id, ext_id, title }].
    */
   protected function loadWorkshops(): array {
     $storage = $this->entityTypeManager()->getStorage('node');
@@ -91,14 +92,19 @@ class ConfigController extends ControllerBase {
       return [];
     }
 
+    /** @var \Drupal\node\Entity\Node[] $nodes */
     $nodes = $storage->loadMultiple($ids);
     $out = [];
 
     foreach ($nodes as $node) {
-      /** @var \Drupal\node\Entity\Node $node */
+      $ext = ($node->hasField('field_ext_id') && !$node->get('field_ext_id')->isEmpty())
+        ? (string) $node->get('field_ext_id')->value
+        : '';
+
       $out[] = [
-        'id' => $node->uuid(),
-        'title' => $node->label() ?? '(ohne Titel)',
+        'id'     => $node->uuid(),
+        'ext_id' => $ext,
+        'title'  => $node->label() ?? '(ohne Titel)',
       ];
     }
 

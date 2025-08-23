@@ -1,4 +1,3 @@
-<!-- src/views/WorkshopView.vue -->
 <template>
   <v-container class="py-8" max-width="900">
     <h1 class="text-h4 mb-6">Meine Workshops</h1>
@@ -52,7 +51,7 @@
               <v-list-item
                 v-for="(a, i) in group.items"
                 :key="i"
-                :title="a.workshop?.title ?? 'Workshop'"
+                :title="displayTitle(a.workshop)"
                 :subtitle="roomText(a.workshop?.room)"
               />
             </v-list>
@@ -72,7 +71,7 @@ const loading = ref(false)
 const triedOnce = ref(false)
 const error = ref('')
 const slots = ref([])         // [{ index, start, end }]
-const assignments = ref([])   // [{ slot_index, workshop: { title, room } }]
+const assignments = ref([])   // [{ slot_index, workshop: { ext_id, title, room } }]
 
 function slotLabel(idx) {
   const s = slots.value.find(s => Number(s.index) === Number(idx))
@@ -83,6 +82,10 @@ function slotLabel(idx) {
 }
 function roomText(room) {
   return room ? `Raum: ${room}` : 'Raum wird vor Ort angezeigt'
+}
+function displayTitle(w) {
+  if (!w) return 'Workshop'
+  return `${w.ext_id ? w.ext_id + ' · ' : ''}${w.title ?? 'Workshop'}`
 }
 
 const groupedBySlot = computed(() => {

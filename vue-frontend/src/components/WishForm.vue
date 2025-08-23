@@ -1,4 +1,3 @@
-<!-- src/components/WishForm.vue -->
 <template>
   <v-form ref="formRef" @submit.prevent="onSubmit">
     <v-text-field
@@ -24,7 +23,7 @@
           <v-autocomplete
             v-model="wuensche[idx]"
             :items="itemsFor(idx)"
-            item-title="title"
+            item-title="label"
             item-value="id"
             :rules="[v => !!v || 'Bitte auswählen', noDuplicateRule(idx)]"
             :label="`Wunsch #${idx + 1}`"
@@ -47,24 +46,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { api } from '@/api/client'
 
 const emit = defineEmits(['submitted'])
 
 const formRef = ref(null)
 const code = ref(localStorage.getItem('jfcamp_code') || '')
-const workshops = ref([]) // [{ id, title }]
+const workshops = ref([]) // [{ id, ext_id, title, label }]
 const wuensche = ref([])  // [id|null, id|null, ...]
 const loadingConfig = ref(false)
 const submitting = ref(false)
 const error = ref('')
 const success = ref(false)
 
-// --- NEU: dynamische Items pro Feld -----------------------------------------
-/**
- * Alle aktuell gewählten IDs (Set), optional ohne Index `excludeIdx`.
- */
+// --- dynamische Items pro Feld ----------------------------------------------
 function selectedSet(excludeIdx = null) {
   const s = new Set()
   wuensche.value.forEach((val, i) => {
@@ -72,12 +68,6 @@ function selectedSet(excludeIdx = null) {
   })
   return s
 }
-
-/**
- * Items-Liste für das i-te Dropdown:
- * - zeigt alle Workshops, die NICHT in anderen Dropdowns gewählt sind
- * - plus den aktuell gewählten (falls vorhanden), damit Vuetify keinen Warnhinweis wirft
- */
 function itemsFor(i) {
   const taken = selectedSet(i)
   return workshops.value.filter(w => w.id === wuensche.value[i] || !taken.has(w.id))
@@ -103,8 +93,11 @@ async function loadConfig() {
   try {
     const cfg = await api.getConfig()
     const count = Number(cfg.max_wishes ?? cfg.field_num_wuensche ?? 3)
-    workshops.value = cfg.workshops || []
-    // vorhandene Auswahl (falls schon da) soweit möglich behalten:
+    // Anzeige "W01 · Titel"
+    workshops.value = (cfg.workshops || []).map(w => ({
+      ...w,
+      label: (w.ext_id ? `${w.ext_id} · ` : '') + w.title
+    }))
     const current = (wuensche.value || []).filter(Boolean)
     wuensche.value = [
       ...current.slice(0, count),
@@ -133,6 +126,7 @@ async function onSubmit() {
   try {
     const res = await api.postWunsch({ code: code.value.trim(), wuensche: chosen })
     if (res.ok) {
+      localStorage.setItem('jfcamp_code', code.value.trim())
       success.value = true
       emit('submitted', { code: code.value, wuensche: chosen })
     } else {

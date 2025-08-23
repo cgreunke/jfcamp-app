@@ -23,13 +23,14 @@
         >
           <v-autocomplete
             v-model="wuensche[idx]"
-            :items="workshops"
+            :items="itemsFor(idx)"
             item-title="title"
             item-value="id"
             :rules="[v => !!v || 'Bitte auswählen', noDuplicateRule(idx)]"
             :label="`Wunsch #${idx + 1}`"
             variant="outlined"
             clearable
+            hide-details="auto"
           />
         </v-col>
       </v-row>
@@ -46,19 +47,42 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { api } from '@/api/client'
 
 const emit = defineEmits(['submitted'])
 
 const formRef = ref(null)
 const code = ref('')
-const workshops = ref([]) // {id,title}
-const wuensche = ref([])
+const workshops = ref([]) // [{ id, title }]
+const wuensche = ref([])  // [id|null, id|null, ...]
 const loadingConfig = ref(false)
 const submitting = ref(false)
 const error = ref('')
 const success = ref(false)
+
+// --- NEU: dynamische Items pro Feld -----------------------------------------
+/**
+ * Alle aktuell gewählten IDs (Set), optional ohne Index `excludeIdx`.
+ */
+function selectedSet(excludeIdx = null) {
+  const s = new Set()
+  wuensche.value.forEach((val, i) => {
+    if (val && i !== excludeIdx) s.add(val)
+  })
+  return s
+}
+
+/**
+ * Items-Liste für das i-te Dropdown:
+ * - zeigt alle Workshops, die NICHT in anderen Dropdowns gewählt sind
+ * - plus den aktuell gewählten (falls vorhanden), damit Vuetify keinen Warnhinweis wirft
+ */
+function itemsFor(i) {
+  const taken = selectedSet(i)
+  return workshops.value.filter(w => w.id === wuensche.value[i] || !taken.has(w.id))
+}
+// -----------------------------------------------------------------------------
 
 function noDuplicateRule(index) {
   return (v) => {
@@ -80,7 +104,12 @@ async function loadConfig() {
     const cfg = await api.getConfig()
     const count = Number(cfg.max_wishes ?? cfg.field_num_wuensche ?? 3)
     workshops.value = cfg.workshops || []
-    wuensche.value = Array(count).fill(null)
+    // vorhandene Auswahl (falls schon da) soweit möglich behalten:
+    const current = (wuensche.value || []).filter(Boolean)
+    wuensche.value = [
+      ...current.slice(0, count),
+      ...Array(Math.max(0, count - current.length)).fill(null),
+    ]
   } catch (e) {
     error.value = `Konfiguration konnte nicht geladen werden: ${e.message}`
   } finally {

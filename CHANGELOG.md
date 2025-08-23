@@ -1,3 +1,7 @@
+## [0.2.0] - 2025-08-23
+- Add: Seite 'Meine Wünsche'
+- Add: GET /api/wunsch (Wünsche lesen)
+
 # 📦 Changelog – JF Startercamp App
 
 Alle relevanten Änderungen und Releases im Überblick.  

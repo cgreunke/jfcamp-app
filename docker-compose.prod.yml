@@ -16,8 +16,8 @@ services:
     # Persistente Verzeichnisse auf dem Server (anpassen!):
     volumes:
       # Config & private auf Serverpfad mounten (bind mounts):
-      - /srv/jfcamp/drupal/config:/opt/drupal/config
-      - /srv/jfcamp/drupal/private:/opt/drupal/private
+      - /opt/jfcamp-app/drupal/config:/opt/drupal/config
+      - /opt/jfcamp-app/drupal/private:/opt/drupal/private
       # Optional: öffentliche Files, wenn genutzt (ansonsten bleiben in Container/Volume)
       # - /srv/jfcamp/drupal/files:/opt/drupal/web/sites/default/files
     depends_on:

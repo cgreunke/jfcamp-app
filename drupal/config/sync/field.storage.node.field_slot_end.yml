@@ -1,0 +1,21 @@
+uuid: 493c4af6-873e-481a-b823-c9c4044da70b
+langcode: de
+status: true
+dependencies:
+  module:
+    - node
+id: node.field_slot_end
+field_name: field_slot_end
+entity_type: node
+type: string
+settings:
+  max_length: 255
+  case_sensitive: false
+  is_ascii: false
+module: core
+locked: false
+cardinality: -1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

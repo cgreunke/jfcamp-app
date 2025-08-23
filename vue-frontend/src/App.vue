@@ -8,6 +8,7 @@ import logoUrl from '@/assets/jf-logo.png?url'
 // Routen + Labels zentral definieren
 const navItems = [
   { label: 'Wünsche abgeben', to: '/' },
+  { label: 'Meine Wünsche', to: '/meine-wuensche' },
   { label: 'Meine Workshops', to: '/workshops' },
 ]
 

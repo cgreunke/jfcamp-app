@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Drupal\node\Entity\Node;
 
 /**
- * Wunsch-API: Speichern von priorisierten Workshop-Wünschen.
+ * Wunsch-API: Speichern und Lesen von priorisierten Workshop-Wünschen.
  */
 class WunschController extends ControllerBase {
 
@@ -78,6 +78,67 @@ class WunschController extends ControllerBase {
     }
 
     return new JsonResponse(['ok' => true, 'message' => 'Wünsche gespeichert. Danke!']);
+  }
+
+  /**
+   * GET /api/wunsch?code=ABC123
+   * Gibt die gespeicherten Wünsche (priorisierte Liste) des Teilnehmers zurück.
+   * Response: { ok: true, wuensche: [{ id, title }] }
+   */
+  public function read(Request $request): JsonResponse {
+    $code = trim((string) $request->query->get('code', ''));
+    if ($code === '') {
+      return new JsonResponse(['ok' => false, 'error' => 'Code fehlt'], 400);
+    }
+
+    $teilnehmerNid = $this->loadTeilnehmerByCode($code);
+    if (!$teilnehmerNid) {
+      return new JsonResponse(['ok' => true, 'wuensche' => []]);
+    }
+
+    // Wunsch-Node zu diesem Teilnehmer holen
+    $ids = \Drupal::entityQuery('node')
+      ->accessCheck(FALSE)
+      ->condition('type', 'wunsch')
+      ->condition('field_teilnehmer', $teilnehmerNid)
+      ->range(0, 1)
+      ->execute();
+
+    if (empty($ids)) {
+      return new JsonResponse(['ok' => true, 'wuensche' => []]);
+    }
+
+    /** @var \Drupal\node\Entity\Node $node */
+    $node = Node::load(reset($ids));
+    $out = [];
+
+    if ($node->hasField('field_wuensche') && !$node->get('field_wuensche')->isEmpty()) {
+      foreach ($node->get('field_wuensche')->referencedEntities() as $w) {
+        if ($w instanceof Node && $w->bundle() === 'workshop') {
+          $out[] = ['id' => $w->uuid(), 'title' => $w->label()];
+        }
+      }
+    }
+    elseif ($node->hasField('field_wuensche_json') && !empty($node->get('field_wuensche_json')->value)) {
+      $nids = json_decode((string) $node->get('field_wuensche_json')->value, true) ?: [];
+      if (!empty($nids)) {
+        $workshops = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($nids);
+        // Reihenfolge anhand $nids erhalten
+        $byId = [];
+        foreach ($workshops as $w) {
+          if ($w instanceof Node && $w->bundle() === 'workshop') {
+            $byId[$w->id()] = ['id' => $w->uuid(), 'title' => $w->label()];
+          }
+        }
+        foreach ($nids as $nid) {
+          if (isset($byId[$nid])) {
+            $out[] = $byId[$nid];
+          }
+        }
+      }
+    }
+
+    return new JsonResponse(['ok' => true, 'wuensche' => $out]);
   }
 
   /**
@@ -237,7 +298,8 @@ class WunschController extends ControllerBase {
     // Beispiel: Referenzfeld field_wuensche (mehrwertig) in priorisierter Reihenfolge
     if ($node->hasField('field_wuensche')) {
       $node->set('field_wuensche', array_map(fn($nid) => ['target_id' => $nid], $workshopNids));
-    } elseif ($node->hasField('field_wuensche_json')) {
+    }
+    elseif ($node->hasField('field_wuensche_json')) {
       $node->set('field_wuensche_json', json_encode($workshopNids));
     }
 

@@ -27,4 +27,5 @@ export const api = {
     return http('GET', `/zuweisungen?code=${encodeURIComponent(code || '')}`)
   },
   getSlots: () => http('GET', '/slots'),
+  getMyWishes: (code) => http('GET', `/wunsch?code=${encodeURIComponent(code)}`),
 }

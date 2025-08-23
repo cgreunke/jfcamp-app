@@ -30,3 +30,11 @@ jfcamp_public_api.assignments_get:
   options:
     _format: 'json'
     no_cache: TRUE
+
+jfcamp_public_api.wunsch_read:
+  path: '/api/wunsch'
+  defaults:
+    _controller: '\Drupal\jfcamp_public_api\Controller\WunschController::read'
+  requirements:
+    _permission: 'access content'
+  methods: [GET]

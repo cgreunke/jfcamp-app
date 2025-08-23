@@ -53,7 +53,7 @@ import { api } from '@/api/client'
 const emit = defineEmits(['submitted'])
 
 const formRef = ref(null)
-const code = ref('')
+const code = ref(localStorage.getItem('jfcamp_code') || '')
 const workshops = ref([]) // [{ id, title }]
 const wuensche = ref([])  // [id|null, id|null, ...]
 const loadingConfig = ref(false)

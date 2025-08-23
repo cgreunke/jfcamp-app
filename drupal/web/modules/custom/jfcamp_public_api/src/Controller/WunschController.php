@@ -38,7 +38,7 @@ class WunschController extends ControllerBase {
     $allowed = (array) ($config['workshops'] ?? []);
     $max = max(1, $max);
 
-    // Normalisieren (Strings, eindeutige Reihenfolge beibehalten).
+    // Normalisieren (Strings, Duplikate entfernen, Reihenfolge beibehalten).
     $wishLabels = array_values(array_unique(array_map('strval', $wishLabels)));
 
     if (count($wishLabels) > $max) {
@@ -77,7 +77,7 @@ class WunschController extends ControllerBase {
       return new JsonResponse(['ok' => false, 'error' => 'Speichern nicht möglich'], 500);
     }
 
-    return new JsonResponse(['ok' => true]);
+    return new JsonResponse(['ok' => true, 'message' => 'Wünsche gespeichert. Danke!']);
   }
 
   /**
@@ -104,12 +104,12 @@ class WunschController extends ControllerBase {
         if ($cfg->hasField('field_num_wuensche') && !$cfg->get('field_num_wuensche')->isEmpty()) {
           $out['max_wishes'] = (int) $cfg->get('field_num_wuensche')->value;
         }
-        // Falls du eine Whitelist pflegst (optional). Wenn nicht vorhanden, bleibt es leer.
+        // Optional: Whitelist als UUIDs (falls Feld existiert).
         if ($cfg->hasField('field_allowed_workshops') && !$cfg->get('field_allowed_workshops')->isEmpty()) {
           $vals = [];
           foreach ($cfg->get('field_allowed_workshops')->referencedEntities() as $n) {
             if ($n instanceof Node && $n->bundle() === 'workshop') {
-              $vals[] = $n->uuid(); // Whitelist als UUIDs
+              $vals[] = $n->uuid();
             }
           }
           $out['workshops'] = $vals;
@@ -157,11 +157,12 @@ class WunschController extends ControllerBase {
     if (empty($labels)) {
       return [];
     }
-    // Titel exakt matchen – falls du Case-Insensitiv willst, passe die Query an.
-    $query = \Drupal::entityQuery('node')->accessCheck(FALSE)->condition('type', 'workshop');
-    // Drupal-EntityQuery kann kein "IN" auf Title direkt, daher laden wir alle und filtern.
+    // Alle Workshops laden und per Label mappen (EntityQuery kann kein IN auf Title).
     $storage = \Drupal::entityTypeManager()->getStorage('node');
-    $ids = $query->execute();
+    $ids = \Drupal::entityQuery('node')
+      ->accessCheck(FALSE)
+      ->condition('type', 'workshop')
+      ->execute();
     if (empty($ids)) {
       return [];
     }
@@ -206,7 +207,7 @@ class WunschController extends ControllerBase {
    * Speichert die Reihenfolge der Wünsche in einem Feld, z.B. field_wuensche (Entity Reference)
    * oder als JSON in field_wuensche_json – passe ggf. an dein Content-Model an.
    *
-   * @param int $teilnehmerNid
+   * @param int   $teilnehmerNid
    * @param int[] $workshopNids
    */
   protected function createOrUpdateWunschNode(int $teilnehmerNid, array $workshopNids): void {
@@ -222,9 +223,13 @@ class WunschController extends ControllerBase {
       /** @var \Drupal\node\Entity\Node $node */
       $node = Node::load(reset($ids));
     } else {
+      // Teilnehmer-Name für den Titel laden; Fallback auf NID.
+      $teilnehmerNode = Node::load($teilnehmerNid);
+      $teilnehmerName = $teilnehmerNode ? $teilnehmerNode->label() : $teilnehmerNid;
+
       $node = Node::create([
         'type' => 'wunsch',
-        'title' => 'Wunsch ' . $teilnehmerNid,
+        'title' => 'Wunsch ' . $teilnehmerName,
         'field_teilnehmer' => $teilnehmerNid,
       ]);
     }

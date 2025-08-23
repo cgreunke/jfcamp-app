@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # start-drupal.sh — Repro-sicherer Bootstrap für Drupal im Container
 # Aufgaben: DB-Wait → Composer → settings.php → (Erst)Install (--existing-config wenn möglich)
 #           → Upgrades → (optional) CIM → Cache → Apache

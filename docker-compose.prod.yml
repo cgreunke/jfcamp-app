@@ -2,13 +2,15 @@ services:
 
   postgres:
     env_file:
-      - ./.env.production    
+      - ./.env.production
+    environment:
+      POSTGRES_DB: ${DRUPAL_DB_NAME}
+      POSTGRES_USER: ${DRUPAL_DB_USER}
+      POSTGRES_PASSWORD: ${DRUPAL_DB_PASS}  
     
   drupal:
     env_file:
       - ./.env.production
-    # Kein Voll-Mount in PROD!
-    # Image enthält Startskript /opt/drupal/start-drupal.sh (aus deinem Dockerfile)
     environment:
       DRUPAL_DB_HOST: ${DRUPAL_DB_HOST}
       DRUPAL_DB_NAME: ${DRUPAL_DB_NAME}
@@ -26,7 +28,6 @@ services:
       CONFIG_SYNC_DIRECTORY: ${CONFIG_SYNC_DIRECTORY}
       DRUPAL_AUTO_IMPORT_ON_START: ${DRUPAL_AUTO_IMPORT_ON_START}
       DRUPAL_INSTALL_PROFILE: ${DRUPAL_INSTALL_PROFILE}
-      # Falls gesetzt:
       DRUPAL_HASH_SALT: ${DRUPAL_HASH_SALT}
     command: ["/bin/bash", "/opt/drupal/start-drupal.sh"]
     restart: unless-stopped

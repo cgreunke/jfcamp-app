@@ -22,5 +22,9 @@ async function http(method, path, body) {
 export const api = {
   getConfig: () => http('GET', '/config'),
   postWunsch: (payload) => http('POST', '/wunsch', payload),
-  getZuweisungen: (code) => http('GET', `/zuweisungen?code=${encodeURIComponent(code)}`),
+  getZuweisungen: (codeOrParams) => {
+    const code = typeof codeOrParams === 'string' ? codeOrParams : codeOrParams?.code
+    return http('GET', `/zuweisungen?code=${encodeURIComponent(code || '')}`)
+  },
+  getSlots: () => http('GET', '/slots'),
 }

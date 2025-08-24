@@ -21,6 +21,8 @@ services:
       DRUPAL_TRUSTED_HOSTS: "^localhost$,^drupal$,^127\\.0\\.0\\.1$"
       DRUPAL_SITE_NAME: "JF Startercamp - App"
       MATCHING_BASE_URL: "http://matching:5001"
+      DRUPAL_AUTO_IMPORT_ON_START: "1"
+      CONFIG_SYNC_DIRECTORY: "/opt/drupal/config/sync"
       # nur PROD/basis – kein Auto-Import hier; DEV übernimmt das
     command: ["/bin/bash", "/opt/drupal/scripts/start-drupal.sh"]
     volumes:
@@ -33,9 +35,6 @@ services:
       - ./drupal/web/themes/custom:/opt/drupal/web/themes/custom
       # 🧱 Behalte Rest als Named Volume aus base-compose (drupal_project)
       # Option: files & private als eigenes Volume? Für DEV reicht das drupal_project-Volume.
-    environment:
-      DRUPAL_AUTO_IMPORT_ON_START: "1"
-      CONFIG_SYNC_DIRECTORY: "/opt/drupal/config/sync"
 
   matching:
     env_file:

@@ -6,7 +6,7 @@ const phone = import.meta.env.VITE_CONTACT_PHONE || '';
 </script>
 
 <template>
-  <footer class="card" style="margin-top:1rem;">
+  <div class="card app-footer">
     <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
       <div>
         <strong>{{ org }}</strong><br>
@@ -19,9 +19,9 @@ const phone = import.meta.env.VITE_CONTACT_PHONE || '';
         <router-link to="/datenschutz">Datenschutz</router-link>
       </nav>
     </div>
-  </footer>
+  </div>
 </template>
 
 <style scoped>
-footer { font-size: .95rem; }
+.app-footer { font-size: .95rem; }
 </style>

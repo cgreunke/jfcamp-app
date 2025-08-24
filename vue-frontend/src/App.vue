@@ -71,13 +71,13 @@ function isActive(path) {
       </v-list>
     </v-navigation-drawer>
 
-    <v-main>
-      <v-container>
+    <v-main class="pb-8">
+      <v-container class="py-6">
         <router-view />
       </v-container>
     </v-main>
 
-    <v-footer app>
+    <v-footer border="t thin" elevation="0" class="mt-6">
       <v-container>
         <AppFooter />
       </v-container>

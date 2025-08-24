@@ -5,6 +5,15 @@ Versionierung folgt **SemVer** (MAJOR.MINOR.PATCH).
 
 ---
 
+## [1.0.1] - 2025-08-24
+### Fixed
+- Footer überdeckte Inhalte auf Formularseiten – Vuetify-Footer nicht mehr als `app`, zusätzliche Abstände in `<v-main>`.
+
+### Added
+- Rechtstexte: **Impressum** und **Datenschutzerklärung** (LV Berlin‑Brandenburg KdöR) als schlanke Vue‑Views.
+
+---
+
 ## [1.0.0] - 2025-08-24
 
 ### Added

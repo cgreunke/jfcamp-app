@@ -1,7 +1,7 @@
 services:
   postgres:
     env_file:
-      - ./.env.production
+      - ./.env.development
     environment:
       POSTGRES_DB: drupal
       POSTGRES_USER: drupal

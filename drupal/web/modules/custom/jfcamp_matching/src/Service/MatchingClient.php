@@ -8,10 +8,6 @@ use Psr\Log\LoggerInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 
-/**
- * Client für den externen Matching-Service (Flask).
- * Der Service hat KEIN /matching/run → wir verwenden für "Run" den Dry-Run.
- */
 final class MatchingClient {
 
   public function __construct(
@@ -31,7 +27,10 @@ final class MatchingClient {
   public function stats(): array {
     $url = $this->baseUrl() . '/matching/stats';
     try {
-      $res = $this->http->request('GET', $url, ['timeout' => 60, 'headers' => ['Accept' => 'application/json']]);
+      $res = $this->http->request('GET', $url, [
+        'timeout' => 60,
+        'headers' => ['Accept' => 'application/json'],
+      ]);
       $data = json_decode((string) $res->getBody(), true);
       if (!is_array($data)) {
         throw new \RuntimeException('Ungültige JSON-Antwort von /matching/stats.');
@@ -43,27 +42,32 @@ final class MatchingClient {
     }
   }
 
-  /** POST /matching/dry-run */
-  public function dryRun(): array {
-    return $this->post('/matching/dry-run');
+  /** POST /matching/dry-run (mit optionalem Payload) */
+  public function dryRun(array $params = []): array {
+    return $this->post('/matching/dry-run', $params);
   }
 
   /**
-   * "Run" = Dry-Run (Service hat keinen echten /matching/run).
-   * Wir behalten die Methode bei, damit Form/Drush weiter funktionieren.
+   * "Run" = erneut /matching/dry-run mit denselben Parametern.
+   * (Es gibt weiterhin kein echtes /matching/run im Service.)
    */
-  public function run(): array {
+  public function run(array $params = []): array {
     $this->logger->notice('MatchingClient::run nutzt /matching/dry-run (kein /matching/run im Service vorhanden).');
-    return $this->post('/matching/dry-run');
+    return $this->post('/matching/dry-run', $params);
   }
 
-  private function post(string $path): array {
+  /** Für ExportProxyController: zusammengesetzte URL zu CSV */
+  public function exportUrl(string $path): string {
+    return $this->baseUrl() . $path;
+  }
+
+  private function post(string $path, array $payload = []): array {
     $url = $this->baseUrl() . $path;
     try {
       $res = $this->http->request('POST', $url, [
-        'timeout' => 60,
-        'headers' => ['Accept' => 'application/json'],
-        'json' => new \stdClass(),
+        'timeout' => 120,
+        'headers' => ['Accept' => 'application/json', 'Content-Type' => 'application/json'],
+        'json' => empty($payload) ? new \stdClass() : $payload,
       ]);
       $data = json_decode((string) $res->getBody(), true);
       if (!is_array($data)) {

@@ -27,7 +27,7 @@ Versionierung folgt **SemVer** (MAJOR.MINOR.PATCH).
 
 ### Notes
 - DEV/PROD-Kompatibilität bleibt bestehen.
-- Empfehlung: alte Felder in `matching_config` können nach Tests entfernt werden (Config-Export/Import).
+- Empfehlung: alte Felder in `matching_config` können nach Tests entfernt werden (Config-Export/Import).loc
 
 ---
 

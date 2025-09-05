@@ -17,6 +17,20 @@ class WunschController extends ControllerBase {
    * Body: { "code": "ABC123", "wuensche": ["<uuid oder titel>", ...] }
    */
   public function submit(Request $request): JsonResponse {
+    // Flood/Rate-Limit: max 10 Events pro 5s pro IP → 429 + Retry-After=3
+    $ip = \Drupal::request()->getClientIp();
+    $flood = \Drupal::flood();
+    $key = 'jfcamp_wunsch_post_' . $ip;
+    $window = 5;  // Sekunden
+    $limit  = 10; // max 10 Ereignisse pro 5s/IP
+    if (!$flood->isAllowed($key, $limit, $window)) {
+      return new JsonResponse(
+        ['error' => 'Zu viele Anfragen. Bitte kurz warten und erneut versuchen.'],
+        429,
+        ['Retry-After' => '3']
+      );
+    }
+    $flood->register($key, $window);
     $data = json_decode($request->getContent() ?: '[]', true);
     if (!is_array($data)) {
       return new JsonResponse(['ok' => false, 'error' => 'Ungültiger Body'], 400);
@@ -26,11 +40,23 @@ class WunschController extends ControllerBase {
     $wishLabels = isset($data['wuensche']) && is_array($data['wuensche']) ? array_values($data['wuensche']) : [];
 
     if ($code === '') {
-      return new JsonResponse(['ok' => false, 'error' => 'Code fehlt'], 400);
+       return new JsonResponse(['ok' => false, 'error' => 'Code fehlt'], 400);
+     }
+     if (empty($wishLabels)) {
+       return new JsonResponse(['ok' => false, 'error' => 'Mindestens ein Wunsch erforderlich'], 400);
+     }
+
+    // Zusätzliche Drossel pro Teilnehmer-Code (empfohlen):
+    $codeKey = 'jfcamp_wunsch_code_' . $code;
+    $flood = \Drupal::flood();
+    if (!$flood->isAllowed($codeKey, 3, 10)) {  // max 3 POSTs in 10s je Code
+      return new JsonResponse(
+        ['error' => 'Zu viele Anfragen für diesen Code. Bitte kurz warten.'],
+        429,
+        ['Retry-After' => '3']
+      );
     }
-    if (empty($wishLabels)) {
-      return new JsonResponse(['ok' => false, 'error' => 'Mindestens ein Wunsch erforderlich'], 400);
-    }
+    $flood->register($codeKey, 10);
 
     // Konfiguration aus matching_config laden (max. erlaubte Wünsche + optional Whitelist).
     $config = $this->getFormConfig();

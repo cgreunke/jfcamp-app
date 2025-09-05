@@ -5,6 +5,43 @@ Versionierung folgt **SemVer** (MAJOR.MINOR.PATCH).
 
 ---
 
+## [1.1.1] - 2025-09-05
+### Added
+- API-Drossel: Flood-Limits für POST /api/wunsch (pro IP + pro Teilnehmer-Code) → 429 + Retry-After.
+- Frontend: automatischer Retry/Backoff bei 429/503/502/504.
+- Web: Apache-Backpressure (MaxRequestWorkers) und Timeouts.
+- PHP: OPcache aktiviert/konfiguriert; Assertions für PHP 8.4 deaktiviert.
+
+### Fixed
+- Stabilität unter Peak-Last (Warten statt 502/Timeouts).
+
+
+## [1.1.0] - 2025-08-25
+
+### Added
+- **Matching-Service:**
+  - Neue Strategien: `fair` (Mehr-Runden mit Deckel & Benachteiligten-Prio) und `solver` (leximin-orientiert).
+  - Erweiterte Metriken: `gini_dissatisfaction`, `jain_index`, `top1_coverage`, `no_topk_rate`.
+  - Flexible Gewichtung: manuell per JSON oder automatisch via `weights_mode` (`linear`/`geometric`).
+- **Drupal Dashboard (Matching):**
+  - Parameter-Form mit Inline-Hilfetexten und Tooltips für alle Matching-Optionen.
+  - Dry-Run mit frei einstellbaren Parametern (Strategy, Objective, Seeds, Deckel, Alpha, Gewichte).
+  - Letzter Dry-Run speichert `last_params`; „Run“ nutzt exakt diese Parameter → reproduzierbar.
+- **Client/Controller:**
+  - `MatchingClient` unterstützt Payload-POSTs für `/matching/dry-run`.
+  - `MatchingRunController` zieht `last_params` aus State.
+  - Dashboard zeigt Kennzahlen (Happy-Index, Median, Gini, Jain, Coverage) übersichtlich an.
+
+### Changed
+- `docker-compose.dev.yml`: Anpassungen für neuen Matching-Service.
+- Nur noch Kernfelder (`field_num_wuensche`, `field_zuteilung`, Slot-Zeiten) in `matching_config` relevant – restliche Tuning-Parameter laufen über das Dashboard.
+
+### Notes
+- DEV/PROD-Kompatibilität bleibt bestehen.
+- Empfehlung: alte Felder in `matching_config` können nach Tests entfernt werden (Config-Export/Import).loc
+
+---
+
 ## [1.0.1] - 2025-08-24
 ### Fixed
 - Footer überdeckte Inhalte auf Formularseiten – Vuetify-Footer nicht mehr als `app`, zusätzliche Abstände in `<v-main>`.

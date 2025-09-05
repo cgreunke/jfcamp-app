@@ -19,8 +19,11 @@ final class MatchingRunController extends ControllerBase {
 
   public function run() {
     try {
-      // 1) Dry-Run holen (ist unser "Echtlauf"-Ergebnis)
-      $result = $this->client->dryRun();
+      // 0) letzte Parameter aus State nehmen (Reproduzierbarkeit)
+      $params = \Drupal::state()->get('jfcamp_matching.last_params') ?: [];
+
+      // 1) Dry-Run ausführen (als "Run"-Quelle)
+      $result = $this->client->dryRun(is_array($params) ? $params : []);
       $sum = $result['summary'] ?? [];
       $byParticipant = $result['by_participant'] ?? [];
       if (!is_array($byParticipant) || empty($byParticipant)) {
@@ -29,7 +32,7 @@ final class MatchingRunController extends ControllerBase {
         return new RedirectResponse($url);
       }
 
-      // 2) Konfiguration für Schreiblogik holen
+      // 2) Konfiguration fürs Schreiben
       $cfg = \Drupal::config('jfcamp_matching.settings');
       $config = [
         'participant_bundle' => $cfg->get('participant_bundle') ?? 'teilnehmer',
@@ -40,7 +43,7 @@ final class MatchingRunController extends ControllerBase {
         'assigned_field' => $cfg->get('assigned_field') ?? 'field_zugewiesen',
       ];
 
-      // 3) Batch setzen & starten
+      // 3) Batch anwenden
       $batch = ApplyAssignmentsBatch::build($config, $byParticipant);
       batch_set($batch);
 

@@ -5,6 +5,17 @@ Versionierung folgt **SemVer** (MAJOR.MINOR.PATCH).
 
 ---
 
+## [1.1.1] - 2025-09-05
+### Added
+- API-Drossel: Flood-Limits für POST /api/wunsch (pro IP + pro Teilnehmer-Code) → 429 + Retry-After.
+- Frontend: automatischer Retry/Backoff bei 429/503/502/504.
+- Web: Apache-Backpressure (MaxRequestWorkers) und Timeouts.
+- PHP: OPcache aktiviert/konfiguriert; Assertions für PHP 8.4 deaktiviert.
+
+### Fixed
+- Stabilität unter Peak-Last (Warten statt 502/Timeouts).
+
+
 ## [1.1.0] - 2025-08-25
 
 ### Added

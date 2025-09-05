@@ -5,6 +5,13 @@ Versionierung folgt **SemVer** (MAJOR.MINOR.PATCH).
 
 ---
 
+## [1.2.0] - 2025-09-05
+### Baseline
+- CPX11-Profil fixiert: **Nginx 12/24**, **MPM 20**.
+- Repro Lasttest (20 VUs / 60s) mit Backpressure:
+  - p95(200) ≈ 1008 ms, 200=0 %, 429=0 %, 5xx=0 % (Messdatei: docs/capacity/summary.cpx11.v1.2.0.json).
+- CAPACITY_GUIDELINE.md hinzugefügt (Vorgehen für Skalierung & Tests).
+
 ## [1.1.4] - 2025-09-05
 ### Changed 
 - Apache-Backpressure (MaxRequestWorkers) und Timeouts.

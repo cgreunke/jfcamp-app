@@ -40,11 +40,23 @@ class WunschController extends ControllerBase {
     $wishLabels = isset($data['wuensche']) && is_array($data['wuensche']) ? array_values($data['wuensche']) : [];
 
     if ($code === '') {
-      return new JsonResponse(['ok' => false, 'error' => 'Code fehlt'], 400);
+       return new JsonResponse(['ok' => false, 'error' => 'Code fehlt'], 400);
+     }
+     if (empty($wishLabels)) {
+       return new JsonResponse(['ok' => false, 'error' => 'Mindestens ein Wunsch erforderlich'], 400);
+     }
+
+    // Zusätzliche Drossel pro Teilnehmer-Code (empfohlen):
+    $codeKey = 'jfcamp_wunsch_code_' . $code;
+    $flood = \Drupal::flood();
+    if (!$flood->isAllowed($codeKey, 3, 10)) {  // max 3 POSTs in 10s je Code
+      return new JsonResponse(
+        ['error' => 'Zu viele Anfragen für diesen Code. Bitte kurz warten.'],
+        429,
+        ['Retry-After' => '3']
+      );
     }
-    if (empty($wishLabels)) {
-      return new JsonResponse(['ok' => false, 'error' => 'Mindestens ein Wunsch erforderlich'], 400);
-    }
+    $flood->register($codeKey, 10);
 
     // Konfiguration aus matching_config laden (max. erlaubte Wünsche + optional Whitelist).
     $config = $this->getFormConfig();

@@ -5,6 +5,10 @@ Versionierung folgt **SemVer** (MAJOR.MINOR.PATCH).
 
 ---
 
+## [1.1.4] - 2025-09-05
+### Changed 
+- Apache-Backpressure (MaxRequestWorkers) und Timeouts.
+
 ## [1.1.1] - 2025-09-05
 ### Added
 - API-Drossel: Flood-Limits für POST /api/wunsch (pro IP + pro Teilnehmer-Code) → 429 + Retry-After.

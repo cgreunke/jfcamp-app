@@ -17,6 +17,20 @@ class WunschController extends ControllerBase {
    * Body: { "code": "ABC123", "wuensche": ["<uuid oder titel>", ...] }
    */
   public function submit(Request $request): JsonResponse {
+    // Flood/Rate-Limit: max 10 Events pro 5s pro IP → 429 + Retry-After=3
+    $ip = \Drupal::request()->getClientIp();
+    $flood = \Drupal::flood();
+    $key = 'jfcamp_wunsch_post_' . $ip;
+    $window = 5;  // Sekunden
+    $limit  = 10; // max 10 Ereignisse pro 5s/IP
+    if (!$flood->isAllowed($key, $limit, $window)) {
+      return new JsonResponse(
+        ['error' => 'Zu viele Anfragen. Bitte kurz warten und erneut versuchen.'],
+        429,
+        ['Retry-After' => '3']
+      );
+    }
+    $flood->register($key, $window);
     $data = json_decode($request->getContent() ?: '[]', true);
     if (!is_array($data)) {
       return new JsonResponse(['ok' => false, 'error' => 'Ungültiger Body'], 400);

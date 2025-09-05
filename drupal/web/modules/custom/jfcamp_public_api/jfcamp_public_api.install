@@ -1,0 +1,14 @@
+<?php
+/**
+ * Update hooks für jfcamp_public_api.
+ */
+
+/**
+ * Create index on node__field_code(field_code_value) for faster participant lookup.
+ */
+function jfcamp_public_api_update_9001(): void {
+  \Drupal::database()->query("
+    CREATE INDEX IF NOT EXISTS idx_field_code_value
+    ON {node__field_code} (field_code_value)
+  ");
+}

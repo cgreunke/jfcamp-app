@@ -36,3 +36,11 @@ RUN chmod +x /opt/drupal/start-drupal.sh
 
 EXPOSE 80
 CMD ["bash", "/opt/drupal/start-drupal.sh"]
+
+# Apache-Module, die für obige Config nötig/ sinnvoll sind
+RUN a2enmod reqtimeout headers rewrite expires
+
+# Tuning-Dateien einspielen
+COPY apache/*.conf /etc/apache2/conf-enabled/
+COPY php/*.ini /usr/local/etc/php/conf.d/
+

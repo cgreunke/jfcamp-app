@@ -94,11 +94,3 @@ db_data/
 # --------------------------
 # wenn CSVs nur Demodaten sind, auskommentiert lassen um sie zu ignorieren:
 csv-examples/
-k6_wunsch.js
-k6-wunsch-simple.js
-payload.json
-summary.json
-workshop_ids.txt
-workshop_titles.txt
-workshops.txt
-codes.txt

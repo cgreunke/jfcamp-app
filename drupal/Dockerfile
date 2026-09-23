@@ -27,6 +27,10 @@ RUN a2enmod rewrite \
 
 WORKDIR /opt/drupal
 
+# Drupal-Projektdateien aus dem Repository
+COPY composer.json composer.lock ./
+COPY web/modules/custom/ web/modules/custom/
+
 # Composer bereitstellen (wichtig, sonst kein vendor/bin/drush)
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 

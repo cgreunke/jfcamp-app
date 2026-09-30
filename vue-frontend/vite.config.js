@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   // Wenn Vite im Container läuft: VITE_PROXY_TARGET=http://drupal
   // Lokal ohne Docker: VITE_PROXY_TARGET=http://localhost:8080
-  const target = env.VITE_PROXY_TARGET || 'http://localhost:8080'
+  const target = env.VITE_PROXY_TARGET || 'http://drupal'
 
   return {
     plugins: [vue(), vuetify({ autoImport: true })],

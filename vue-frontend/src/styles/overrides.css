@@ -1,4 +1,4 @@
-:root { --brand: #ee7203; }
+:root { --brand: #232f5e; }
 
 /* dünne Akzentlinie oben (dezent, aber wiedererkennbar) */
 .brand-topbar { height: 3px; background: var(--brand); }

@@ -4,18 +4,18 @@ import { createVuetify } from 'vuetify';
 import { aliases, mdi } from 'vuetify/iconsets/mdi';
 import { de } from 'vuetify/locale';
 
-const brand = '#ee7203';
+const brand = '#232f5e';
 
 const customTheme = {
   dark: false,
   colors: {
     primary: brand,
-    'primary-darken-1': '#d56603',
-    'primary-lighten-1': '#ff8a2d',
+    'primary-darken-1': '#1B244A',
+    'primary-lighten-1': '#404A71',
     surface: '#ffffff',
     background: '#ffffff',
     error: '#b3261e',
-    success: '#0f6d2a',
+    success: '#eae983',
   },
 };
 

@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import AppFooter from '@/components/AppFooter.vue'
-import logoUrl from '@/assets/jf-logo.png?url'
+import logoUrl from '@/assets/Happy-Human_jf.png?url'
 
 // Routen + Labels zentral definieren
 const navItems = [
@@ -86,8 +86,8 @@ function isActive(path) {
 </template>
 
 <style>
-/* Brand-Akzent oben (JugendFEIER-Orange) */
-.brand-topbar { height: 3px; background: #EE7100; }
+/* Brand-Akzent oben (JugendFEIER-blau) */
+.brand-topbar { height: 3px; background: var(--brand); }
 
 /* Logo-Größe dezent, responsive */
 .app-logo { height: 28px; width: auto; display: block; }
@@ -104,12 +104,12 @@ function isActive(path) {
   line-height: 1;
 }
 .nav-link:hover { background: rgba(0,0,0,0.05); }
-.nav-link.active { color: #EE7100; }
+.nav-link.active { color: var(--brand); }
 .nav-link.active::after {
   content: '';
   display: block;
   height: 2px;
-  background: #EE7100;
+  background: var(--brand);
   border-radius: 2px;
   margin-top: 4px;
 }

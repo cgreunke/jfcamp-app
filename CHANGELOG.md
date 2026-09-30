@@ -4,6 +4,27 @@ Alle relevanten Änderungen und Releases im Überblick.
 Versionierung folgt **SemVer** (MAJOR.MINOR.PATCH).
 
 ---
+## [1.3.0] - 2026-09-30
+
+### Security
+- **Drupal Core 11.4.7**: Sicherheitsupdate von 11.2.3 → 11.4.7 (kritische Patches)
+- Alle Drupal-Dependencies aktualisiert
+
+### Changed
+- **Gin Admin Theme**: 3.0.0 → 5.x (Kompatibilität mit Drupal 11.4)
+- **Admin Toolbar**: 3.6.2 → 3.6.3
+
+### Added
+- **Corporate Design Update**:
+  - Neue Primärfarbe: `#232f5e` (dunkles Blau)
+  - Neue Logos: HRN-Logo, Happy-Human_jf.png
+  - Design-Anpassungen in Vue Frontend (overrides.css, Vuetify-Config)
+- Vue Production Build-Prozess optimiert (statisches Nginx-Serve)
+
+### Fixed
+- Vue Frontend dist-Build mit aktuellen Design-Änderungen
+- Docker Compose Konfiguration für PROD-Umgebung
+
 
 ## [1.2.0] - 2025-09-05
 ### Baseline

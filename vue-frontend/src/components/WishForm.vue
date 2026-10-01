@@ -2,7 +2,7 @@
   <v-form ref="formRef" @submit.prevent="onSubmit">
     <v-text-field
       v-model="code"
-      label="Teilnehmer-Code"
+      label="Teilnehmer*innen-Code"
       variant="outlined"
       :rules="[v => !!v || 'Bitte Code eingeben']"
       class="mb-4"

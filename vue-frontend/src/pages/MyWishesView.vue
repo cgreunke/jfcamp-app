@@ -5,7 +5,7 @@
     <v-form @submit.prevent="loadWishes">
       <v-text-field
         v-model="code"
-        label="Teilnehmer-Code"
+        label="Teilnehmer*innen-Code"
         variant="outlined"
         autocomplete="one-time-code"
         :rules="[v => !!v || 'Bitte Code eingeben']"

@@ -1,0 +1,31 @@
+# Bei einer späteren Wiederverwendung Domains und Routing prüfen.
+
+startercamp.jugendfeier-nordbrandenburg.de, startercamp.jugendfeier.org {
+    encode gzip zstd
+
+    @drupal path \
+        /admin \
+        /admin/* \
+        /node \
+        /node/* \
+        /user \
+        /user/* \
+        /core/* \
+        /modules/* \
+        /themes/* \
+        /sites/* \
+        /profiles/* \
+        /libraries/* \
+        /update/* \
+        /batch \
+        /jsonapi \
+        /jsonapi/*
+
+    handle @drupal {
+        reverse_proxy drupal:80
+    }
+
+    handle {
+        reverse_proxy vue-prod:80
+    }
+}

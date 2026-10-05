@@ -1,0 +1,22 @@
+# Produktions-Overlay: Caddy als HTTPS-Reverse-Proxy.
+# Nur zusammen mit den Basis- und Produktions-Compose-Dateien verwenden.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: jfcamp-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - drupal
+      - vue-prod
+
+volumes:
+  caddy_data:
+  caddy_config:

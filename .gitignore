@@ -95,3 +95,4 @@ db_data/
 # --------------------------
 # wenn CSVs nur Demodaten sind, auskommentiert lassen um sie zu ignorieren:
 csv-examples/
+.venv/

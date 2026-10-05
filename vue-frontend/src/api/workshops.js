@@ -20,7 +20,7 @@ async function req(url) {
 export async function fetchWorkshops() {
   const tries = [
     // vollen Wunsch (mit ext_id) …
-    '/jsonapi/node/workshop?filter[status]=1&fields[node--workshop]=title,field_ext_id&sort=title&page[limit]=500',
+    '/jsonapi/node/workshop?filter[status]=1&fields[node--workshop]=title,field_ext_id,field_kurzbeschreibung&sort=title&page[limit]=500',
     // falls ext_id-Feld (noch) fehlt …
     '/jsonapi/node/workshop?filter[status]=1&fields[node--workshop]=title&sort=title&page[limit]=500',
     // ohne fields (Server wählt Standardfelder)
@@ -37,6 +37,7 @@ export async function fetchWorkshops() {
       return (data ?? []).map(d => ({
         id: d.id,                              // JSON:API UUID (für Auswahl & POST)
         title: d.attributes?.title ?? '(ohne Titel)',
+        description: d.attributes?.field_kurzbeschreibung ?? '',
         // extId ist „nice to have“ – kann fehlen, ohne das UI zu blockieren:
         extId: d.attributes?.field_ext_id ?? null,
       }))

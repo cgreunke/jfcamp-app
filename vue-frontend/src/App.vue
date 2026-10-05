@@ -10,6 +10,7 @@ const navItems = [
   { label: 'Wünsche abgeben', to: '/' },
   { label: 'Meine Wünsche', to: '/meine-wuensche' },
   { label: 'Meine Workshops', to: '/workshops' },
+  { label: 'Alle Workshops', to: '/workshop-list' },
 ]
 
 const route = useRoute()

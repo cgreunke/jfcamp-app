@@ -18,8 +18,26 @@ use Drupal\node\Entity\Node;
 final class ApplyAssignmentsBatch {
 
   /** Batch-Definition für Apply */
-  public static function build(array $config, array $by_participant): array {
-    $ops = [];
+  public static function build(
+    array $config,
+    array $by_participant,
+    int $runId,
+    string $resultHash,
+  ): array {
+    $expectedParticipants = count($by_participant);
+    $expectedAssignments = array_sum(array_map(
+      static fn(array $slotMap): int => count($slotMap),
+      $by_participant,
+    ));
+
+    $ops = [
+      [[static::class, 'initializeApply'], [
+        $runId,
+        $resultHash,
+        $expectedParticipants,
+        $expectedAssignments,
+      ]],
+    ];
     $chunks = array_chunk($by_participant, 150, TRUE);
     foreach ($chunks as $chunk) {
       $ops[] = [[static::class, 'applyChunk'], [$config, $chunk]];
@@ -46,6 +64,20 @@ final class ApplyAssignmentsBatch {
       'progress_message' => t('Lösche Zuweisungen …'),
       'error_message' => t('Fehler beim Zurücksetzen der Zuteilungen.'),
     ];
+  }
+
+
+  public static function initializeApply(
+    int $runId,
+    string $resultHash,
+    int $expectedParticipants,
+    int $expectedAssignments,
+    array &$context,
+  ): void {
+    $context['results']['run_id'] = $runId;
+    $context['results']['result_hash'] = $resultHash;
+    $context['results']['expected_participants'] = $expectedParticipants;
+    $context['results']['expected_assignments'] = $expectedAssignments;
   }
 
   public static function applyChunk(array $config, array $chunk, array &$context): void {
@@ -203,48 +235,74 @@ final class ApplyAssignmentsBatch {
   }
 
   public static function finishApply($success, array $results, array $operations): void {
-  if (!$success) {
-    \Drupal::messenger()->addError(
-      t('Batch ist mit Fehlern beendet.')
-    );
-    return;
-  }
+    $runId = (int) ($results['run_id'] ?? 0);
+    $resultHash = (string) ($results['result_hash'] ?? '');
+    $expectedParticipants = (int) ($results['expected_participants'] ?? 0);
+    $expectedAssignments = (int) ($results['expected_assignments'] ?? 0);
 
-  $updated = (int) ($results['updated_participants'] ?? 0);
-  $assignments = (int) ($results['written_assignments'] ?? 0);
-  $skipped = (int) ($results['skipped_participants'] ?? 0);
-  $invalidWorkshops = (int) ($results['invalid_workshops'] ?? 0);
-  $missingField = (int) ($results['missing_assignment_field'] ?? 0);
-  $participantsWithErrors = (int) ($results['participants_with_errors'] ?? 0);
-  $withoutAssignments = (int) ($results['participants_without_assignments'] ?? 0);
+    $updated = (int) ($results['updated_participants'] ?? 0);
+    $assignments = (int) ($results['written_assignments'] ?? 0);
+    $skipped = (int) ($results['skipped_participants'] ?? 0);
+    $invalidWorkshops = (int) ($results['invalid_workshops'] ?? 0);
+    $missingField = (int) ($results['missing_assignment_field'] ?? 0);
+    $participantsWithErrors = (int) ($results['participants_with_errors'] ?? 0);
+    $withoutAssignments = (int) ($results['participants_without_assignments'] ?? 0);
 
-  \Drupal::messenger()->addStatus(t(
-    'Zuweisungen angewendet: @participants Teilnehmer aktualisiert, @assignments Zuweisungen gespeichert.',
-    [
-      '@participants' => $updated,
-      '@assignments' => $assignments,
-    ]
-  ));
+    $applyResult = [
+      'batch_success' => (bool) $success,
+      'expected_participants' => $expectedParticipants,
+      'updated_participants' => $updated,
+      'expected_assignments' => $expectedAssignments,
+      'written_assignments' => $assignments,
+      'skipped_participants' => $skipped,
+      'invalid_workshops' => $invalidWorkshops,
+      'missing_assignment_field' => $missingField,
+      'participants_with_errors' => $participantsWithErrors,
+      'participants_without_assignments' => $withoutAssignments,
+    ];
 
-  if (
-  $skipped > 0 ||
-  $invalidWorkshops > 0 ||
-  $missingField > 0 ||
-  $participantsWithErrors > 0 ||
-  $withoutAssignments > 0
-  ) {
-    \Drupal::messenger()->addWarning(t(
-      'Hinweise: @skipped Teilnehmer übersprungen, @invalid ungültige Workshop-Referenzen, @missing fehlende Zielfelder, @errors Teilnehmer mit Teilfehlern.',
+    $hasDataErrors = $skipped > 0 || $invalidWorkshops > 0 || $missingField > 0 || $participantsWithErrors > 0 || $withoutAssignments > 0;
+    $countsMatch = $updated === $expectedParticipants && $assignments === $expectedAssignments;
+    $fullySuccessful = $success && !$hasDataErrors && $countsMatch;
+
+    try {
+      $runStorage = \Drupal::service('jfcamp_matching.run_storage');
+
+      if ($fullySuccessful && $runId > 0 && strlen($resultHash) === 64) {
+        $runStorage->markApplied($runId, $resultHash, $applyResult);
+        \Drupal::messenger()->addStatus(t(
+          'Run #@run wurde exakt aus dem gespeicherten Snapshot angewendet: @participants Teilnehmer, @assignments Zuweisungen.',
+          [
+            '@run' => $runId,
+            '@participants' => $updated,
+            '@assignments' => $assignments,
+          ],
+        ));
+        return;
+      }
+
+      if ($runId > 0 && strlen($resultHash) === 64) {
+        $runStorage->markApplyFailed($runId, $resultHash, $applyResult);
+      }
+    }
+    catch (\Throwable $e) {
+      \Drupal::logger('jfcamp_matching')->error(
+        'Apply-Status für Matching-Run #@run konnte nicht persistiert werden: @message',
+        ['@run' => $runId, '@message' => $e->getMessage()],
+      );
+    }
+
+    \Drupal::messenger()->addError(t(
+      'Run #@run wurde nicht vollständig angewendet. Erwartet: @ep Teilnehmer / @ea Zuweisungen; geschrieben: @up Teilnehmer / @wa Zuweisungen.',
       [
-        '@skipped' => $skipped,
-        '@invalid' => $invalidWorkshops,
-        '@missing' => $missingField,
-        '@errors' => $participantsWithErrors,
-        '@without' => $withoutAssignments,
-      ]
+        '@run' => $runId ?: '?',
+        '@ep' => $expectedParticipants,
+        '@ea' => $expectedAssignments,
+        '@up' => $updated,
+        '@wa' => $assignments,
+      ],
     ));
   }
-}
 
   public static function finishReset($success, array $results, array $operations): void {
     if ($success) {

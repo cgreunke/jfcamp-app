@@ -24,6 +24,25 @@ function jfcamp_matching_update_10001(): void {
   }
 }
 
+
+/**
+ * Adds auditable Apply metadata for existing matching-run tables.
+ */
+function jfcamp_matching_update_10002(): void {
+  $schema = \Drupal::database()->schema();
+  if (!$schema->tableExists('jfcamp_matching_run')) {
+    $schema->createTable('jfcamp_matching_run', jfcamp_matching_run_table_definition());
+    return;
+  }
+
+  $definition = jfcamp_matching_run_table_definition();
+  foreach (['apply_status', 'applied_uid', 'applied_hash', 'apply_result_json'] as $field) {
+    if (!$schema->fieldExists('jfcamp_matching_run', $field)) {
+      $schema->addField('jfcamp_matching_run', $field, $definition['fields'][$field]);
+    }
+  }
+}
+
 /**
  * Shared schema definition for matching runs.
  */
@@ -103,9 +122,34 @@ function jfcamp_matching_run_table_definition(): array {
         'size' => 'big',
         'not null' => FALSE,
       ],
+      'apply_status' => [
+        'description' => 'Apply-Status: not_applied, applying, applied oder failed.',
+        'type' => 'varchar_ascii',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => 'not_applied',
+      ],
       'applied_at' => [
-        'description' => 'Zeitpunkt des erfolgreichen Apply; wird in einer späteren Phase gesetzt.',
+        'description' => 'Zeitpunkt des letzten erfolgreichen Apply.',
         'type' => 'int',
+        'not null' => FALSE,
+      ],
+      'applied_uid' => [
+        'description' => 'Drupal-User-ID des letzten erfolgreichen Apply.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+      ],
+      'applied_hash' => [
+        'description' => 'Snapshot-Hash, der tatsächlich angewendet wurde.',
+        'type' => 'varchar_ascii',
+        'length' => 64,
+        'not null' => FALSE,
+      ],
+      'apply_result_json' => [
+        'description' => 'Ergebnis und Zähler des letzten Apply.',
+        'type' => 'text',
+        'size' => 'big',
         'not null' => FALSE,
       ],
     ],

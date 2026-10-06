@@ -163,7 +163,10 @@ final class MatchingDashboardController extends ControllerBase {
         '#type' => 'inline_template',
         '#template' => '<form action="{{ url }}" method="post" style="display:inline-block;margin-right:8px"><button class="button button--primary">{{ label }}</button></form>',
         '#context' => [
-          'url' => Url::fromRoute('jfcamp_matching.action_apply')->toString(),
+          'url' => Url::fromRoute(
+            'jfcamp_matching.action_apply',
+            ['run_id' => $latestRun['id']],
+          )->toString(),
           'label' => $this->t('Run #@id festschreiben', ['@id' => $latestRun['id']]),
         ],
       ];
@@ -304,44 +307,47 @@ final class MatchingDashboardController extends ControllerBase {
   }
 
   /**
-   * POST /apply -> wendet ausschließlich den Snapshot des neuesten Runs an.
+   * POST /run/{run_id}/apply -> wendet ausschließlich genau diesen Snapshot an.
    *
-   * Ein fehlgeschlagener oder laufender neuer Run blockiert damit bewusst den
-   * Apply-Button für einen älteren Run. Eine gezielte Auswahl historischer Runs
-   * folgt zusammen mit Review/Apply in einer späteren Phase.
+   * Es wird kein Matching-Service aufgerufen und nichts neu berechnet.
    */
-  public function actionApply(Request $request) {
-    $run = $this->runStorage->latest();
-    $snapshot = $run['snapshot'] ?? NULL;
+  public function actionApply(int $run_id, Request $request) {
+    try {
+      $run = $this->runStorage->loadApplicable($run_id);
+      $snapshot = $run['snapshot'];
+      $resultHash = (string) $run['result_hash'];
 
-    if (
-      !$run
-      || $run['status'] !== 'completed'
-      || !$snapshot
-      || empty($snapshot['by_participant'])
-      || !is_array($snapshot['by_participant'])
-    ) {
+      $this->runStorage->markApplying($run_id, $resultHash);
+
+      $config = $this->cfg();
+      $batch = ApplyAssignmentsBatch::build(
+        $config,
+        $snapshot['by_participant'],
+        $run_id,
+        $resultHash,
+      );
+      batch_set($batch);
+
+      $this->messenger()->addStatus($this->t(
+        'Festschreiben von Run #@run gestartet. Snapshot @hash wird exakt angewendet; es findet keine Neuberechnung statt.',
+        [
+          '@run' => $run_id,
+          '@hash' => substr($resultHash, 0, 16) . '…',
+        ],
+      ));
+
+      return batch_process(Url::fromRoute('jfcamp_matching.dashboard'));
+    }
+    catch (\Throwable $e) {
       $this->messenger()->addError($this->t(
-        'Der neueste Matching-Run ist nicht anwendbar. Bitte zuerst einen erfolgreichen Matching-Lauf abschließen.'
+        'Run #@run konnte nicht angewendet werden: @message',
+        [
+          '@run' => $run_id,
+          '@message' => $e->getMessage(),
+        ],
       ));
       return new RedirectResponse(Url::fromRoute('jfcamp_matching.dashboard')->toString());
     }
-
-    $config = $this->cfg();
-    $batch = ApplyAssignmentsBatch::build($config, $snapshot['by_participant']);
-    batch_set($batch);
-
-    $sum = $snapshot['summary'] ?? [];
-    $this->messenger()->addStatus($this->t(
-      'Festschreiben von Run #@run gestartet: @participants Teilnehmer, @assignments Zuteilungen. Das Matching wird dabei nicht neu berechnet.',
-      [
-        '@run' => $run['id'],
-        '@participants' => $sum['participants_total'] ?? count($snapshot['by_participant']),
-        '@assignments' => $sum['assignments_total'] ?? 0,
-      ]
-    ));
-
-    return batch_process(Url::fromRoute('jfcamp_matching.dashboard'));
   }
 
   /** POST /reset -> löscht die in Drupal festgeschriebenen Zuteilungen. */
@@ -374,6 +380,23 @@ final class MatchingDashboardController extends ControllerBase {
 
     if (!empty($run['result_hash'])) {
       $metaRows[] = [$this->t('Snapshot-Hash'), substr($run['result_hash'], 0, 16) . '…'];
+    }
+
+    $applyStatusLabels = [
+      'not_applied' => $this->t('noch nicht festgeschrieben'),
+      'applying' => $this->t('wird festgeschrieben'),
+      'applied' => $this->t('erfolgreich festgeschrieben'),
+      'failed' => $this->t('Festschreiben fehlgeschlagen'),
+    ];
+    $metaRows[] = [
+      $this->t('Apply-Status'),
+      (string) ($applyStatusLabels[$run['apply_status']] ?? $run['apply_status']),
+    ];
+    if (!empty($run['applied_at'])) {
+      $metaRows[] = [$this->t('Festgeschrieben'), $this->formatTimestamp($run['applied_at'])];
+    }
+    if (!empty($run['applied_hash'])) {
+      $metaRows[] = [$this->t('Angewendeter Hash'), substr($run['applied_hash'], 0, 16) . '…'];
     }
 
     $build['run_meta'] = [

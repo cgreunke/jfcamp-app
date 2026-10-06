@@ -113,6 +113,70 @@ final class MatchingRunStorage {
       ->execute();
   }
 
+
+  public function loadApplicable(int $runId): array {
+    $run = $this->load($runId);
+    if (!$run) {
+      throw new \RuntimeException(sprintf('Matching-Run #%d wurde nicht gefunden.', $runId));
+    }
+    if ($run['status'] !== 'completed') {
+      throw new \RuntimeException(sprintf('Matching-Run #%d ist nicht abgeschlossen.', $runId));
+    }
+    if (empty($run['result_hash']) || strlen((string) $run['result_hash']) !== 64) {
+      throw new \RuntimeException(sprintf('Matching-Run #%d besitzt keinen gültigen Snapshot-Hash.', $runId));
+    }
+    if (empty($run['snapshot']) || empty($run['snapshot']['by_participant']) || !is_array($run['snapshot']['by_participant'])) {
+      throw new \RuntimeException(sprintf('Matching-Run #%d besitzt keinen anwendbaren Snapshot.', $runId));
+    }
+    return $run;
+  }
+
+  public function markApplying(int $runId, string $expectedHash): void {
+    $affected = $this->database->update(self::TABLE)
+      ->fields([
+        'apply_status' => 'applying',
+        'apply_result_json' => NULL,
+      ])
+      ->condition('id', $runId)
+      ->condition('status', 'completed')
+      ->condition('result_hash', $expectedHash)
+      ->execute();
+
+    if ($affected !== 1) {
+      throw new \RuntimeException(sprintf('Matching-Run #%d konnte nicht für Apply reserviert werden.', $runId));
+    }
+  }
+
+  public function markApplied(int $runId, string $expectedHash, array $result): void {
+    $affected = $this->database->update(self::TABLE)
+      ->fields([
+        'apply_status' => 'applied',
+        'applied_at' => $this->time->getCurrentTime(),
+        'applied_uid' => (int) $this->currentUser->id(),
+        'applied_hash' => $expectedHash,
+        'apply_result_json' => $this->encode($result),
+      ])
+      ->condition('id', $runId)
+      ->condition('status', 'completed')
+      ->condition('result_hash', $expectedHash)
+      ->execute();
+
+    if ($affected !== 1) {
+      throw new \RuntimeException(sprintf('Matching-Run #%d konnte nach Apply nicht bestätigt werden.', $runId));
+    }
+  }
+
+  public function markApplyFailed(int $runId, string $expectedHash, array $result): void {
+    $this->database->update(self::TABLE)
+      ->fields([
+        'apply_status' => 'failed',
+        'apply_result_json' => $this->encode($result),
+      ])
+      ->condition('id', $runId)
+      ->condition('result_hash', $expectedHash)
+      ->execute();
+  }
+
   public function latest(): ?array {
     $row = $this->database->select(self::TABLE, 'r')
       ->fields('r')
@@ -199,7 +263,19 @@ final class MatchingRunStorage {
       'snapshot' => $snapshot,
       'result_hash' => $row['result_hash'] !== NULL ? (string) $row['result_hash'] : NULL,
       'error_message' => $row['error_message'] !== NULL ? (string) $row['error_message'] : NULL,
+      'apply_status' => isset($row['apply_status']) && $row['apply_status'] !== NULL
+        ? (string) $row['apply_status']
+        : 'not_applied',
       'applied_at' => $row['applied_at'] !== NULL ? (int) $row['applied_at'] : NULL,
+      'applied_uid' => isset($row['applied_uid']) && $row['applied_uid'] !== NULL
+        ? (int) $row['applied_uid']
+        : NULL,
+      'applied_hash' => isset($row['applied_hash']) && $row['applied_hash'] !== NULL
+        ? (string) $row['applied_hash']
+        : NULL,
+      'apply_result' => !empty($row['apply_result_json'])
+        ? $this->decode((string) $row['apply_result_json'])
+        : [],
     ];
   }
 

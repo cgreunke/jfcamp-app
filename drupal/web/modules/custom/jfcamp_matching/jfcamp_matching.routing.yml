@@ -30,11 +30,12 @@ jfcamp_matching.action_dry_run:
   methods: [POST]
 
 jfcamp_matching.action_apply:
-  path: '/admin/reports/jfcamp/matching/apply'
+  path: '/admin/reports/jfcamp/matching/run/{run_id}/apply'
   defaults:
     _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::actionApply'
   requirements:
     _permission: 'run jfcamp matching'
+    run_id: '^\d+$'
   methods: [POST]
 
 jfcamp_matching.action_reset:

@@ -3,6 +3,10 @@ services:
     class: 'Drupal\jfcamp_matching\Service\MatchingClient'
     arguments: ['@http_client', '@config.factory', '@logger.channel.jfcamp_matching', '@settings']
 
+  jfcamp_matching.run_storage:
+    class: 'Drupal\jfcamp_matching\Service\MatchingRunStorage'
+    arguments: ['@database', '@uuid', '@current_user', '@datetime.time']
+
   logger.channel.jfcamp_matching:
     parent: 'logger.channel_base'
     arguments: ['jfcamp_matching']

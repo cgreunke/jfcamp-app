@@ -1,0 +1,121 @@
+<?php
+
+/**
+ * @file
+ * Install/update hooks for JFCamp Matching.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function jfcamp_matching_schema(): array {
+  return [
+    'jfcamp_matching_run' => jfcamp_matching_run_table_definition(),
+  ];
+}
+
+/**
+ * Adds persistent matching runs for existing installations.
+ */
+function jfcamp_matching_update_10001(): void {
+  $schema = \Drupal::database()->schema();
+  if (!$schema->tableExists('jfcamp_matching_run')) {
+    $schema->createTable('jfcamp_matching_run', jfcamp_matching_run_table_definition());
+  }
+}
+
+/**
+ * Shared schema definition for matching runs.
+ */
+function jfcamp_matching_run_table_definition(): array {
+  return [
+    'description' => 'Persistente Matching-Läufe und ihre unveränderlichen Ergebnis-Snapshots.',
+    'fields' => [
+      'id' => [
+        'description' => 'Interne Run-ID.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'uuid' => [
+        'description' => 'Stabile UUID des Runs.',
+        'type' => 'varchar_ascii',
+        'length' => 36,
+        'not null' => TRUE,
+      ],
+      'status' => [
+        'description' => 'Run-Status: running, completed oder failed.',
+        'type' => 'varchar_ascii',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => 'running',
+      ],
+      'created_at' => [
+        'description' => 'Erstellzeitpunkt als Unix-Timestamp.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'started_at' => [
+        'description' => 'Startzeitpunkt als Unix-Timestamp.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ],
+      'finished_at' => [
+        'description' => 'Endzeitpunkt als Unix-Timestamp.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ],
+      'created_uid' => [
+        'description' => 'Drupal-User-ID, die den Lauf gestartet hat.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'config_json' => [
+        'description' => 'Snapshot der für den Lauf verwendeten matching_config.',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+      ],
+      'summary_json' => [
+        'description' => 'Vom Matching-Service gelieferte Zusammenfassung.',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+      ],
+      'snapshot_json' => [
+        'description' => 'Vollständiger Ergebnis-Snapshot für späteres Apply.',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+      ],
+      'result_hash' => [
+        'description' => 'SHA-256 des gespeicherten Snapshot-JSON.',
+        'type' => 'varchar_ascii',
+        'length' => 64,
+        'not null' => FALSE,
+      ],
+      'error_message' => [
+        'description' => 'Fehlertext bei fehlgeschlagenen Runs.',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+      ],
+      'applied_at' => [
+        'description' => 'Zeitpunkt des erfolgreichen Apply; wird in einer späteren Phase gesetzt.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => [
+      'uuid' => ['uuid'],
+    ],
+    'indexes' => [
+      'status_created' => ['status', 'created_at'],
+      'created_at' => ['created_at'],
+    ],
+  ];
+}

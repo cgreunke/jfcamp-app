@@ -7,6 +7,7 @@ use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\jfcamp_matching\Batch\ApplyAssignmentsBatch;
 use Drupal\jfcamp_matching\Service\MatchingClient;
+use Drupal\jfcamp_matching\Service\MatchingRunStorage;
 use Drupal\node\Entity\Node;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -14,10 +15,16 @@ use Symfony\Component\HttpFoundation\Request;
 
 final class MatchingDashboardController extends ControllerBase {
 
-  public function __construct(private MatchingClient $client) {}
+  public function __construct(
+    private MatchingClient $client,
+    private MatchingRunStorage $runStorage,
+  ) {}
 
   public static function create(ContainerInterface $container): self {
-    return new self($container->get('jfcamp_matching.client'));
+    return new self(
+      $container->get('jfcamp_matching.client'),
+      $container->get('jfcamp_matching.run_storage'),
+    );
   }
 
   private function cfg(): array {
@@ -33,7 +40,7 @@ final class MatchingDashboardController extends ControllerBase {
   }
 
   public function dashboard(): array {
-    $snapshot = \Drupal::state()->get('jfcamp_matching.last_dryrun') ?: NULL;
+    $latestRun = $this->runStorage->latest();
     $matchingConfig = $this->readMatchingConfigFromDrupal();
 
     $build = [
@@ -82,23 +89,28 @@ final class MatchingDashboardController extends ControllerBase {
       ];
       $build['run_hint'] = [
         '#markup' => '<p><small>' . $this->t(
-          'Phase 3A läuft noch synchron. Während der Berechnung muss die Seite geöffnet bleiben. Die asynchrone Run-Verarbeitung folgt in einem späteren Schritt.'
+          'Phase 3B speichert jeden Lauf bereits dauerhaft. Die Berechnung selbst läuft noch synchron; echte Hintergrundverarbeitung und Live-Fortschritt folgen in Phase 3C.'
         ) . '</small></p>',
       ];
     }
 
     $build['result_title'] = [
-      '#markup' => '<h2>' . $this->t('Letztes berechnetes Ergebnis') . '</h2>',
+      '#markup' => '<h2>' . $this->t('Letzter Matching-Lauf') . '</h2>',
     ];
 
-    if ($snapshot && is_array($snapshot)) {
-      $build += $this->buildSnapshotResult($snapshot);
+    if ($latestRun) {
+      $build += $this->buildRunResult($latestRun);
     }
     else {
       $build['result_empty'] = [
-        '#markup' => '<p><em>' . $this->t('Noch kein Matching-Ergebnis vorhanden.') . '</em></p>',
+        '#markup' => '<p><em>' . $this->t('Noch kein persistenter Matching-Lauf vorhanden.') . '</em></p>',
       ];
     }
+
+    $build['history_title'] = [
+      '#markup' => '<h2>' . $this->t('Letzte Matching-Läufe') . '</h2>',
+    ];
+    $build['history'] = $this->buildRunHistory();
 
     $build['actions_title'] = [
       '#markup' => '<h2>' . $this->t('Aktionen') . '</h2>',
@@ -108,13 +120,17 @@ final class MatchingDashboardController extends ControllerBase {
       '#attributes' => ['class' => ['container-inline']],
     ];
 
-    if ($snapshot && !empty($snapshot['by_participant'])) {
+    if (
+      $latestRun
+      && $latestRun['status'] === 'completed'
+      && !empty($latestRun['snapshot']['by_participant'])
+    ) {
       $build['actions']['apply'] = [
         '#type' => 'inline_template',
         '#template' => '<form action="{{ url }}" method="post" style="display:inline-block;margin-right:8px"><button class="button button--primary">{{ label }}</button></form>',
         '#context' => [
           'url' => Url::fromRoute('jfcamp_matching.action_apply')->toString(),
-          'label' => $this->t('Dieses Ergebnis festschreiben'),
+          'label' => $this->t('Run #@id festschreiben', ['@id' => $latestRun['id']]),
         ],
       ];
     }
@@ -133,7 +149,7 @@ final class MatchingDashboardController extends ControllerBase {
     ];
     $build['exports_hint'] = [
       '#markup' => '<p><small>' . $this->t(
-        'Diese Exporte enthalten die aktuell in Drupal festgeschriebenen Zuteilungen, nicht automatisch den letzten Dry-Run.'
+        'Diese Exporte enthalten die aktuell in Drupal festgeschriebenen Zuteilungen, nicht automatisch den letzten Matching-Run.'
       ) . '</small></p>',
     ];
     $build['exports'] = $this->buildExportLinks($matchingConfig);
@@ -142,22 +158,22 @@ final class MatchingDashboardController extends ControllerBase {
   }
 
   /**
-   * POST /dry-run -> aktuell noch ein einzelner State-Snapshot.
+   * POST /dry-run -> persistenter Run mit unveränderlichem Ergebnis-Snapshot.
    *
-   * In Phase 3B wird dieser State-Snapshot durch persistente Matching-Runs
-   * ersetzt. Apply berechnet schon jetzt niemals erneut.
+   * Die Berechnung läuft in Phase 3B noch synchron. Der Run wird aber bereits
+   * vor dem Service-Aufruf als "running" angelegt und danach auf "completed"
+   * oder "failed" gesetzt. Phase 3C kann darauf die Async-Verarbeitung bauen.
    */
   public function actionDryRun(Request $request): RedirectResponse {
+    $runId = NULL;
+
     try {
       $matchingConfig = $this->readMatchingConfigFromDrupal();
       if (!$matchingConfig) {
         throw new \RuntimeException('Keine veröffentlichte matching_config gefunden.');
       }
 
-      // Ein fehlgeschlagener neuer Lauf darf nicht versehentlich den Apply-
-      // Button für einen älteren Snapshot stehen lassen.
-      \Drupal::state()->delete('jfcamp_matching.last_dryrun');
-      \Drupal::state()->delete('jfcamp_matching.last_params');
+      $runId = $this->runStorage->createRunning($matchingConfig);
 
       $res = $this->client->dryRun();
       $byParticipant = $res['by_participant'] ?? [];
@@ -165,27 +181,43 @@ final class MatchingDashboardController extends ControllerBase {
         throw new \RuntimeException('Matching-Service lieferte kein gültiges by_participant-Ergebnis.');
       }
 
-      $snapshot = [
-        'created_at' => \Drupal::time()->getRequestTime(),
-        'summary' => is_array($res['summary'] ?? NULL) ? $res['summary'] : [],
-        'by_participant' => $byParticipant,
-        'assignment_details' => is_array($res['assignment_details'] ?? NULL) ? $res['assignment_details'] : [],
-        'config' => $matchingConfig,
-      ];
-      \Drupal::state()->set('jfcamp_matching.last_dryrun', $snapshot);
+      $summary = is_array($res['summary'] ?? NULL) ? $res['summary'] : [];
+      $assignmentDetails = is_array($res['assignment_details'] ?? NULL)
+        ? $res['assignment_details']
+        : [];
 
-      $sum = $snapshot['summary'];
+      $this->runStorage->markCompleted(
+        $runId,
+        $summary,
+        $byParticipant,
+        $assignmentDetails,
+        $matchingConfig,
+      );
+
       $this->messenger()->addStatus($this->t(
-        'Matching berechnet: @participants Teilnehmer, @assignments Zuteilungen, davon @wishes Wünsche und @fillers Auffüllungen.',
+        'Run #@run abgeschlossen: @participants Teilnehmer, @assignments Zuteilungen, davon @wishes Wünsche und @fillers Auffüllungen.',
         [
-          '@participants' => $sum['participants_total'] ?? count($byParticipant),
-          '@assignments' => $sum['assignments_total'] ?? 0,
-          '@wishes' => $sum['wish_assignments'] ?? 0,
-          '@fillers' => $sum['filler_assignments'] ?? 0,
+          '@run' => $runId,
+          '@participants' => $summary['participants_total'] ?? count($byParticipant),
+          '@assignments' => $summary['assignments_total'] ?? 0,
+          '@wishes' => $summary['wish_assignments'] ?? 0,
+          '@fillers' => $summary['filler_assignments'] ?? 0,
         ]
       ));
     }
     catch (\Throwable $e) {
+      if ($runId !== NULL) {
+        try {
+          $this->runStorage->markFailed($runId, $e->getMessage());
+        }
+        catch (\Throwable $storageError) {
+          \Drupal::logger('jfcamp_matching')->error(
+            'Run #@run konnte nach Fehler nicht als failed gespeichert werden: @message',
+            ['@run' => $runId, '@message' => $storageError->getMessage()],
+          );
+        }
+      }
+
       $this->messenger()->addError($this->t('Matching fehlgeschlagen: @message', [
         '@message' => $e->getMessage(),
       ]));
@@ -194,12 +226,26 @@ final class MatchingDashboardController extends ControllerBase {
     return new RedirectResponse(Url::fromRoute('jfcamp_matching.dashboard')->toString());
   }
 
-  /** POST /apply -> wendet ausschließlich den gespeicherten Snapshot an. */
+  /**
+   * POST /apply -> wendet ausschließlich den Snapshot des neuesten Runs an.
+   *
+   * Ein fehlgeschlagener oder laufender neuer Run blockiert damit bewusst den
+   * Apply-Button für einen älteren Run. Eine gezielte Auswahl historischer Runs
+   * folgt zusammen mit Review/Apply in einer späteren Phase.
+   */
   public function actionApply(Request $request) {
-    $snapshot = \Drupal::state()->get('jfcamp_matching.last_dryrun');
-    if (!$snapshot || empty($snapshot['by_participant']) || !is_array($snapshot['by_participant'])) {
+    $run = $this->runStorage->latest();
+    $snapshot = $run['snapshot'] ?? NULL;
+
+    if (
+      !$run
+      || $run['status'] !== 'completed'
+      || !$snapshot
+      || empty($snapshot['by_participant'])
+      || !is_array($snapshot['by_participant'])
+    ) {
       $this->messenger()->addError($this->t(
-        'Kein anwendbarer Matching-Snapshot vorhanden. Bitte zuerst Matching berechnen.'
+        'Der neueste Matching-Run ist nicht anwendbar. Bitte zuerst einen erfolgreichen Matching-Lauf abschließen.'
       ));
       return new RedirectResponse(Url::fromRoute('jfcamp_matching.dashboard')->toString());
     }
@@ -210,8 +256,9 @@ final class MatchingDashboardController extends ControllerBase {
 
     $sum = $snapshot['summary'] ?? [];
     $this->messenger()->addStatus($this->t(
-      'Festschreiben gestartet: @participants Teilnehmer, @assignments Zuteilungen. Das Matching wird dabei nicht neu berechnet.',
+      'Festschreiben von Run #@run gestartet: @participants Teilnehmer, @assignments Zuteilungen. Das Matching wird dabei nicht neu berechnet.',
       [
+        '@run' => $run['id'],
         '@participants' => $sum['participants_total'] ?? count($snapshot['by_participant']),
         '@assignments' => $sum['assignments_total'] ?? 0,
       ]
@@ -230,13 +277,98 @@ final class MatchingDashboardController extends ControllerBase {
     return batch_process(Url::fromRoute('jfcamp_matching.dashboard'));
   }
 
+  private function buildRunResult(array $run): array {
+    $build = [];
+
+    $statusLabels = [
+      'running' => $this->t('läuft'),
+      'completed' => $this->t('abgeschlossen'),
+      'failed' => $this->t('fehlgeschlagen'),
+    ];
+
+    $metaRows = [
+      [$this->t('Run'), '#' . $run['id']],
+      [$this->t('Status'), (string) ($statusLabels[$run['status']] ?? $run['status'])],
+      [$this->t('Erstellt'), $this->formatTimestamp($run['created_at'])],
+      [$this->t('Gestartet'), $this->formatTimestamp($run['started_at'])],
+      [$this->t('Beendet'), $this->formatTimestamp($run['finished_at'])],
+    ];
+
+    if (!empty($run['result_hash'])) {
+      $metaRows[] = [$this->t('Snapshot-Hash'), substr($run['result_hash'], 0, 16) . '…'];
+    }
+
+    $build['run_meta'] = [
+      '#type' => 'table',
+      '#header' => [$this->t('Run-Metadatum'), $this->t('Wert')],
+      '#rows' => $metaRows,
+    ];
+
+    if ($run['status'] === 'failed') {
+      $build['run_error'] = [
+        '#markup' => '<p><strong>' . $this->t('Fehler:') . '</strong> '
+          . $this->escape((string) ($run['error_message'] ?? 'Unbekannter Fehler'))
+          . '</p>',
+      ];
+      return $build;
+    }
+
+    if ($run['status'] === 'running') {
+      $build['run_running'] = [
+        '#markup' => '<p><em>' . $this->t(
+          'Dieser Run ist als laufend gespeichert. In Phase 3B blockiert der synchrone Request die Oberfläche noch; Phase 3C übernimmt die Hintergrundverarbeitung.'
+        ) . '</em></p>',
+      ];
+      return $build;
+    }
+
+    if (!empty($run['snapshot']) && is_array($run['snapshot'])) {
+      $build += $this->buildSnapshotResult($run['snapshot']);
+    }
+
+    return $build;
+  }
+
+  private function buildRunHistory(): array {
+    $runs = $this->runStorage->recent(10);
+    if (!$runs) {
+      return [
+        '#markup' => '<p><em>' . $this->t('Noch keine Matching-Läufe vorhanden.') . '</em></p>',
+      ];
+    }
+
+    $rows = [];
+    foreach ($runs as $run) {
+      $rows[] = [
+        '#' . $run['id'],
+        $run['status'],
+        $this->formatTimestamp($run['created_at']),
+        $this->formatTimestamp($run['finished_at']),
+        $run['result_hash'] ? substr($run['result_hash'], 0, 12) . '…' : '–',
+      ];
+    }
+
+    return [
+      '#type' => 'table',
+      '#header' => [
+        $this->t('Run'),
+        $this->t('Status'),
+        $this->t('Erstellt'),
+        $this->t('Beendet'),
+        $this->t('Snapshot'),
+      ],
+      '#rows' => $rows,
+      '#empty' => $this->t('Noch keine Matching-Läufe vorhanden.'),
+    ];
+  }
+
   private function buildSnapshotResult(array $snapshot): array {
     $sum = is_array($snapshot['summary'] ?? NULL) ? $snapshot['summary'] : [];
     $build = [];
 
     if (!empty($snapshot['created_at'])) {
       $build['result_time'] = [
-        '#markup' => '<p>' . $this->t('Berechnet am: @date', [
+        '#markup' => '<p>' . $this->t('Ergebnis gespeichert am: @date', [
           '@date' => \Drupal::service('date.formatter')->format((int) $snapshot['created_at'], 'short'),
         ]) . '</p>',
       ];
@@ -438,6 +570,13 @@ final class MatchingDashboardController extends ControllerBase {
       return (string) $value;
     }
     return number_format((float) $value, $decimals, ',', '.');
+  }
+
+  private function formatTimestamp(?int $timestamp): string {
+    if (!$timestamp) {
+      return '–';
+    }
+    return \Drupal::service('date.formatter')->format($timestamp, 'short');
   }
 
   private function escape(string $value): string {

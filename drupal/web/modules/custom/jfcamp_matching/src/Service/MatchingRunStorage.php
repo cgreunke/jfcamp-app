@@ -18,21 +18,58 @@ final class MatchingRunStorage {
     private TimeInterface $time,
   ) {}
 
-  public function createRunning(array $configSnapshot): int {
+  public function createQueued(array $configSnapshot): int {
     $now = $this->time->getCurrentTime();
 
     $id = $this->database->insert(self::TABLE)
       ->fields([
         'uuid' => $this->uuid->generate(),
-        'status' => 'running',
+        'status' => 'queued',
         'created_at' => $now,
-        'started_at' => $now,
+        'started_at' => NULL,
         'created_uid' => (int) $this->currentUser->id(),
         'config_json' => $this->encode($configSnapshot),
       ])
       ->execute();
 
     return (int) $id;
+  }
+
+  public function markRunning(int $runId): bool {
+    $affected = $this->database->update(self::TABLE)
+      ->fields([
+        'status' => 'running',
+        'started_at' => $this->time->getCurrentTime(),
+        'finished_at' => NULL,
+        'error_message' => NULL,
+      ])
+      ->condition('id', $runId)
+      ->condition('status', 'queued')
+      ->execute();
+
+    return $affected === 1;
+  }
+
+  public function hasActive(): bool {
+    $count = $this->database->select(self::TABLE, 'r')
+      ->condition('status', ['queued', 'running'], 'IN')
+      ->countQuery()
+      ->execute()
+      ->fetchField();
+
+    return (int) $count > 0;
+  }
+
+  public function latestActive(): ?array {
+    $row = $this->database->select(self::TABLE, 'r')
+      ->fields('r')
+      ->condition('status', ['queued', 'running'], 'IN')
+      ->orderBy('id', 'DESC')
+      ->range(0, 1)
+      ->execute()
+      ->fetchAssoc();
+
+    return $row ? $this->normalizeRow($row) : NULL;
   }
 
   public function markCompleted(

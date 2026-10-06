@@ -6,8 +6,8 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\jfcamp_matching\Batch\ApplyAssignmentsBatch;
-use Drupal\jfcamp_matching\Service\MatchingClient;
 use Drupal\jfcamp_matching\Service\MatchingRunStorage;
+use Drupal\Core\Queue\QueueFactory;
 use Drupal\node\Entity\Node;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -16,14 +16,14 @@ use Symfony\Component\HttpFoundation\Request;
 final class MatchingDashboardController extends ControllerBase {
 
   public function __construct(
-    private MatchingClient $client,
     private MatchingRunStorage $runStorage,
+    private QueueFactory $queueFactory,
   ) {}
 
   public static function create(ContainerInterface $container): self {
     return new self(
-      $container->get('jfcamp_matching.client'),
       $container->get('jfcamp_matching.run_storage'),
+      $container->get('queue'),
     );
   }
 
@@ -41,6 +41,7 @@ final class MatchingDashboardController extends ControllerBase {
 
   public function dashboard(): array {
     $latestRun = $this->runStorage->latest();
+    $activeRun = $this->runStorage->latestActive();
     $matchingConfig = $this->readMatchingConfigFromDrupal();
 
     $build = [
@@ -78,20 +79,38 @@ final class MatchingDashboardController extends ControllerBase {
       '#markup' => '<h2>' . $this->t('Matching berechnen') . '</h2>',
     ];
 
-    if ($matchingConfig) {
+    if ($matchingConfig && !$activeRun) {
       $build['run_action'] = [
         '#type' => 'inline_template',
         '#template' => '<form action="{{ url }}" method="post"><button class="button button--primary">{{ label }}</button></form>',
         '#context' => [
           'url' => Url::fromRoute('jfcamp_matching.action_dry_run')->toString(),
-          'label' => $this->t('Matching berechnen'),
+          'label' => $this->t('Matching im Hintergrund starten'),
         ],
       ];
       $build['run_hint'] = [
         '#markup' => '<p><small>' . $this->t(
-          'Phase 3B speichert jeden Lauf bereits dauerhaft. Die Berechnung selbst läuft noch synchron; echte Hintergrundverarbeitung und Live-Fortschritt folgen in Phase 3C.'
+          'Der Lauf wird in die Matching-Warteschlange gestellt. Die Seite muss während der Berechnung nicht geöffnet bleiben.'
         ) . '</small></p>',
       ];
+    }
+    elseif ($activeRun) {
+      $build['run_active'] = [
+        '#markup' => '<p><strong>' . $this->t(
+          'Run #@run ist aktuell @status. Solange ein Lauf aktiv ist, kann kein zweiter gestartet werden.',
+          [
+            '@run' => $activeRun['id'],
+            '@status' => $activeRun['status'] === 'queued' ? $this->t('in der Warteschlange') : $this->t('in Berechnung'),
+          ]
+        ) . '</strong></p>',
+      ];
+      $build['#attached']['html_head'][] = [[
+        '#tag' => 'meta',
+        '#attributes' => [
+          'http-equiv' => 'refresh',
+          'content' => '5',
+        ],
+      ], 'jfcamp_matching_active_run_refresh'];
     }
 
     $build['result_title'] = [
@@ -158,67 +177,38 @@ final class MatchingDashboardController extends ControllerBase {
   }
 
   /**
-   * POST /dry-run -> persistenter Run mit unveränderlichem Ergebnis-Snapshot.
+   * POST /dry-run -> legt einen persistenten Run an und reiht ihn ein.
    *
-   * Die Berechnung läuft in Phase 3B noch synchron. Der Run wird aber bereits
-   * vor dem Service-Aufruf als "running" angelegt und danach auf "completed"
-   * oder "failed" gesetzt. Phase 3C kann darauf die Async-Verarbeitung bauen.
+   * Der HTTP-Request kehrt sofort zum Dashboard zurück. Die eigentliche
+   * Berechnung übernimmt der Queue-Worker außerhalb des Browser-Requests.
    */
   public function actionDryRun(Request $request): RedirectResponse {
-    $runId = NULL;
-
     try {
+      if ($this->runStorage->hasActive()) {
+        $active = $this->runStorage->latestActive();
+        $this->messenger()->addWarning($this->t(
+          'Es läuft bereits Matching-Run #@run. Bitte warten, bis dieser beendet ist.',
+          ['@run' => $active['id'] ?? '?'],
+        ));
+        return new RedirectResponse(Url::fromRoute('jfcamp_matching.dashboard')->toString());
+      }
+
       $matchingConfig = $this->readMatchingConfigFromDrupal();
       if (!$matchingConfig) {
         throw new \RuntimeException('Keine veröffentlichte matching_config gefunden.');
       }
 
-      $runId = $this->runStorage->createRunning($matchingConfig);
-
-      $res = $this->client->dryRun();
-      $byParticipant = $res['by_participant'] ?? [];
-      if (!is_array($byParticipant)) {
-        throw new \RuntimeException('Matching-Service lieferte kein gültiges by_participant-Ergebnis.');
-      }
-
-      $summary = is_array($res['summary'] ?? NULL) ? $res['summary'] : [];
-      $assignmentDetails = is_array($res['assignment_details'] ?? NULL)
-        ? $res['assignment_details']
-        : [];
-
-      $this->runStorage->markCompleted(
-        $runId,
-        $summary,
-        $byParticipant,
-        $assignmentDetails,
-        $matchingConfig,
-      );
+      $runId = $this->runStorage->createQueued($matchingConfig);
+      $queue = $this->queueFactory->get('jfcamp_matching_runs');
+      $queue->createItem(['run_id' => $runId]);
 
       $this->messenger()->addStatus($this->t(
-        'Run #@run abgeschlossen: @participants Teilnehmer, @assignments Zuteilungen, davon @wishes Wünsche und @fillers Auffüllungen.',
-        [
-          '@run' => $runId,
-          '@participants' => $summary['participants_total'] ?? count($byParticipant),
-          '@assignments' => $summary['assignments_total'] ?? 0,
-          '@wishes' => $summary['wish_assignments'] ?? 0,
-          '@fillers' => $summary['filler_assignments'] ?? 0,
-        ]
+        'Matching-Run #@run wurde gestartet und läuft im Hintergrund.',
+        ['@run' => $runId],
       ));
     }
     catch (\Throwable $e) {
-      if ($runId !== NULL) {
-        try {
-          $this->runStorage->markFailed($runId, $e->getMessage());
-        }
-        catch (\Throwable $storageError) {
-          \Drupal::logger('jfcamp_matching')->error(
-            'Run #@run konnte nach Fehler nicht als failed gespeichert werden: @message',
-            ['@run' => $runId, '@message' => $storageError->getMessage()],
-          );
-        }
-      }
-
-      $this->messenger()->addError($this->t('Matching fehlgeschlagen: @message', [
+      $this->messenger()->addError($this->t('Matching konnte nicht gestartet werden: @message', [
         '@message' => $e->getMessage(),
       ]));
     }
@@ -281,6 +271,7 @@ final class MatchingDashboardController extends ControllerBase {
     $build = [];
 
     $statusLabels = [
+      'queued' => $this->t('wartet'),
       'running' => $this->t('läuft'),
       'completed' => $this->t('abgeschlossen'),
       'failed' => $this->t('fehlgeschlagen'),
@@ -313,11 +304,11 @@ final class MatchingDashboardController extends ControllerBase {
       return $build;
     }
 
-    if ($run['status'] === 'running') {
+    if ($run['status'] === 'queued' || $run['status'] === 'running') {
       $build['run_running'] = [
-        '#markup' => '<p><em>' . $this->t(
-          'Dieser Run ist als laufend gespeichert. In Phase 3B blockiert der synchrone Request die Oberfläche noch; Phase 3C übernimmt die Hintergrundverarbeitung.'
-        ) . '</em></p>',
+        '#markup' => '<p><em>' . ($run['status'] === 'queued'
+          ? $this->t('Dieser Run wartet auf den Matching-Worker.')
+          : $this->t('Dieser Run wird gerade im Hintergrund berechnet.')) . '</em></p>',
       ];
       return $build;
     }

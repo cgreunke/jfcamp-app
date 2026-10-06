@@ -36,6 +36,31 @@ services:
       # 🧱 Behalte Rest als Named Volume aus base-compose (drupal_project)
       # Option: files & private als eigenes Volume? Für DEV reicht das drupal_project-Volume.
 
+
+  drupal-queue:
+    env_file:
+      - ./.env.development
+    environment:
+      DRUPAL_DB_HOST: postgres
+      DRUPAL_DB_NAME: drupal
+      DRUPAL_DB_USER: drupal
+      DRUPAL_DB_PASS: drupal
+      DRUPAL_ADMIN_USER: admin
+      DRUPAL_ADMIN_PASS: admin
+      DRUPAL_ADMIN_MAIL: admin@example.com
+      DRUPAL_TRUSTED_HOSTS: "^localhost$,^drupal$,^127\\.0\\.0\\.1$"
+      DRUPAL_SITE_NAME: "JF Startercamp - App"
+      MATCHING_BASE_URL: "http://matching:5001"
+      DRUPAL_AUTO_IMPORT_ON_START: "0"
+      CONFIG_SYNC_DIRECTORY: "/opt/drupal/config/sync"
+    volumes:
+      - ./drupal/composer.json:/opt/drupal/composer.json
+      - ./drupal/composer.lock:/opt/drupal/composer.lock
+      - ./drupal/config:/opt/drupal/config
+      - ./drupal/scripts:/opt/drupal/scripts
+      - ./drupal/web/modules/custom:/opt/drupal/web/modules/custom
+      - ./drupal/web/themes/custom:/opt/drupal/web/themes/custom
+
   matching:
     env_file:
       - ./.env.development

@@ -73,10 +73,9 @@ final class MatchingClient {
     $url = $this->baseUrl() . $path;
     try {
       $res = $this->http->request('POST', $url, [
-        // Phase 3A ist noch synchron. Die asynchrone Run-Verarbeitung folgt
-        // später; bis dahin darf ein legitimer Solver-Lauf nicht schon am
-        // bisherigen 120-Sekunden-HTTP-Limit scheitern.
-        'timeout' => 420,
+        // Der Aufruf kommt aus dem separaten Queue-Worker und darf deshalb
+        // mehrere Minuten laufen, ohne einen Browser-Request zu blockieren.
+        'timeout' => 900,
         'headers' => [
           'Accept' => 'application/json',
           'Content-Type' => 'application/json',

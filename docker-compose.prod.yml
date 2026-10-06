@@ -24,6 +24,18 @@ services:
       postgres:
         condition: service_healthy
 
+
+  drupal-queue:
+    env_file:
+      - ./.env.production
+    restart: unless-stopped
+    volumes:
+      - /opt/jfcamp-app/drupal/config:/opt/drupal/config
+      - /opt/jfcamp-app/drupal/private:/opt/drupal/private
+    depends_on:
+      drupal:
+        condition: service_healthy
+
   matching:
     env_file:
       - ./.env.production

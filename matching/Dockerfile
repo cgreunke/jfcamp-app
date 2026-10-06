@@ -19,4 +19,4 @@ EXPOSE 5001
 HEALTHCHECK --interval=30s --timeout=5s --retries=5 \
   CMD curl -fsS http://localhost:5001/health || exit 1
 
-CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5001", "matching_server:app"]
+CMD ["gunicorn", "-w", "2", "--timeout", "900", "--graceful-timeout", "30", "-b", "0.0.0.0:5001", "matching_server:app"]

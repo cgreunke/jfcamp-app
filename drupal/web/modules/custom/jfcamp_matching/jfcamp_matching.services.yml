@@ -7,6 +7,11 @@ services:
     class: 'Drupal\jfcamp_matching\Service\MatchingRunStorage'
     arguments: ['@database', '@uuid', '@current_user', '@datetime.time']
 
+
+  jfcamp_matching.run_processor:
+    class: 'Drupal\jfcamp_matching\Service\MatchingRunProcessor'
+    arguments: ['@jfcamp_matching.client', '@jfcamp_matching.run_storage', '@logger.channel.jfcamp_matching']
+
   logger.channel.jfcamp_matching:
     parent: 'logger.channel_base'
     arguments: ['jfcamp_matching']

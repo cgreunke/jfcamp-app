@@ -27,6 +27,28 @@ services:
       # 🧱 Named Volume für komplettes Projekt (schnell & persistent)
       - drupal_project:/opt/drupal
 
+
+  drupal-queue:
+    build:
+      context: ./drupal
+    container_name: jfcamp-drupal-queue
+    working_dir: /opt/drupal
+    depends_on:
+      drupal:
+        condition: service_healthy
+    restart: unless-stopped
+    command:
+      - /bin/bash
+      - -lc
+      - |
+        echo "[queue] jfcamp matching worker started"
+        while true; do
+          vendor/bin/drush queue:run jfcamp_matching_runs || true
+          sleep 10
+        done
+    volumes:
+      - drupal_project:/opt/drupal
+
   adminer:
     image: adminer
     container_name: adminer

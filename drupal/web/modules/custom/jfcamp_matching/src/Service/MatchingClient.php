@@ -4,9 +4,9 @@ namespace Drupal\jfcamp_matching\Service;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Site\Settings;
-use Psr\Log\LoggerInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
+use Psr\Log\LoggerInterface;
 
 final class MatchingClient {
 
@@ -31,52 +31,68 @@ final class MatchingClient {
         'timeout' => 60,
         'headers' => ['Accept' => 'application/json'],
       ]);
-      $data = json_decode((string) $res->getBody(), true);
+      $data = json_decode((string) $res->getBody(), TRUE);
       if (!is_array($data)) {
         throw new \RuntimeException('Ungültige JSON-Antwort von /matching/stats.');
       }
       return $data;
-    } catch (GuzzleException $e) {
+    }
+    catch (GuzzleException $e) {
       $this->logger->error('HTTP Fehler /matching/stats: @msg', ['@msg' => $e->getMessage()]);
       throw new \RuntimeException('Matching-Service nicht erreichbar: ' . $e->getMessage(), 0, $e);
     }
   }
 
-  /** POST /matching/dry-run (mit optionalem Payload) */
-  public function dryRun(array $params = []): array {
-    return $this->post('/matching/dry-run', $params);
+  /**
+   * POST /matching/dry-run.
+   *
+   * Produktiv werden keine Algorithmus-Overrides an den Matching-Service
+   * übergeben. num_wishes und num_assign stammen aus matching_config.
+   */
+  public function dryRun(): array {
+    return $this->post('/matching/dry-run');
   }
 
   /**
-   * "Run" = erneut /matching/dry-run mit denselben Parametern.
-   * (Es gibt weiterhin kein echtes /matching/run im Service.)
+   * Legacy-Kompatibilität für vorhandene Drush-/Altaufrufe.
+   *
+   * Auch dieser Aufruf berechnet lediglich einen Dry-Run. Er schreibt keine
+   * Zuteilungen in Drupal. Die produktive Oberfläche nutzt diese Methode nicht.
    */
   public function run(array $params = []): array {
-    $this->logger->notice('MatchingClient::run nutzt /matching/dry-run (kein /matching/run im Service vorhanden).');
-    return $this->post('/matching/dry-run', $params);
+    $this->logger->notice('MatchingClient::run ist Legacy-Kompatibilität und nutzt /matching/dry-run.');
+    return $this->post('/matching/dry-run');
   }
 
-  /** Für ExportProxyController: zusammengesetzte URL zu CSV */
+  /** Legacy-Kompatibilität für den derzeit noch vorhandenen ExportProxyController. */
   public function exportUrl(string $path): string {
     return $this->baseUrl() . $path;
   }
 
-  private function post(string $path, array $payload = []): array {
+  private function post(string $path): array {
     $url = $this->baseUrl() . $path;
     try {
       $res = $this->http->request('POST', $url, [
-        'timeout' => 120,
-        'headers' => ['Accept' => 'application/json', 'Content-Type' => 'application/json'],
-        'json' => empty($payload) ? new \stdClass() : $payload,
+        // Phase 3A ist noch synchron. Die asynchrone Run-Verarbeitung folgt
+        // später; bis dahin darf ein legitimer Solver-Lauf nicht schon am
+        // bisherigen 120-Sekunden-HTTP-Limit scheitern.
+        'timeout' => 420,
+        'headers' => [
+          'Accept' => 'application/json',
+          'Content-Type' => 'application/json',
+        ],
+        'json' => new \stdClass(),
       ]);
-      $data = json_decode((string) $res->getBody(), true);
+      $data = json_decode((string) $res->getBody(), TRUE);
       if (!is_array($data)) {
         throw new \RuntimeException('Ungültige JSON-Antwort vom Matching-Service.');
       }
       return $data;
-    } catch (GuzzleException $e) {
+    }
+    catch (GuzzleException $e) {
       $this->logger->error('HTTP Fehler @path: @msg', ['@path' => $path, '@msg' => $e->getMessage()]);
       throw new \RuntimeException('Matching-Service nicht erreichbar: ' . $e->getMessage(), 0, $e);
     }
   }
+
 }

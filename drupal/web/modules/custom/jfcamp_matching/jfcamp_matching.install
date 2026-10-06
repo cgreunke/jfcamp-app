@@ -43,6 +43,25 @@ function jfcamp_matching_update_10002(): void {
   }
 }
 
+
+/**
+ * Adds reset audit metadata and extends the Apply lifecycle.
+ */
+function jfcamp_matching_update_10003(): void {
+  $schema = \Drupal::database()->schema();
+  if (!$schema->tableExists('jfcamp_matching_run')) {
+    $schema->createTable('jfcamp_matching_run', jfcamp_matching_run_table_definition());
+    return;
+  }
+
+  $definition = jfcamp_matching_run_table_definition();
+  foreach (['reset_at', 'reset_uid'] as $field) {
+    if (!$schema->fieldExists('jfcamp_matching_run', $field)) {
+      $schema->addField('jfcamp_matching_run', $field, $definition['fields'][$field]);
+    }
+  }
+}
+
 /**
  * Shared schema definition for matching runs.
  */
@@ -150,6 +169,17 @@ function jfcamp_matching_run_table_definition(): array {
         'description' => 'Ergebnis und Zähler des letzten Apply.',
         'type' => 'text',
         'size' => 'big',
+        'not null' => FALSE,
+      ],
+      'reset_at' => [
+        'description' => 'Zeitpunkt, an dem dieser aktuell angewendete Run zurückgesetzt wurde.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ],
+      'reset_uid' => [
+        'description' => 'Drupal-User-ID, der den Reset dieses Runs ausgelöst hat.',
+        'type' => 'int',
+        'unsigned' => TRUE,
         'not null' => FALSE,
       ],
     ],

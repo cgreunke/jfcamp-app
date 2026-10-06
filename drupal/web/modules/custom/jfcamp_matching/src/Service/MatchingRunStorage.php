@@ -148,21 +148,42 @@ final class MatchingRunStorage {
   }
 
   public function markApplied(int $runId, string $expectedHash, array $result): void {
-    $affected = $this->database->update(self::TABLE)
-      ->fields([
-        'apply_status' => 'applied',
-        'applied_at' => $this->time->getCurrentTime(),
-        'applied_uid' => (int) $this->currentUser->id(),
-        'applied_hash' => $expectedHash,
-        'apply_result_json' => $this->encode($result),
-      ])
-      ->condition('id', $runId)
-      ->condition('status', 'completed')
-      ->condition('result_hash', $expectedHash)
-      ->execute();
+    $transaction = $this->database->startTransaction();
 
-    if ($affected !== 1) {
-      throw new \RuntimeException(sprintf('Matching-Run #%d konnte nach Apply nicht bestätigt werden.', $runId));
+    try {
+      // There is exactly one currently applied matching state. Older applied
+      // runs remain in history, but are explicitly marked as superseded.
+      $this->database->update(self::TABLE)
+        ->fields(['apply_status' => 'superseded'])
+        ->condition('apply_status', 'applied')
+        ->condition('id', $runId, '<>')
+        ->execute();
+
+      $affected = $this->database->update(self::TABLE)
+        ->fields([
+          'apply_status' => 'applied',
+          'applied_at' => $this->time->getCurrentTime(),
+          'applied_uid' => (int) $this->currentUser->id(),
+          'applied_hash' => $expectedHash,
+          'apply_result_json' => $this->encode($result),
+          'reset_at' => NULL,
+          'reset_uid' => NULL,
+        ])
+        ->condition('id', $runId)
+        ->condition('status', 'completed')
+        ->condition('result_hash', $expectedHash)
+        ->execute();
+
+      if ($affected !== 1) {
+        throw new \RuntimeException(sprintf(
+          'Matching-Run #%d konnte nach Apply nicht bestätigt werden.',
+          $runId,
+        ));
+      }
+    }
+    catch (\Throwable $e) {
+      $transaction->rollBack();
+      throw $e;
     }
   }
 
@@ -175,6 +196,64 @@ final class MatchingRunStorage {
       ->condition('id', $runId)
       ->condition('result_hash', $expectedHash)
       ->execute();
+  }
+
+
+  public function currentApplied(): ?array {
+    $row = $this->database->select(self::TABLE, 'r')
+      ->fields('r')
+      ->condition('apply_status', 'applied')
+      ->orderBy('applied_at', 'DESC')
+      ->orderBy('id', 'DESC')
+      ->range(0, 1)
+      ->execute()
+      ->fetchAssoc();
+
+    return $row ? $this->normalizeRow($row) : NULL;
+  }
+
+  public function loadCurrentApplied(int $runId): array {
+    $run = $this->load($runId);
+    if (!$run) {
+      throw new \RuntimeException(sprintf('Matching-Run #%d wurde nicht gefunden.', $runId));
+    }
+    if ($run['apply_status'] !== 'applied') {
+      throw new \RuntimeException(sprintf(
+        'Matching-Run #%d ist nicht der aktuell festgeschriebene Run.',
+        $runId,
+      ));
+    }
+    if (empty($run['applied_hash']) || empty($run['result_hash']) || !hash_equals(
+      (string) $run['result_hash'],
+      (string) $run['applied_hash'],
+    )) {
+      throw new \RuntimeException(sprintf(
+        'Matching-Run #%d hat keinen konsistenten angewendeten Snapshot-Hash.',
+        $runId,
+      ));
+    }
+
+    return $run;
+  }
+
+  public function markReset(int $runId, string $expectedHash): void {
+    $affected = $this->database->update(self::TABLE)
+      ->fields([
+        'apply_status' => 'reset',
+        'reset_at' => $this->time->getCurrentTime(),
+        'reset_uid' => (int) $this->currentUser->id(),
+      ])
+      ->condition('id', $runId)
+      ->condition('apply_status', 'applied')
+      ->condition('applied_hash', $expectedHash)
+      ->execute();
+
+    if ($affected !== 1) {
+      throw new \RuntimeException(sprintf(
+        'Matching-Run #%d konnte nach Reset nicht als zurückgesetzt markiert werden.',
+        $runId,
+      ));
+    }
   }
 
   public function latest(): ?array {
@@ -213,6 +292,13 @@ final class MatchingRunStorage {
         'created_uid',
         'result_hash',
         'error_message',
+        'apply_status',
+        'applied_at',
+        'applied_uid',
+        'applied_hash',
+        'reset_at',
+        'reset_uid',
+        'summary_json',
       ])
       ->orderBy('id', 'DESC')
       ->range(0, $limit)
@@ -230,6 +316,13 @@ final class MatchingRunStorage {
         'created_uid' => (int) $row->created_uid,
         'result_hash' => $row->result_hash !== NULL ? (string) $row->result_hash : NULL,
         'error_message' => $row->error_message !== NULL ? (string) $row->error_message : NULL,
+        'apply_status' => $row->apply_status !== NULL ? (string) $row->apply_status : 'not_applied',
+        'applied_at' => $row->applied_at !== NULL ? (int) $row->applied_at : NULL,
+        'applied_uid' => $row->applied_uid !== NULL ? (int) $row->applied_uid : NULL,
+        'applied_hash' => $row->applied_hash !== NULL ? (string) $row->applied_hash : NULL,
+        'reset_at' => $row->reset_at !== NULL ? (int) $row->reset_at : NULL,
+        'reset_uid' => $row->reset_uid !== NULL ? (int) $row->reset_uid : NULL,
+        'summary' => !empty($row->summary_json) ? $this->decode((string) $row->summary_json) : [],
       ];
     }
 
@@ -276,6 +369,12 @@ final class MatchingRunStorage {
       'apply_result' => !empty($row['apply_result_json'])
         ? $this->decode((string) $row['apply_result_json'])
         : [],
+      'reset_at' => isset($row['reset_at']) && $row['reset_at'] !== NULL
+        ? (int) $row['reset_at']
+        : NULL,
+      'reset_uid' => isset($row['reset_uid']) && $row['reset_uid'] !== NULL
+        ? (int) $row['reset_uid']
+        : NULL,
     ];
   }
 

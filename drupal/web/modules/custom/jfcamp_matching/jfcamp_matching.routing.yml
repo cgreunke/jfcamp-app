@@ -39,11 +39,12 @@ jfcamp_matching.action_apply:
   methods: [POST]
 
 jfcamp_matching.action_reset:
-  path: '/admin/reports/jfcamp/matching/reset'
+  path: '/admin/reports/jfcamp/matching/run/{run_id}/reset'
   defaults:
     _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::actionReset'
   requirements:
     _permission: 'run jfcamp matching'
+    run_id: '^\d+$'
   methods: [POST]
 
 # CSV-Exporte lesen ausschließlich aus den in Drupal festgeschriebenen Zuteilungen.

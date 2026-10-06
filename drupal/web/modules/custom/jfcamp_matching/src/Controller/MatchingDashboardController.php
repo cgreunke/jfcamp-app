@@ -46,6 +46,7 @@ final class MatchingDashboardController extends ControllerBase {
   public function dashboard(): array {
     $latestRun = $this->runStorage->latest();
     $activeRun = $this->runStorage->latestActive();
+    $currentApplied = $this->runStorage->currentApplied();
     $matchingConfig = $this->readMatchingConfigFromDrupal();
 
     $build = [
@@ -128,6 +129,35 @@ final class MatchingDashboardController extends ControllerBase {
       $build['#attached']['library'][] = 'jfcamp_matching/status_polling';
     }
 
+    $build['applied_title'] = [
+      '#markup' => '<h2>' . $this->t('Aktuell festgeschriebener Stand') . '</h2>',
+    ];
+
+    if ($currentApplied) {
+      $appliedSummary = is_array($currentApplied['summary'] ?? NULL)
+        ? $currentApplied['summary']
+        : [];
+      $build['applied_state'] = [
+        '#type' => 'table',
+        '#header' => [$this->t('Merkmal'), $this->t('Wert')],
+        '#rows' => [
+          [$this->t('Run'), '#' . $currentApplied['id']],
+          [$this->t('Festgeschrieben'), $this->formatTimestamp($currentApplied['applied_at'])],
+          [$this->t('Snapshot'), substr((string) $currentApplied['applied_hash'], 0, 16) . '…'],
+          [$this->t('Zuteilungen'), (string) ($appliedSummary['assignments_total'] ?? 'n/a')],
+          [$this->t('Wunsch-Zuteilungen'), (string) ($appliedSummary['wish_assignments'] ?? 'n/a')],
+          [$this->t('Auffüllungen'), (string) ($appliedSummary['filler_assignments'] ?? 'n/a')],
+        ],
+      ];
+    }
+    else {
+      $build['applied_empty'] = [
+        '#markup' => '<p><em>' . $this->t(
+          'Aktuell ist kein Matching-Run als festgeschriebener Stand markiert.'
+        ) . '</em></p>',
+      ];
+    }
+
     $build['result_title'] = [
       '#markup' => '<h2>' . $this->t('Letzter Matching-Lauf') . '</h2>',
     ];
@@ -158,6 +188,7 @@ final class MatchingDashboardController extends ControllerBase {
       $latestRun
       && $latestRun['status'] === 'completed'
       && !empty($latestRun['snapshot']['by_participant'])
+      && $latestRun['apply_status'] !== 'applied'
     ) {
       $build['actions']['apply'] = [
         '#type' => 'inline_template',
@@ -172,14 +203,19 @@ final class MatchingDashboardController extends ControllerBase {
       ];
     }
 
-    $build['actions']['reset'] = [
-      '#type' => 'inline_template',
-      '#template' => '<form action="{{ url }}" method="post" style="display:inline-block"><button class="button button--danger">{{ label }}</button></form>',
-      '#context' => [
-        'url' => Url::fromRoute('jfcamp_matching.action_reset')->toString(),
-        'label' => $this->t('Festgeschriebene Zuteilungen zurücksetzen'),
-      ],
-    ];
+    if ($currentApplied) {
+      $build['actions']['reset'] = [
+        '#type' => 'inline_template',
+        '#template' => '<form action="{{ url }}" method="post" style="display:inline-block"><button class="button button--danger">{{ label }}</button></form>',
+        '#context' => [
+          'url' => Url::fromRoute(
+            'jfcamp_matching.action_reset',
+            ['run_id' => $currentApplied['id']],
+          )->toString(),
+          'label' => $this->t('Run #@id zurücksetzen', ['@id' => $currentApplied['id']]),
+        ],
+      ];
+    }
 
     $build['exports_title'] = [
       '#markup' => '<h2>' . $this->t('Exporte aus Drupal') . '</h2>',
@@ -350,14 +386,38 @@ final class MatchingDashboardController extends ControllerBase {
     }
   }
 
-  /** POST /reset -> löscht die in Drupal festgeschriebenen Zuteilungen. */
-  public function actionReset(Request $request) {
-    $config = $this->cfg();
-    $batch = ApplyAssignmentsBatch::buildReset($config);
-    batch_set($batch);
+  /**
+   * POST /run/{run_id}/reset -> setzt genau den aktuell angewendeten Run zurück.
+   */
+  public function actionReset(int $run_id, Request $request) {
+    try {
+      $run = $this->runStorage->loadCurrentApplied($run_id);
+      $appliedHash = (string) $run['applied_hash'];
 
-    $this->messenger()->addStatus($this->t('Zurücksetzen der Zuteilungen gestartet …'));
-    return batch_process(Url::fromRoute('jfcamp_matching.dashboard'));
+      $config = $this->cfg();
+      $batch = ApplyAssignmentsBatch::buildReset(
+        $config,
+        $run_id,
+        $appliedHash,
+      );
+      batch_set($batch);
+
+      $this->messenger()->addStatus($this->t(
+        'Zurücksetzen von Run #@run gestartet.',
+        ['@run' => $run_id],
+      ));
+      return batch_process(Url::fromRoute('jfcamp_matching.dashboard'));
+    }
+    catch (\Throwable $e) {
+      $this->messenger()->addError($this->t(
+        'Run #@run konnte nicht zurückgesetzt werden: @message',
+        [
+          '@run' => $run_id,
+          '@message' => $e->getMessage(),
+        ],
+      ));
+      return new RedirectResponse(Url::fromRoute('jfcamp_matching.dashboard')->toString());
+    }
   }
 
   private function buildRunResult(array $run): array {
@@ -385,7 +445,9 @@ final class MatchingDashboardController extends ControllerBase {
     $applyStatusLabels = [
       'not_applied' => $this->t('noch nicht festgeschrieben'),
       'applying' => $this->t('wird festgeschrieben'),
-      'applied' => $this->t('erfolgreich festgeschrieben'),
+      'applied' => $this->t('aktuell festgeschrieben'),
+      'superseded' => $this->t('durch neueren Run ersetzt'),
+      'reset' => $this->t('zurückgesetzt'),
       'failed' => $this->t('Festschreiben fehlgeschlagen'),
     ];
     $metaRows[] = [
@@ -397,6 +459,9 @@ final class MatchingDashboardController extends ControllerBase {
     }
     if (!empty($run['applied_hash'])) {
       $metaRows[] = [$this->t('Angewendeter Hash'), substr($run['applied_hash'], 0, 16) . '…'];
+    }
+    if (!empty($run['reset_at'])) {
+      $metaRows[] = [$this->t('Zurückgesetzt'), $this->formatTimestamp($run['reset_at'])];
     }
 
     $build['run_meta'] = [
@@ -431,21 +496,42 @@ final class MatchingDashboardController extends ControllerBase {
   }
 
   private function buildRunHistory(): array {
-    $runs = $this->runStorage->recent(10);
+    $runs = $this->runStorage->recent(15);
     if (!$runs) {
       return [
         '#markup' => '<p><em>' . $this->t('Noch keine Matching-Läufe vorhanden.') . '</em></p>',
       ];
     }
 
+    $runStatusLabels = [
+      'queued' => $this->t('wartet'),
+      'running' => $this->t('läuft'),
+      'completed' => $this->t('abgeschlossen'),
+      'failed' => $this->t('fehlgeschlagen'),
+    ];
+    $applyStatusLabels = [
+      'not_applied' => $this->t('nicht angewendet'),
+      'applying' => $this->t('wird angewendet'),
+      'applied' => $this->t('AKTUELL ANGEWENDET'),
+      'superseded' => $this->t('ersetzt'),
+      'reset' => $this->t('zurückgesetzt'),
+      'failed' => $this->t('Apply fehlgeschlagen'),
+    ];
+
     $rows = [];
     foreach ($runs as $run) {
+      $sum = is_array($run['summary'] ?? NULL) ? $run['summary'] : [];
+      $quality = (string) ($sum['matching_quality_status'] ?? $sum['run_quality'] ?? '–');
+
       $rows[] = [
         '#' . $run['id'],
-        $run['status'],
+        (string) ($runStatusLabels[$run['status']] ?? $run['status']),
+        (string) ($applyStatusLabels[$run['apply_status']] ?? $run['apply_status']),
+        $quality,
+        isset($sum['wish_assignments']) ? (string) $sum['wish_assignments'] : '–',
+        isset($sum['filler_assignments']) ? (string) $sum['filler_assignments'] : '–',
         $this->formatTimestamp($run['created_at']),
-        $this->formatTimestamp($run['finished_at']),
-        $run['result_hash'] ? substr($run['result_hash'], 0, 12) . '…' : '–',
+        $run['applied_at'] ? $this->formatTimestamp($run['applied_at']) : '–',
       ];
     }
 
@@ -453,10 +539,13 @@ final class MatchingDashboardController extends ControllerBase {
       '#type' => 'table',
       '#header' => [
         $this->t('Run'),
-        $this->t('Status'),
+        $this->t('Berechnung'),
+        $this->t('Festschreibung'),
+        $this->t('Qualität'),
+        $this->t('Wünsche'),
+        $this->t('Filler'),
         $this->t('Erstellt'),
-        $this->t('Beendet'),
-        $this->t('Snapshot'),
+        $this->t('Angewendet'),
       ],
       '#rows' => $rows,
       '#empty' => $this->t('Noch keine Matching-Läufe vorhanden.'),

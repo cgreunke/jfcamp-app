@@ -53,10 +53,15 @@ final class ApplyAssignmentsBatch {
   }
 
   /** Batch-Definition für Reset */
-  public static function buildReset(array $config): array {
+  public static function buildReset(
+    array $config,
+    int $runId,
+    string $appliedHash,
+  ): array {
     return [
       'title' => t('Zuteilungen werden zurückgesetzt …'),
       'operations' => [
+        [[static::class, 'initializeReset'], [$runId, $appliedHash]],
         [[static::class, 'resetChunk'], [$config, NULL]],
       ],
       'finished' => [static::class, 'finishReset'],
@@ -199,6 +204,16 @@ final class ApplyAssignmentsBatch {
   }
 }
 
+
+  public static function initializeReset(
+    int $runId,
+    string $appliedHash,
+    array &$context,
+  ): void {
+    $context['results']['reset_run_id'] = $runId;
+    $context['results']['reset_applied_hash'] = $appliedHash;
+  }
+
   public static function resetChunk(array $config, $unused, array &$context): void {
     $storage = \Drupal::entityTypeManager()->getStorage('node');
     $p_bundle = (string) ($config['participant_bundle'] ?? 'teilnehmer');
@@ -305,11 +320,37 @@ final class ApplyAssignmentsBatch {
   }
 
   public static function finishReset($success, array $results, array $operations): void {
-    if ($success) {
-      $n = (int) ($results['reset'] ?? 0);
-      \Drupal::messenger()->addStatus(t('Zuweisungen zurückgesetzt: @n Teilnehmer aktualisiert.', ['@n' => $n]));
-    } else {
+    $runId = (int) ($results['reset_run_id'] ?? 0);
+    $appliedHash = (string) ($results['reset_applied_hash'] ?? '');
+
+    if (!$success) {
       \Drupal::messenger()->addError(t('Zurücksetzen mit Fehlern beendet.'));
+      return;
+    }
+
+    try {
+      if ($runId <= 0 || strlen($appliedHash) !== 64) {
+        throw new \RuntimeException('Reset enthält keine gültige Run-/Hash-Referenz.');
+      }
+
+      $runStorage = \Drupal::service('jfcamp_matching.run_storage');
+      $runStorage->markReset($runId, $appliedHash);
+
+      $n = (int) ($results['reset'] ?? 0);
+      \Drupal::messenger()->addStatus(t(
+        'Zuweisungen von Run #@run zurückgesetzt: @n Teilnehmer aktualisiert.',
+        ['@run' => $runId, '@n' => $n],
+      ));
+    }
+    catch (\Throwable $e) {
+      \Drupal::logger('jfcamp_matching')->error(
+        'Reset-Status für Matching-Run #@run konnte nicht persistiert werden: @message',
+        ['@run' => $runId, '@message' => $e->getMessage()],
+      );
+      \Drupal::messenger()->addError(t(
+        'Die Zuweisungen wurden geleert, aber der Reset-Status konnte nicht gespeichert werden: @message',
+        ['@message' => $e->getMessage()],
+      ));
     }
   }
 }

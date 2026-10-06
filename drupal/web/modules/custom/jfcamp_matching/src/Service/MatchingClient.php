@@ -49,8 +49,34 @@ final class MatchingClient {
    * Produktiv werden keine Algorithmus-Overrides an den Matching-Service
    * übergeben. num_wishes und num_assign stammen aus matching_config.
    */
-  public function dryRun(): array {
-    return $this->post('/matching/dry-run');
+  public function dryRun(?int $runId = NULL): array {
+    $headers = [];
+    if ($runId !== NULL && $runId > 0) {
+      $headers['X-JFCamp-Run-Id'] = (string) $runId;
+    }
+    return $this->post('/matching/dry-run', $headers);
+  }
+
+  /**
+   * Liest den flüchtigen Fortschritt eines aktuell laufenden Solver-Requests.
+   */
+  public function progress(int $runId): array {
+    $url = $this->baseUrl() . '/matching/progress/' . $runId;
+    try {
+      $res = $this->http->request('GET', $url, [
+        'timeout' => 5,
+        'headers' => ['Accept' => 'application/json'],
+      ]);
+      $data = json_decode((string) $res->getBody(), TRUE);
+      return is_array($data) ? $data : [];
+    }
+    catch (GuzzleException $e) {
+      $this->logger->warning(
+        'Fortschritt für Matching-Run #@run konnte nicht gelesen werden: @msg',
+        ['@run' => $runId, '@msg' => $e->getMessage()],
+      );
+      return [];
+    }
   }
 
   /**
@@ -69,17 +95,17 @@ final class MatchingClient {
     return $this->baseUrl() . $path;
   }
 
-  private function post(string $path): array {
+  private function post(string $path, array $extraHeaders = []): array {
     $url = $this->baseUrl() . $path;
     try {
       $res = $this->http->request('POST', $url, [
         // Der Aufruf kommt aus dem separaten Queue-Worker und darf deshalb
         // mehrere Minuten laufen, ohne einen Browser-Request zu blockieren.
         'timeout' => 900,
-        'headers' => [
+        'headers' => array_merge([
           'Accept' => 'application/json',
           'Content-Type' => 'application/json',
-        ],
+        ], $extraHeaders),
         'json' => new \stdClass(),
       ]);
       $data = json_decode((string) $res->getBody(), TRUE);

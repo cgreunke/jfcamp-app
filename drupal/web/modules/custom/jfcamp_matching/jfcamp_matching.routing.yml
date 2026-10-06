@@ -9,6 +9,17 @@ jfcamp_matching.dashboard:
   options:
     _admin_route: TRUE
 
+# Status-Polling für aktive Runs.
+
+jfcamp_matching.run_status:
+  path: '/admin/reports/jfcamp/matching/run/{run_id}/status'
+  defaults:
+    _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::runStatus'
+  requirements:
+    _permission: 'run jfcamp matching'
+    run_id: '^\d+$'
+  methods: [GET]
+
 # Aktionen vom Dashboard.
 jfcamp_matching.action_dry_run:
   path: '/admin/reports/jfcamp/matching/dry-run'

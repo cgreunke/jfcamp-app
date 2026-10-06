@@ -7,9 +7,11 @@ use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\jfcamp_matching\Batch\ApplyAssignmentsBatch;
 use Drupal\jfcamp_matching\Service\MatchingRunStorage;
+use Drupal\jfcamp_matching\Service\MatchingClient;
 use Drupal\Core\Queue\QueueFactory;
 use Drupal\node\Entity\Node;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -18,12 +20,14 @@ final class MatchingDashboardController extends ControllerBase {
   public function __construct(
     private MatchingRunStorage $runStorage,
     private QueueFactory $queueFactory,
+    private MatchingClient $client,
   ) {}
 
   public static function create(ContainerInterface $container): self {
     return new self(
       $container->get('jfcamp_matching.run_storage'),
       $container->get('queue'),
+      $container->get('jfcamp_matching.client'),
     );
   }
 
@@ -95,22 +99,33 @@ final class MatchingDashboardController extends ControllerBase {
       ];
     }
     elseif ($activeRun) {
+      $statusUrl = Url::fromRoute(
+        'jfcamp_matching.run_status',
+        ['run_id' => $activeRun['id']],
+      )->toString();
+
       $build['run_active'] = [
-        '#markup' => '<p><strong>' . $this->t(
-          'Run #@run ist aktuell @status. Solange ein Lauf aktiv ist, kann kein zweiter gestartet werden.',
-          [
-            '@run' => $activeRun['id'],
-            '@status' => $activeRun['status'] === 'queued' ? $this->t('in der Warteschlange') : $this->t('in Berechnung'),
-          ]
-        ) . '</strong></p>',
-      ];
-      $build['#attached']['html_head'][] = [[
-        '#tag' => 'meta',
-        '#attributes' => [
-          'http-equiv' => 'refresh',
-          'content' => '5',
+        '#type' => 'inline_template',
+        '#template' => '
+          <div class="jfcamp-matching-live"
+               id="jfcamp-matching-live-status"
+               data-status-url="{{ status_url }}"
+               data-run-id="{{ run_id }}">
+            <p><strong>Run #{{ run_id }} läuft im Hintergrund.</strong></p>
+            <p>
+              <span data-jfcamp-status>Wird gestartet …</span><br>
+              <span data-jfcamp-phase>Fortschritt wird geladen …</span><br>
+              <small>Laufzeit: <span data-jfcamp-elapsed>0:00</span></small>
+            </p>
+            <progress data-jfcamp-progress value="0" max="7" style="width:min(560px,100%);"></progress>
+            <p><small data-jfcamp-detail>Die Seite bleibt benutzbar. Nur diese Statusanzeige wird aktualisiert.</small></p>
+          </div>',
+        '#context' => [
+          'status_url' => $statusUrl,
+          'run_id' => $activeRun['id'],
         ],
-      ], 'jfcamp_matching_active_run_refresh'];
+      ];
+      $build['#attached']['library'][] = 'jfcamp_matching/status_polling';
     }
 
     $build['result_title'] = [
@@ -175,6 +190,78 @@ final class MatchingDashboardController extends ControllerBase {
 
     return $build;
   }
+
+  /**
+   * GET /run/{run_id}/status -> kompakter Polling-Endpunkt fürs Dashboard.
+   */
+  public function runStatus(int $run_id): JsonResponse {
+    $run = $this->runStorage->load($run_id);
+    if (!$run) {
+      return new JsonResponse([
+        'ok' => FALSE,
+        'error' => 'Run nicht gefunden.',
+      ], 404);
+    }
+
+    $now = time();
+    $startedAt = $run['started_at'] ?? NULL;
+    $elapsed = $startedAt ? max(0, $now - (int) $startedAt) : 0;
+
+    $progress = [];
+    if ($run['status'] === 'running') {
+      $progress = $this->client->progress($run_id);
+    }
+
+    $phase = (string) ($progress['phase'] ?? (
+      $run['status'] === 'queued' ? 'queued' : $run['status']
+    ));
+
+    $labels = [
+      'queued' => $this->t('Wartet auf den Matching-Worker'),
+      'loading_data' => $this->t('Drupal-Daten und Matching-Konfiguration werden geladen'),
+      'priority_1' => $this->t('Priorität 1/5: möglichst viele Wunsch-Zuteilungen'),
+      'priority_2' => $this->t('Priorität 2/5: möglichst viele vollständig über Wünsche versorgen'),
+      'priority_3' => $this->t('Priorität 3/5: Top-k-Wünsche maximieren'),
+      'priority_4' => $this->t('Priorität 4/5: Wunschqualität optimieren'),
+      'priority_5' => $this->t('Priorität 5/5: Fairness verbessern'),
+      'completion' => $this->t('Offene Plätze werden aufgefüllt'),
+      'slot' => $this->t('Workshops werden auf Slots verteilt'),
+      'finalizing' => $this->t('Ergebnis wird vorbereitet'),
+      'completed' => $this->t('Matching abgeschlossen'),
+      'failed' => $this->t('Matching fehlgeschlagen'),
+      'running' => $this->t('Matching wird berechnet'),
+      'unknown' => $this->t('Matching wird berechnet'),
+    ];
+
+    $current = (int) ($progress['current'] ?? 0);
+    $total = max(1, (int) ($progress['total'] ?? 7));
+
+    return new JsonResponse([
+      'ok' => TRUE,
+      'run_id' => $run['id'],
+      'status' => $run['status'],
+      'status_label' => match ($run['status']) {
+        'queued' => (string) $this->t('Warteschlange'),
+        'running' => (string) $this->t('Läuft'),
+        'completed' => (string) $this->t('Abgeschlossen'),
+        'failed' => (string) $this->t('Fehlgeschlagen'),
+        default => $run['status'],
+      },
+      'phase' => $phase,
+      'phase_label' => (string) ($labels[$phase] ?? $labels['unknown']),
+      'progress_current' => min($current, $total),
+      'progress_total' => $total,
+      'elapsed_seconds' => $elapsed,
+      'updated_at' => $progress['updated_at'] ?? NULL,
+      'detail' => is_array($progress['detail'] ?? NULL) ? $progress['detail'] : [],
+      'error_message' => $run['error_message'],
+      'finished_at' => $run['finished_at'],
+      'terminal' => in_array($run['status'], ['completed', 'failed'], TRUE),
+    ], 200, [
+      'Cache-Control' => 'no-store, no-cache, must-revalidate',
+    ]);
+  }
+
 
   /**
    * POST /dry-run -> legt einen persistenten Run an und reiht ihn ein.

@@ -1,0 +1,6 @@
+status_polling:
+  version: 1.x
+  js:
+    js/matching-status.js: {}
+  dependencies:
+    - core/drupal

@@ -32,7 +32,7 @@ final class MatchingRunProcessor {
     }
 
     try {
-      $res = $this->client->dryRun();
+      $res = $this->client->dryRun($runId);
       $byParticipant = $res['by_participant'] ?? [];
       if (!is_array($byParticipant)) {
         throw new \RuntimeException('Matching-Service lieferte kein gültiges by_participant-Ergebnis.');

@@ -16,6 +16,7 @@ Ad-hoc Overrides (pro Request-Body bei /matching/dry-run):
 """
 
 import os
+import json
 import random
 import time
 from dataclasses import dataclass
@@ -28,6 +29,82 @@ from flask import Flask, jsonify, request
 from ortools.sat.python import cp_model
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
+
+
+# --------------------------------------------------------------------------------------
+# Laufzeit-Fortschritt für asynchrone Drupal-Runs
+# --------------------------------------------------------------------------------------
+PROGRESS_DIR = os.getenv("MATCHING_PROGRESS_DIR", "/tmp/jfcamp-matching-progress")
+
+
+def _progress_file(run_id: Optional[int]) -> Optional[str]:
+    if not run_id:
+        return None
+    os.makedirs(PROGRESS_DIR, exist_ok=True)
+    return os.path.join(PROGRESS_DIR, f"run-{int(run_id)}.json")
+
+
+def _write_matching_progress(
+    run_id: Optional[int],
+    phase: str,
+    label: str,
+    *,
+    current: int = 0,
+    total: int = 7,
+    status: str = "running",
+    detail: Optional[Dict[str, Any]] = None,
+) -> None:
+    path = _progress_file(run_id)
+    if not path:
+        return
+
+    payload = {
+        "run_id": int(run_id),
+        "status": status,
+        "phase": phase,
+        "label": label,
+        "current": int(current),
+        "total": int(total),
+        "updated_at": int(time.time()),
+        "detail": detail or {},
+    }
+
+    tmp_path = f"{path}.{os.getpid()}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp_path, path)
+
+
+def _read_matching_progress(run_id: int) -> Dict[str, Any]:
+    path = _progress_file(run_id)
+    if not path or not os.path.exists(path):
+        return {
+            "run_id": int(run_id),
+            "status": "unknown",
+            "phase": "unknown",
+            "label": "Noch kein Fortschritt verfügbar",
+            "current": 0,
+            "total": 7,
+            "updated_at": None,
+            "detail": {},
+        }
+
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError, TypeError):
+        return {
+            "run_id": int(run_id),
+            "status": "unknown",
+            "phase": "unknown",
+            "label": "Fortschritt konnte nicht gelesen werden",
+            "current": 0,
+            "total": 7,
+            "updated_at": None,
+            "detail": {},
+        }
+
 
 # --------------------------------------------------------------------------------------
 # Konfiguration & Defaults
@@ -1003,6 +1080,7 @@ def run_matching_optimized(
     """
     num_assign = int(cfg["num_assign"])
     num_wishes = int(cfg["num_wishes"])
+    progress_run_id = cfg.get("_progress_run_id")
 
     if num_assign <= 0:
         raise ValueError("num_assign muss größer als 0 sein")
@@ -1184,6 +1262,14 @@ def run_matching_optimized(
             stage_limits.get(stage, 60.0)
         )
 
+        _write_matching_progress(
+            progress_run_id,
+            f"priority_{stage}",
+            label,
+            current=stage,
+            total=7,
+            detail={"state": "started"},
+        )
         print(
             f"[matching] priority {stage}/5 started: {label}",
             flush=True,
@@ -1213,6 +1299,20 @@ def run_matching_optimized(
                 f"priority_{stage}_proven_optimal"
             ] = proven
 
+            _write_matching_progress(
+                progress_run_id,
+                f"priority_{stage}",
+                label,
+                current=stage,
+                total=7,
+                detail={
+                    "state": "finished",
+                    "solver_status": status_name,
+                    "value": objective_value,
+                    "proven_optimal": proven,
+                    "seconds": round(elapsed, 3),
+                },
+            )
             print(
                 f"[matching] priority {stage}/5 finished in "
                 f"{elapsed:.3f}s (status={status_name}, "
@@ -1231,6 +1331,18 @@ def run_matching_optimized(
                 f"(Status: {status_name})."
             )
 
+        _write_matching_progress(
+            progress_run_id,
+            f"priority_{stage}",
+            label,
+            current=stage,
+            total=7,
+            detail={
+                "state": "stopped",
+                "solver_status": status_name,
+                "seconds": round(elapsed, 3),
+            },
+        )
         print(
             f"[matching] priority {stage}/5 stopped after "
             f"{elapsed:.3f}s (status={status_name}); "
@@ -1273,6 +1385,14 @@ def run_matching_optimized(
         stage_proven_optimal["priority_2_proven_optimal"] = True
         model.Add(
             sum(full_participant_vars.values()) == best_fully_by_wishes
+        )
+        _write_matching_progress(
+            progress_run_id,
+            "priority_2",
+            "maximize participants fully assigned by wishes",
+            current=2,
+            total=7,
+            detail={"state": "skipped", "reason": "all_filled_by_wishes"},
         )
         print(
             "[matching] priority 2/5 skipped: all participants already "
@@ -1473,6 +1593,14 @@ def run_matching_optimized(
         stage_timings["priority_5_seconds"] = 0.0
         stage_statuses["priority_5_status"] = "SKIPPED"
         stage_proven_optimal["priority_5_proven_optimal"] = True
+        _write_matching_progress(
+            progress_run_id,
+            "priority_5",
+            "maximize minimum participant wish quality",
+            current=5,
+            total=7,
+            detail={"state": "skipped", "reason": "no_valid_wishes"},
+        )
         print(
             "[matching] priority 5/5 skipped: no valid wishes available",
             flush=True,
@@ -1580,6 +1708,14 @@ def run_matching_optimized(
                 if int(round(self.ObjectiveValue())) >= self.target:
                     self.StopSearch()
 
+        _write_matching_progress(
+            progress_run_id,
+            "completion",
+            "complete remaining assignments",
+            current=6,
+            total=7,
+            detail={"state": "started", "missing_total": missing_total},
+        )
         print(
             f"[matching] completion phase started: {missing_total} assignments open",
             flush=True,
@@ -1675,6 +1811,20 @@ def run_matching_optimized(
                     )
                 )
 
+            _write_matching_progress(
+                progress_run_id,
+                "completion",
+                "complete remaining assignments",
+                current=6,
+                total=7,
+                detail={
+                    "state": "finished",
+                    "solver_status": completion_solver_status,
+                    "added": completion_added,
+                    "missing_total": missing_total,
+                    "seconds": round(completion_solver_seconds, 3),
+                },
+            )
             print(
                 f"[matching] completion phase finished in "
                 f"{completion_solver_seconds:.3f}s "
@@ -1740,6 +1890,14 @@ def run_matching_optimized(
         cfg.get("slot_solver_limit", 60.0)
     )
 
+    _write_matching_progress(
+        progress_run_id,
+        "slot",
+        "assign selected workshops to slots",
+        current=7,
+        total=7,
+        detail={"state": "started", "assignments": len(selected_edges)},
+    )
     print(
         f"[matching] slot phase started: {len(selected_edges)} assignments",
         flush=True,
@@ -1755,6 +1913,18 @@ def run_matching_optimized(
             f"verteilen (Status: {slot_solver_status})."
         )
 
+    _write_matching_progress(
+        progress_run_id,
+        "slot",
+        "assign selected workshops to slots",
+        current=7,
+        total=7,
+        detail={
+            "state": "finished",
+            "solver_status": slot_solver_status,
+            "seconds": round(slot_solver_seconds, 3),
+        },
+    )
     print(
         f"[matching] slot phase finished in {slot_solver_seconds:.3f}s "
         f"(status={slot_solver_status})",
@@ -1986,6 +2156,11 @@ def health_root():
 def root():
     return jsonify({"status": "ok", "hint": "use /matching/stats or POST /matching/dry-run"})
 
+@app.get("/matching/progress/<int:run_id>")
+def matching_progress(run_id: int):
+    return jsonify(_read_matching_progress(run_id))
+
+
 @app.get("/matching/stats")
 def stats():
     cfg = load_matching_config()
@@ -2038,58 +2213,131 @@ def _apply_weights_generation(cfg: Dict[str, Any]) -> None:
 
 @app.post("/matching/dry-run")
 def dry_run():
-    cfg = load_matching_config()
-    overrides = _collect_body_overrides()
-    cfg.update(overrides or {})
-    # Auto-Weights ggf. erzeugen
-    _apply_weights_generation(cfg)
+    run_id_raw = request.headers.get("X-JFCamp-Run-Id", "").strip()
+    try:
+        progress_run_id = int(run_id_raw) if run_id_raw else None
+    except ValueError:
+        progress_run_id = None
 
-    workshops = load_workshops()
-    participants = load_participants_and_wishes(cfg["num_wishes"])
+    try:
+        _write_matching_progress(
+            progress_run_id,
+            "loading_data",
+            "load matching configuration and Drupal data",
+            current=0,
+            total=7,
+            detail={"state": "started"},
+        )
 
-    # Produktiv gibt es genau eine Matching-Strategie.
-    strategy = "optimized"
-    assignments, meta = run_matching_optimized(
-        participants,
-        workshops,
-        cfg,
-    )
+        cfg = load_matching_config()
+        overrides = _collect_body_overrides()
+        cfg.update(overrides or {})
+        cfg["_progress_run_id"] = progress_run_id
 
-    rows = []
-    for pid, slots in assignments.items():
-        for s, wid in sorted(slots.items()):
-            detail = (
-                meta.get("assignment_details", {})
-                .get(pid, {})
-                .get(s, {})
-            )
-            rows.append({
-                "participant_id": pid,
-                "slot": s,
-                "workshop_id": wid,
-                "workshop_title": workshops.get(
-                    wid,
-                    Workshop(wid, "?", 0),
-                ).title,
-                "source": detail.get("source", "wish"),
-                "wish_rank": detail.get("wish_rank"),
-                "is_topk": detail.get("is_topk", False),
-            })
+        # Auto-Weights ggf. erzeugen
+        _apply_weights_generation(cfg)
 
-    return jsonify({
-        "status": "ok",
-        "mode": "dry-run",
-        "strategy": strategy,
-        "summary": meta["summary"],
-        "unfilled_workshops": meta["unfilled_workshops"],
-        "assignments_by_slot": {str(s): [r for r in rows if r["slot"] == s] for s in range(1, cfg["num_assign"] + 1)},
-        "by_participant": {pid: {str(s): wid for s, wid in slots.items()} for pid, slots in assignments.items()},
-        "export_rows": rows[:2000],
-        "diag": {"root": FETCH_DIAG.get("root"),
-                 "effective_limit": FETCH_DIAG.get("effective_limit"),
-                 "retries": FETCH_DIAG.get("retries", 0),
-                 "last_error": FETCH_DIAG.get("last_error")},
-    })
+        workshops = load_workshops()
+        participants = load_participants_and_wishes(cfg["num_wishes"])
+
+        _write_matching_progress(
+            progress_run_id,
+            "loading_data",
+            "load matching configuration and Drupal data",
+            current=0,
+            total=7,
+            detail={
+                "state": "finished",
+                "participants": len(participants),
+                "workshops": len(workshops),
+            },
+        )
+
+        # Produktiv gibt es genau eine Matching-Strategie.
+        strategy = "optimized"
+        assignments, meta = run_matching_optimized(
+            participants,
+            workshops,
+            cfg,
+        )
+
+        rows = []
+        for pid, slots in assignments.items():
+            for s, wid in sorted(slots.items()):
+                detail = (
+                    meta.get("assignment_details", {})
+                    .get(pid, {})
+                    .get(s, {})
+                )
+                rows.append({
+                    "participant_id": pid,
+                    "slot": s,
+                    "workshop_id": wid,
+                    "workshop_title": workshops.get(
+                        wid,
+                        Workshop(wid, "?", 0),
+                    ).title,
+                    "source": detail.get("source", "wish"),
+                    "wish_rank": detail.get("wish_rank"),
+                    "is_topk": detail.get("is_topk", False),
+                })
+
+        _write_matching_progress(
+            progress_run_id,
+            "finalizing",
+            "prepare matching result",
+            current=7,
+            total=7,
+            detail={"state": "finished"},
+        )
+
+        response = {
+            "status": "ok",
+            "mode": "dry-run",
+            "strategy": strategy,
+            "summary": meta["summary"],
+            "unfilled_workshops": meta["unfilled_workshops"],
+            "assignment_details": meta.get("assignment_details", {}),
+            "assignments_by_slot": {
+                str(s): [r for r in rows if r["slot"] == s]
+                for s in range(1, cfg["num_assign"] + 1)
+            },
+            "by_participant": {
+                pid: {str(s): wid for s, wid in slots.items()}
+                for pid, slots in assignments.items()
+            },
+            "export_rows": rows[:2000],
+            "diag": {
+                "root": FETCH_DIAG.get("root"),
+                "effective_limit": FETCH_DIAG.get("effective_limit"),
+                "retries": FETCH_DIAG.get("retries", 0),
+                "last_error": FETCH_DIAG.get("last_error"),
+            },
+        }
+
+        _write_matching_progress(
+            progress_run_id,
+            "completed",
+            "matching completed",
+            current=7,
+            total=7,
+            status="completed",
+            detail={"state": "completed"},
+        )
+        return jsonify(response)
+
+    except Exception as exc:
+        _write_matching_progress(
+            progress_run_id,
+            "failed",
+            "matching failed",
+            current=0,
+            total=7,
+            status="failed",
+            detail={"message": str(exc)[:1000]},
+        )
+        raise
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)

@@ -1,6 +1,6 @@
 from collections import Counter
 
-from matching.matching_server import Participant, Workshop, run_matching_fair
+from matching_server import Participant, Workshop, run_matching_fair
 
 
 def test_fair_matching_respects_basic_constraints():

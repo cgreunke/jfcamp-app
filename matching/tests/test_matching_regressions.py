@@ -1,6 +1,6 @@
 import pytest
 
-from matching.matching_server import Participant, Workshop, run_matching_fair
+from matching_server import Participant, Workshop, run_matching_fair
 
 
 @pytest.mark.xfail(

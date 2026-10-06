@@ -1,4 +1,4 @@
-from matching.matching_server import Participant, Workshop, run_matching_fair
+from matching_server import Participant, Workshop, run_matching_fair
 
 
 def test_fair_matching_reaches_1000_assignments_when_fully_feasible():

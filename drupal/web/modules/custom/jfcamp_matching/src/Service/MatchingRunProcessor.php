@@ -52,12 +52,25 @@ final class MatchingRunProcessor {
         throw new \RuntimeException('Matching-Service lieferte keine gültige Fingerprint-Version.');
       }
 
+      $effectiveConfig = $res['effective_config'] ?? NULL;
+      if (!is_array($effectiveConfig)) {
+        throw new \RuntimeException('Matching-Service lieferte keine gültige effektive Matching-Konfiguration.');
+      }
+      if (!isset($effectiveConfig['num_wishes'], $effectiveConfig['num_assign'])) {
+        throw new \RuntimeException('Effektive Matching-Konfiguration enthält nicht alle Pflichtwerte.');
+      }
+      foreach (array_keys($effectiveConfig) as $key) {
+        if (str_starts_with((string) $key, '_')) {
+          throw new \RuntimeException('Effektive Matching-Konfiguration enthält technische Laufzeitdaten.');
+        }
+      }
+
       $this->runStorage->markCompleted(
         $runId,
         $summary,
         $byParticipant,
         $assignmentDetails,
-        $run['config'],
+        $effectiveConfig,
         $inputFingerprint,
         $inputFingerprintVersion,
       );

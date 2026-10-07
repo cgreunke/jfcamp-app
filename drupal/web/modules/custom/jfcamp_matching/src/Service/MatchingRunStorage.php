@@ -91,10 +91,11 @@ final class MatchingRunStorage {
 
     $snapshotJson = $this->encode($snapshot);
 
-    $this->database->update(self::TABLE)
+    $affected = $this->database->update(self::TABLE)
       ->fields([
         'status' => 'completed',
         'finished_at' => $this->time->getCurrentTime(),
+        'config_json' => $this->encode($configSnapshot),
         'summary_json' => $this->encode($summary),
         'snapshot_json' => $snapshotJson,
         'result_hash' => hash('sha256', $snapshotJson),
@@ -103,7 +104,15 @@ final class MatchingRunStorage {
         'error_message' => NULL,
       ])
       ->condition('id', $runId)
+      ->condition('status', 'running')
       ->execute();
+
+    if ($affected !== 1) {
+      throw new \RuntimeException(sprintf(
+        'Matching-Run #%d konnte nicht atomar als completed gespeichert werden.',
+        $runId,
+      ));
+    }
   }
 
   public function markFailed(int $runId, string $message): void {

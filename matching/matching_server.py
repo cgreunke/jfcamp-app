@@ -331,9 +331,9 @@ class Participant:
     region: Optional[str] = None
 
 try:
-    from .input_fingerprint import build_input_fingerprint
+    from .input_fingerprint import build_effective_config_snapshot, build_input_fingerprint
 except ImportError:
-    from input_fingerprint import build_input_fingerprint
+    from input_fingerprint import build_effective_config_snapshot, build_input_fingerprint
 
 
 # --------------------------------------------------------------------------------------
@@ -2272,6 +2272,7 @@ def dry_run():
 
         workshops = load_workshops()
         participants = load_participants_and_wishes(cfg["num_wishes"])
+        effective_config = build_effective_config_snapshot(cfg)
         input_fingerprint, input_fingerprint_version = build_input_fingerprint(
             cfg,
             participants,
@@ -2335,6 +2336,7 @@ def dry_run():
             "strategy": strategy,
             "input_fingerprint": input_fingerprint,
             "input_fingerprint_version": input_fingerprint_version,
+            "effective_config": effective_config,
             "summary": meta["summary"],
             "unfilled_workshops": meta["unfilled_workshops"],
             "assignment_details": meta.get("assignment_details", {}),

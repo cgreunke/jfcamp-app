@@ -22,7 +22,23 @@ def _normalize(value: Any) -> Any:
         return sorted((_normalize(item) for item in value), key=lambda item: repr(item))
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
-    raise TypeError(f"Unsupported value in matching input fingerprint: {type(value).__name__}")
+    raise TypeError(
+        f"Unsupported value in matching input fingerprint: {type(value).__name__}"
+    )
+
+
+def build_effective_config_snapshot(cfg: Mapping[str, Any]) -> Dict[str, Any]:
+    """Return the deterministic solver config persisted as run provenance.
+
+    Keys prefixed with ``_`` are technical runtime metadata (for example the
+    Drupal progress run id) and are deliberately not part of solver provenance.
+    """
+    effective_config = {
+        str(key): value
+        for key, value in cfg.items()
+        if not str(key).startswith("_")
+    }
+    return _normalize(effective_config)
 
 
 def canonical_matching_input(
@@ -31,12 +47,6 @@ def canonical_matching_input(
     workshops: Mapping[str, Any],
 ) -> Dict[str, Any]:
     """Build the versioned canonical structure that is hashed for stale detection."""
-    effective_config = {
-        str(key): value
-        for key, value in cfg.items()
-        if not str(key).startswith("_")
-    }
-
     participant_rows = [
         {
             "id": str(pid),
@@ -57,7 +67,7 @@ def canonical_matching_input(
     return _normalize(
         {
             "version": INPUT_FINGERPRINT_VERSION,
-            "config": effective_config,
+            "config": build_effective_config_snapshot(cfg),
             "participants": participant_rows,
             "workshops": workshop_rows,
         }

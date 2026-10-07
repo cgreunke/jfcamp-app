@@ -82,6 +82,31 @@ function jfcamp_matching_update_10004(): void {
 }
 
 /**
+ * Adds the Apply claim timestamp used for stale Apply recovery.
+ */
+function jfcamp_matching_update_10005(): void {
+  $schema = \Drupal::database()->schema();
+
+  if (!$schema->tableExists('jfcamp_matching_run')) {
+    $schema->createTable(
+      'jfcamp_matching_run',
+      jfcamp_matching_run_table_definition(),
+    );
+    return;
+  }
+
+  $definition = jfcamp_matching_run_table_definition();
+
+  if (!$schema->fieldExists('jfcamp_matching_run', 'apply_started_at')) {
+    $schema->addField(
+      'jfcamp_matching_run',
+      'apply_started_at',
+      $definition['fields']['apply_started_at'],
+    );
+  }
+}
+
+/**
  * Shared schema definition for matching runs.
  */
 function jfcamp_matching_run_table_definition(): array {
@@ -178,6 +203,11 @@ function jfcamp_matching_run_table_definition(): array {
         'length' => 32,
         'not null' => TRUE,
         'default' => 'not_applied',
+      ],
+      'apply_started_at' => [
+        'description' => 'Startzeitpunkt des aktuellen Apply-Versuchs als Unix-Timestamp.',
+        'type' => 'int',
+        'not null' => FALSE,
       ],
       'applied_at' => [
         'description' => 'Zeitpunkt des letzten erfolgreichen Apply.',

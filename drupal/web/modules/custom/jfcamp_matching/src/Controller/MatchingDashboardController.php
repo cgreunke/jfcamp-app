@@ -50,6 +50,17 @@ final class MatchingDashboardController extends ControllerBase {
     $activeRun = $this->runStorage->latestActive();
     $currentApplied = $this->runStorage->currentApplied();
     $matchingConfig = $this->readMatchingConfigFromDrupal();
+
+    $latestApplyStatus = (string) ($latestRun['apply_status'] ?? 'not_applied');
+    $latestApplyStartedAt = (int) ($latestRun['apply_started_at'] ?? 0);
+    $latestApplyRecoverable = (
+      $latestApplyStatus === 'applying'
+      && (
+        $latestApplyStartedAt <= 0
+        || $latestApplyStartedAt <= time() - MatchingRunStorage::APPLY_RECOVERY_AFTER_SECONDS
+      )
+    );
+
     $latestFreshness = (
       $latestRun
       && $latestRun['status'] === 'completed'
@@ -195,9 +206,16 @@ final class MatchingDashboardController extends ControllerBase {
       $latestRun
       && $latestRun['status'] === 'completed'
       && !empty($latestRun['snapshot']['by_participant'])
-      && $latestRun['apply_status'] !== 'applied'
+      && (
+        in_array($latestApplyStatus, ['not_applied', 'failed', 'superseded', 'reset'], TRUE)
+        || $latestApplyRecoverable
+      )
       && ($latestFreshness['state'] ?? '') === 'current'
     ) {
+      $applyLabel = $latestApplyRecoverable
+        ? $this->t('Run #@id Apply wiederaufnehmen', ['@id' => $latestRun['id']])
+        : $this->t('Run #@id festschreiben', ['@id' => $latestRun['id']]);
+
       $build['actions']['apply'] = [
         '#type' => 'inline_template',
         '#template' => '<form action="{{ url }}" method="post" style="display:inline-block;margin-right:8px"><button class="button button--primary">{{ label }}</button></form>',
@@ -206,16 +224,30 @@ final class MatchingDashboardController extends ControllerBase {
             'jfcamp_matching.action_apply',
             ['run_id' => $latestRun['id']],
           )->toString(),
-          'label' => $this->t('Run #@id festschreiben', ['@id' => $latestRun['id']]),
+          'label' => $applyLabel,
         ],
       ];
     }
-
+    elseif (
+      $latestRun
+      && $latestRun['status'] === 'completed'
+      && $latestApplyStatus === 'applying'
+      && !$latestApplyRecoverable
+    ) {
+      $build['actions']['apply_running'] = [
+        '#markup' => '<p><strong>' . $this->t('Festschreiben läuft bereits.') . '</strong> '
+          . $this->t('Gestartet: @date. Ein Recovery-Versuch wird erst nach @minutes Minuten möglich.', [
+            '@date' => $this->formatTimestamp($latestApplyStartedAt),
+            '@minutes' => (int) (MatchingRunStorage::APPLY_RECOVERY_AFTER_SECONDS / 60),
+          ]) . '</p>',
+      ];
+    }
     elseif (
       $latestRun
       && $latestRun['status'] === 'completed'
       && !empty($latestRun['snapshot']['by_participant'])
-      && $latestRun['apply_status'] !== 'applied'
+      && $latestApplyStatus !== 'applied'
+      && ($latestFreshness['state'] ?? '') !== 'current'
     ) {
       $build['actions']['apply_blocked'] = [
         '#markup' => '<p><strong>' . $this->t('Festschreiben blockiert:') . '</strong> '
@@ -573,6 +605,12 @@ final class MatchingDashboardController extends ControllerBase {
     if (!empty($run['reset_at'])) {
       $metaRows[] = [$this->t('Zurückgesetzt'), $this->formatTimestamp($run['reset_at'])];
     }
+    if (!empty($run['apply_started_at'])) {
+      $metaRows[] = [
+        $this->t('Apply gestartet'),
+        $this->formatTimestamp((int) $run['apply_started_at']),
+      ];
+    }
 
     $build['run_meta'] = [
       '#type' => 'table',
@@ -652,6 +690,7 @@ final class MatchingDashboardController extends ControllerBase {
         $quality,
         isset($sum['wish_assignments']) ? (string) $sum['wish_assignments'] : '–',
         isset($sum['filler_assignments']) ? (string) $sum['filler_assignments'] : '–',
+        $run['apply_started_at'] ? $this->formatTimestamp($run['apply_started_at']) : '–',
         $this->formatTimestamp($run['created_at']),
         $run['applied_at'] ? $this->formatTimestamp($run['applied_at']) : '–',
       ];
@@ -666,6 +705,7 @@ final class MatchingDashboardController extends ControllerBase {
         $this->t('Qualität'),
         $this->t('Wünsche'),
         $this->t('Filler'),
+        $this->t('Apply gestartet'),
         $this->t('Erstellt'),
         $this->t('Angewendet'),
       ],

@@ -46,7 +46,7 @@ final class AssignmentPersistenceService {
 
     // Reserve only after the full preflight passed. From this point on, any
     // write error is recorded as failed after the transaction was rolled back.
-    $this->runStorage->markApplying($runId, $resultHash);
+    $applyStartedAt = $this->runStorage->markApplying($runId, $resultHash);
     $transaction = $this->database->startTransaction();
 
     try {
@@ -72,14 +72,24 @@ final class AssignmentPersistenceService {
         throw new \RuntimeException('Apply-Zählwerte stimmen nach dem Schreiben nicht mit dem Snapshot überein.');
       }
 
-      $this->runStorage->markApplied($runId, $resultHash, $result);
+      $this->runStorage->markApplied(
+        $runId,
+        $resultHash,
+        $applyStartedAt,
+        $result,
+      );
       return $result;
     }
     catch (\Throwable $e) {
       $transaction->rollBack();
       $result['error'] = $e->getMessage();
       try {
-        $this->runStorage->markApplyFailed($runId, $resultHash, $result);
+        $this->runStorage->markApplyFailed(
+          $runId,
+          $resultHash,
+          $applyStartedAt,
+          $result,
+        );
       }
       catch (\Throwable) {
         // Preserve the original exception. A separate storage failure is

@@ -10,6 +10,7 @@ use Drupal\Core\Session\AccountProxyInterface;
 final class MatchingRunStorage {
 
   private const TABLE = 'jfcamp_matching_run';
+  public const APPLY_RECOVERY_AFTER_SECONDS = 1200;
 
   public function __construct(
     private Connection $database,
@@ -209,10 +210,13 @@ final class MatchingRunStorage {
     return $run;
   }
 
-  public function markApplying(int $runId, string $expectedHash): void {
+  public function markApplying(int $runId, string $expectedHash): int {
+    $now = $this->time->getCurrentTime();
+
     $affected = $this->database->update(self::TABLE)
       ->fields([
         'apply_status' => 'applying',
+        'apply_started_at' => $now,
         'apply_result_json' => NULL,
       ])
       ->condition('id', $runId)
@@ -221,12 +225,40 @@ final class MatchingRunStorage {
       ->condition('apply_status', ['not_applied', 'failed', 'superseded', 'reset'], 'IN')
       ->execute();
 
-    if ($affected !== 1) {
-      throw new \RuntimeException(sprintf('Matching-Run #%d konnte nicht für Apply reserviert werden.', $runId));
+    if ($affected === 1) {
+      return $now;
     }
+
+    $cutoff = $now - self::APPLY_RECOVERY_AFTER_SECONDS;
+
+    $staleClaim = $this->database->condition('OR')
+      ->condition('apply_started_at', $cutoff, '<=')
+      ->isNull('apply_started_at');
+
+    $affected = $this->database->update(self::TABLE)
+      ->fields([
+        'apply_status' => 'applying',
+        'apply_started_at' => $now,
+        'apply_result_json' => NULL,
+      ])
+      ->condition('id', $runId)
+      ->condition('status', 'completed')
+      ->condition('result_hash', $expectedHash)
+      ->condition('apply_status', 'applying')
+      ->condition($staleClaim)
+      ->execute();
+
+    if ($affected === 1) {
+      return $now;
+    }
+
+    throw new \RuntimeException(sprintf(
+      'Matching-Run #%d konnte nicht für Apply reserviert werden. Ein anderer Apply-Versuch läuft möglicherweise noch.',
+      $runId,
+    ));
   }
 
-  public function markApplied(int $runId, string $expectedHash, array $result): void {
+  public function markApplied(int $runId, string $expectedHash, int $expectedApplyStartedAt, array $result): void {
     $transaction = $this->database->startTransaction();
 
     try {
@@ -241,6 +273,7 @@ final class MatchingRunStorage {
       $affected = $this->database->update(self::TABLE)
         ->fields([
           'apply_status' => 'applied',
+          'apply_started_at' => NULL,
           'applied_at' => $this->time->getCurrentTime(),
           'applied_uid' => (int) $this->currentUser->id(),
           'applied_hash' => $expectedHash,
@@ -252,6 +285,7 @@ final class MatchingRunStorage {
         ->condition('status', 'completed')
         ->condition('result_hash', $expectedHash)
         ->condition('apply_status', 'applying')
+        ->condition('apply_started_at', $expectedApplyStartedAt)
         ->execute();
 
       if ($affected !== 1) {
@@ -267,16 +301,18 @@ final class MatchingRunStorage {
     }
   }
 
-  public function markApplyFailed(int $runId, string $expectedHash, array $result): void {
-    $this->database->update(self::TABLE)
+  public function markApplyFailed(int $runId, string $expectedHash, int $expectedApplyStartedAt, array $result): bool {
+    return $this->database->update(self::TABLE)
       ->fields([
         'apply_status' => 'failed',
+        'apply_started_at' => NULL,
         'apply_result_json' => $this->encode($result),
       ])
       ->condition('id', $runId)
       ->condition('result_hash', $expectedHash)
       ->condition('apply_status', 'applying')
-      ->execute();
+      ->condition('apply_started_at', $expectedApplyStartedAt)
+      ->execute() === 1;
   }
 
 
@@ -376,6 +412,7 @@ final class MatchingRunStorage {
         'input_fingerprint_version',
         'error_message',
         'apply_status',
+        'apply_started_at',
         'applied_at',
         'applied_uid',
         'applied_hash',
@@ -402,6 +439,7 @@ final class MatchingRunStorage {
         'input_fingerprint_version' => $row->input_fingerprint_version !== NULL ? (int) $row->input_fingerprint_version : NULL,
         'error_message' => $row->error_message !== NULL ? (string) $row->error_message : NULL,
         'apply_status' => $row->apply_status !== NULL ? (string) $row->apply_status : 'not_applied',
+        'apply_started_at' => $row->apply_started_at !== NULL ? (int) $row->apply_started_at : NULL,
         'applied_at' => $row->applied_at !== NULL ? (int) $row->applied_at : NULL,
         'applied_uid' => $row->applied_uid !== NULL ? (int) $row->applied_uid : NULL,
         'applied_hash' => $row->applied_hash !== NULL ? (string) $row->applied_hash : NULL,
@@ -450,6 +488,9 @@ final class MatchingRunStorage {
       'apply_status' => isset($row['apply_status']) && $row['apply_status'] !== NULL
         ? (string) $row['apply_status']
         : 'not_applied',
+      'apply_started_at' => isset($row['apply_started_at']) && $row['apply_started_at'] !== NULL
+        ? (int) $row['apply_started_at']
+        : NULL,
       'applied_at' => $row['applied_at'] !== NULL ? (int) $row['applied_at'] : NULL,
       'applied_uid' => isset($row['applied_uid']) && $row['applied_uid'] !== NULL
         ? (int) $row['applied_uid']

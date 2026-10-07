@@ -5,7 +5,11 @@ services:
 
   jfcamp_matching.run_storage:
     class: 'Drupal\jfcamp_matching\Service\MatchingRunStorage'
-    arguments: ['@database', '@uuid', '@current_user', '@datetime.time', '@lock']
+    arguments: ['@database', '@uuid', '@current_user', '@datetime.time']
+
+  jfcamp_matching.run_starter:
+    class: 'Drupal\jfcamp_matching\Service\MatchingRunStarter'
+    arguments: ['@database', '@lock', '@queue', '@jfcamp_matching.run_storage']
 
   jfcamp_matching.assignment_persistence:
     class: 'Drupal\jfcamp_matching\Service\AssignmentPersistenceService'

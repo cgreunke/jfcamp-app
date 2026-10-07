@@ -5,13 +5,11 @@ namespace Drupal\jfcamp_matching\Service;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Component\Uuid\UuidInterface;
 use Drupal\Core\Database\Connection;
-use Drupal\Core\Lock\LockBackendInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 
 final class MatchingRunStorage {
 
   private const TABLE = 'jfcamp_matching_run';
-  private const START_LOCK = 'jfcamp_matching.create_run';
   public const APPLY_RECOVERY_AFTER_SECONDS = 1200;
 
   public function __construct(
@@ -19,33 +17,12 @@ final class MatchingRunStorage {
     private UuidInterface $uuid,
     private AccountProxyInterface $currentUser,
     private TimeInterface $time,
-    private LockBackendInterface $lock,
   ) {}
 
   /**
-   * Atomically creates a queued run only when no queued/running run exists.
+   * Creates a queued run inside the caller's start transaction.
    */
-  public function createQueuedIfNoneActive(array $configSnapshot): ?int {
-    if (!$this->lock->acquire(self::START_LOCK, 10.0)) {
-      $this->lock->wait(self::START_LOCK, 5);
-      if (!$this->lock->acquire(self::START_LOCK, 10.0)) {
-        throw new \RuntimeException('Matching-Start konnte nicht exklusiv reserviert werden. Bitte erneut versuchen.');
-      }
-    }
-
-    try {
-      if ($this->hasActive()) {
-        return NULL;
-      }
-
-      return $this->createQueued($configSnapshot);
-    }
-    finally {
-      $this->lock->release(self::START_LOCK);
-    }
-  }
-
-  private function createQueued(array $configSnapshot): int {
+  public function createQueued(array $configSnapshot): int {
     $now = $this->time->getCurrentTime();
 
     $id = $this->database->insert(self::TABLE)

@@ -7,8 +7,8 @@ use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\jfcamp_matching\Service\AssignmentPersistenceService;
 use Drupal\jfcamp_matching\Service\MatchingRunStorage;
+use Drupal\jfcamp_matching\Service\MatchingRunStarter;
 use Drupal\jfcamp_matching\Service\MatchingClient;
-use Drupal\Core\Queue\QueueFactory;
 use Drupal\node\Entity\Node;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -19,7 +19,7 @@ final class MatchingDashboardController extends ControllerBase {
 
   public function __construct(
     private MatchingRunStorage $runStorage,
-    private QueueFactory $queueFactory,
+    private MatchingRunStarter $runStarter,
     private MatchingClient $client,
     private AssignmentPersistenceService $assignmentPersistence,
   ) {}
@@ -27,7 +27,7 @@ final class MatchingDashboardController extends ControllerBase {
   public static function create(ContainerInterface $container): self {
     return new self(
       $container->get('jfcamp_matching.run_storage'),
-      $container->get('queue'),
+      $container->get('jfcamp_matching.run_starter'),
       $container->get('jfcamp_matching.client'),
       $container->get('jfcamp_matching.assignment_persistence'),
     );
@@ -368,7 +368,7 @@ final class MatchingDashboardController extends ControllerBase {
         throw new \RuntimeException('Keine veröffentlichte matching_config gefunden.');
       }
 
-      $runId = $this->runStorage->createQueuedIfNoneActive($matchingConfig);
+      $runId = $this->runStarter->startIfNoneActive($matchingConfig);
       if ($runId === NULL) {
         $active = $this->runStorage->latestActive();
         $this->messenger()->addWarning($this->t(
@@ -377,9 +377,6 @@ final class MatchingDashboardController extends ControllerBase {
         ));
         return new RedirectResponse(Url::fromRoute('jfcamp_matching.dashboard')->toString());
       }
-
-      $queue = $this->queueFactory->get('jfcamp_matching_runs');
-      $queue->createItem(['run_id' => $runId]);
 
       $this->messenger()->addStatus($this->t(
         'Matching-Run #@run wurde gestartet und läuft im Hintergrund.',

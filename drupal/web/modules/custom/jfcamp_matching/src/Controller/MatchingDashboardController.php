@@ -363,7 +363,13 @@ final class MatchingDashboardController extends ControllerBase {
    */
   public function actionDryRun(Request $request): RedirectResponse {
     try {
-      if ($this->runStorage->hasActive()) {
+      $matchingConfig = $this->readMatchingConfigFromDrupal();
+      if (!$matchingConfig) {
+        throw new \RuntimeException('Keine veröffentlichte matching_config gefunden.');
+      }
+
+      $runId = $this->runStorage->createQueuedIfNoneActive($matchingConfig);
+      if ($runId === NULL) {
         $active = $this->runStorage->latestActive();
         $this->messenger()->addWarning($this->t(
           'Es läuft bereits Matching-Run #@run. Bitte warten, bis dieser beendet ist.',
@@ -372,12 +378,6 @@ final class MatchingDashboardController extends ControllerBase {
         return new RedirectResponse(Url::fromRoute('jfcamp_matching.dashboard')->toString());
       }
 
-      $matchingConfig = $this->readMatchingConfigFromDrupal();
-      if (!$matchingConfig) {
-        throw new \RuntimeException('Keine veröffentlichte matching_config gefunden.');
-      }
-
-      $runId = $this->runStorage->createQueued($matchingConfig);
       $queue = $this->queueFactory->get('jfcamp_matching_runs');
       $queue->createItem(['run_id' => $runId]);
 

@@ -219,7 +219,10 @@ install_site_if_needed() {
       echo "[config] Import schlug fehl – versuche einmaligen Fix (UUID+pgsql) und Retry."
       align_site_uuid_with_sync
       sanitize_core_extension_basics
-      "${DRUSH}" cim -y --source="${CONFIG_SYNC_DIR}" || echo "[config] Import weiterhin fehlgeschlagen – bitte Logs prüfen."
+      if ! "${DRUSH}" cim -y --source="${CONFIG_SYNC_DIR}"; then
+        echo "[fatal] Config-Import ist auch nach dem Retry fehlgeschlagen." >&2
+        return 1
+      fi
     fi
   else
     echo "[config] Sync-Ordner ist leer → überspringe 'cim'."
@@ -233,15 +236,26 @@ install_site_if_needed() {
 
 post_bootstrap_maintenance() {
   echo "[update] drush updb -y"
-  "${DRUSH}" updb -y || true
+  if ! "${DRUSH}" updb -y; then
+    echo "[fatal] Datenbank-Updates (drush updb) sind fehlgeschlagen." >&2
+    return 1
+  fi
+
   if [[ "${AUTO_CIM}" == "1" ]] && sync_has_files; then
     echo "[config] drush cim -y (AUTO)"
     align_site_uuid_with_sync
     sanitize_core_extension_basics
-    "${DRUSH}" cim -y --source="${CONFIG_SYNC_DIR}" || true
+    if ! "${DRUSH}" cim -y --source="${CONFIG_SYNC_DIR}"; then
+      echo "[fatal] Automatischer Config-Import (drush cim) ist fehlgeschlagen." >&2
+      return 1
+    fi
   fi
+
   echo "[cache] drush cr -y"
-  "${DRUSH}" cr -y || true
+  if ! "${DRUSH}" cr -y; then
+    echo "[fatal] Cache-Rebuild (drush cr) ist fehlgeschlagen." >&2
+    return 1
+  fi
 }
 
 start_apache() { echo "[start] Apache"; exec apache2-foreground; }

@@ -218,6 +218,7 @@ final class MatchingRunStorage {
       ->condition('id', $runId)
       ->condition('status', 'completed')
       ->condition('result_hash', $expectedHash)
+      ->condition('apply_status', ['not_applied', 'failed', 'superseded', 'reset'], 'IN')
       ->execute();
 
     if ($affected !== 1) {
@@ -250,6 +251,7 @@ final class MatchingRunStorage {
         ->condition('id', $runId)
         ->condition('status', 'completed')
         ->condition('result_hash', $expectedHash)
+        ->condition('apply_status', 'applying')
         ->execute();
 
       if ($affected !== 1) {
@@ -273,6 +275,7 @@ final class MatchingRunStorage {
       ])
       ->condition('id', $runId)
       ->condition('result_hash', $expectedHash)
+      ->condition('apply_status', 'applying')
       ->execute();
   }
 

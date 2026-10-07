@@ -5,7 +5,7 @@ namespace Drupal\jfcamp_matching\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
-use Drupal\jfcamp_matching\Batch\ApplyAssignmentsBatch;
+use Drupal\jfcamp_matching\Service\AssignmentPersistenceService;
 use Drupal\jfcamp_matching\Service\MatchingRunStorage;
 use Drupal\jfcamp_matching\Service\MatchingClient;
 use Drupal\Core\Queue\QueueFactory;
@@ -21,6 +21,7 @@ final class MatchingDashboardController extends ControllerBase {
     private MatchingRunStorage $runStorage,
     private QueueFactory $queueFactory,
     private MatchingClient $client,
+    private AssignmentPersistenceService $assignmentPersistence,
   ) {}
 
   public static function create(ContainerInterface $container): self {
@@ -28,6 +29,7 @@ final class MatchingDashboardController extends ControllerBase {
       $container->get('jfcamp_matching.run_storage'),
       $container->get('queue'),
       $container->get('jfcamp_matching.client'),
+      $container->get('jfcamp_matching.assignment_persistence'),
     );
   }
 
@@ -379,27 +381,24 @@ final class MatchingDashboardController extends ControllerBase {
 
       $snapshot = $run['snapshot'];
       $resultHash = (string) $run['result_hash'];
-
-      $this->runStorage->markApplying($run_id, $resultHash);
-
-      $config = $this->cfg();
-      $batch = ApplyAssignmentsBatch::build(
-        $config,
+      $result = $this->assignmentPersistence->apply(
+        $this->cfg(),
         $snapshot['by_participant'],
         $run_id,
         $resultHash,
       );
-      batch_set($batch);
 
       $this->messenger()->addStatus($this->t(
-        'Festschreiben von Run #@run gestartet. Snapshot @hash wird exakt angewendet; es findet keine Neuberechnung statt.',
+        'Run #@run wurde atomar aus Snapshot @hash festgeschrieben: @participants Teilnehmer, @assignments Zuweisungen verifiziert.',
         [
           '@run' => $run_id,
           '@hash' => substr($resultHash, 0, 16) . '…',
+          '@participants' => $result['updated_participants'] ?? 0,
+          '@assignments' => $result['written_assignments'] ?? 0,
         ],
       ));
 
-      return batch_process(Url::fromRoute('jfcamp_matching.dashboard'));
+      return new RedirectResponse(Url::fromRoute('jfcamp_matching.dashboard')->toString());
     }
     catch (\Throwable $e) {
       $this->messenger()->addError($this->t(
@@ -421,19 +420,20 @@ final class MatchingDashboardController extends ControllerBase {
       $run = $this->runStorage->loadCurrentApplied($run_id);
       $appliedHash = (string) $run['applied_hash'];
 
-      $config = $this->cfg();
-      $batch = ApplyAssignmentsBatch::buildReset(
-        $config,
+      $result = $this->assignmentPersistence->reset(
+        $this->cfg(),
         $run_id,
         $appliedHash,
       );
-      batch_set($batch);
 
       $this->messenger()->addStatus($this->t(
-        'Zurücksetzen von Run #@run gestartet.',
-        ['@run' => $run_id],
+        'Run #@run wurde atomar zurückgesetzt: @participants Teilnehmer verifiziert.',
+        [
+          '@run' => $run_id,
+          '@participants' => $result['reset_participants'] ?? 0,
+        ],
       ));
-      return batch_process(Url::fromRoute('jfcamp_matching.dashboard'));
+      return new RedirectResponse(Url::fromRoute('jfcamp_matching.dashboard')->toString());
     }
     catch (\Throwable $e) {
       $this->messenger()->addError($this->t(

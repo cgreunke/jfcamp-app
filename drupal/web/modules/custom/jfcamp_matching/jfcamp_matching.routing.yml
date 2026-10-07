@@ -27,6 +27,7 @@ jfcamp_matching.action_dry_run:
     _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::actionDryRun'
   requirements:
     _permission: 'run jfcamp matching'
+    _csrf_token: 'TRUE'
   methods: [POST]
 
 jfcamp_matching.action_apply:
@@ -35,6 +36,7 @@ jfcamp_matching.action_apply:
     _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::actionApply'
   requirements:
     _permission: 'run jfcamp matching'
+    _csrf_token: 'TRUE'
     run_id: '^\d+$'
   methods: [POST]
 
@@ -44,6 +46,7 @@ jfcamp_matching.action_reset:
     _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::actionReset'
   requirements:
     _permission: 'run jfcamp matching'
+    _csrf_token: 'TRUE'
     run_id: '^\d+$'
   methods: [POST]
 

@@ -43,12 +43,23 @@ final class MatchingRunProcessor {
         ? $res['assignment_details']
         : [];
 
+      $inputFingerprint = strtolower(trim((string) ($res['input_fingerprint'] ?? '')));
+      $inputFingerprintVersion = (int) ($res['input_fingerprint_version'] ?? 0);
+      if (!preg_match('/^[a-f0-9]{64}$/', $inputFingerprint)) {
+        throw new \RuntimeException('Matching-Service lieferte keinen gültigen Input-Fingerprint.');
+      }
+      if ($inputFingerprintVersion < 1) {
+        throw new \RuntimeException('Matching-Service lieferte keine gültige Fingerprint-Version.');
+      }
+
       $this->runStorage->markCompleted(
         $runId,
         $summary,
         $byParticipant,
         $assignmentDetails,
         $run['config'],
+        $inputFingerprint,
+        $inputFingerprintVersion,
       );
 
       $this->logger->notice(

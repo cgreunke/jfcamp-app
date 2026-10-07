@@ -58,6 +58,30 @@ final class MatchingClient {
   }
 
   /**
+   * POST /matching/input-fingerprint.
+   *
+   * Lädt und normalisiert ausschließlich den aktuellen Matching-Eingabestand.
+   * Es wird kein Matching berechnet und nichts in Drupal geschrieben.
+   */
+  public function inputFingerprint(): array {
+    $data = $this->post('/matching/input-fingerprint');
+    $fingerprint = strtolower(trim((string) ($data['input_fingerprint'] ?? '')));
+    $version = (int) ($data['input_fingerprint_version'] ?? 0);
+
+    if (!preg_match('/^[a-f0-9]{64}$/', $fingerprint)) {
+      throw new \RuntimeException('Matching-Service lieferte keinen gültigen aktuellen Input-Fingerprint.');
+    }
+    if ($version < 1) {
+      throw new \RuntimeException('Matching-Service lieferte keine gültige aktuelle Fingerprint-Version.');
+    }
+
+    return [
+      'input_fingerprint' => $fingerprint,
+      'input_fingerprint_version' => $version,
+    ];
+  }
+
+  /**
    * Liest den flüchtigen Fortschritt eines aktuell laufenden Solver-Requests.
    */
   public function progress(int $runId): array {

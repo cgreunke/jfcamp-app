@@ -330,6 +330,12 @@ class Participant:
     wishes: List[str]
     region: Optional[str] = None
 
+try:
+    from .input_fingerprint import build_input_fingerprint
+except ImportError:
+    from input_fingerprint import build_input_fingerprint
+
+
 # --------------------------------------------------------------------------------------
 # Config & Daten laden
 # --------------------------------------------------------------------------------------
@@ -2211,6 +2217,33 @@ def _apply_weights_generation(cfg: Dict[str, Any]) -> None:
             if gen:
                 cfg["weights"] = gen
 
+@app.post("/matching/input-fingerprint")
+def input_fingerprint():
+    """Return the fingerprint of the current effective matching input only."""
+    try:
+        cfg = load_matching_config()
+        overrides = _collect_body_overrides()
+        cfg.update(overrides or {})
+        _apply_weights_generation(cfg)
+
+        workshops = load_workshops()
+        participants = load_participants_and_wishes(cfg["num_wishes"])
+        fingerprint, version = build_input_fingerprint(cfg, participants, workshops)
+
+        return jsonify({
+            "status": "ok",
+            "input_fingerprint": fingerprint,
+            "input_fingerprint_version": version,
+            "counts": {
+                "participants": len(participants),
+                "workshops": len(workshops),
+            },
+        })
+    except Exception as exc:
+        app.logger.exception("input fingerprint failed")
+        return jsonify({"status": "error", "error": str(exc)}), 500
+
+
 @app.post("/matching/dry-run")
 def dry_run():
     run_id_raw = request.headers.get("X-JFCamp-Run-Id", "").strip()
@@ -2239,6 +2272,11 @@ def dry_run():
 
         workshops = load_workshops()
         participants = load_participants_and_wishes(cfg["num_wishes"])
+        input_fingerprint, input_fingerprint_version = build_input_fingerprint(
+            cfg,
+            participants,
+            workshops,
+        )
 
         _write_matching_progress(
             progress_run_id,
@@ -2295,6 +2333,8 @@ def dry_run():
             "status": "ok",
             "mode": "dry-run",
             "strategy": strategy,
+            "input_fingerprint": input_fingerprint,
+            "input_fingerprint_version": input_fingerprint_version,
             "summary": meta["summary"],
             "unfilled_workshops": meta["unfilled_workshops"],
             "assignment_details": meta.get("assignment_details", {}),

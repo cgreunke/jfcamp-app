@@ -62,6 +62,25 @@ function jfcamp_matching_update_10003(): void {
   }
 }
 
+
+/**
+ * Adds the matching-input fingerprint used for stale-run detection.
+ */
+function jfcamp_matching_update_10004(): void {
+  $schema = \Drupal::database()->schema();
+  if (!$schema->tableExists('jfcamp_matching_run')) {
+    $schema->createTable('jfcamp_matching_run', jfcamp_matching_run_table_definition());
+    return;
+  }
+
+  $definition = jfcamp_matching_run_table_definition();
+  foreach (['input_fingerprint', 'input_fingerprint_version'] as $field) {
+    if (!$schema->fieldExists('jfcamp_matching_run', $field)) {
+      $schema->addField('jfcamp_matching_run', $field, $definition['fields'][$field]);
+    }
+  }
+}
+
 /**
  * Shared schema definition for matching runs.
  */
@@ -133,6 +152,18 @@ function jfcamp_matching_run_table_definition(): array {
         'description' => 'SHA-256 des gespeicherten Snapshot-JSON.',
         'type' => 'varchar_ascii',
         'length' => 64,
+        'not null' => FALSE,
+      ],
+      'input_fingerprint' => [
+        'description' => 'SHA-256 des kanonischen Matching-Eingabestands.',
+        'type' => 'varchar_ascii',
+        'length' => 64,
+        'not null' => FALSE,
+      ],
+      'input_fingerprint_version' => [
+        'description' => 'Version des kanonischen Input-Fingerprint-Formats.',
+        'type' => 'int',
+        'unsigned' => TRUE,
         'not null' => FALSE,
       ],
       'error_message' => [

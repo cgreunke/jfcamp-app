@@ -78,6 +78,8 @@ final class MatchingRunStorage {
     array $byParticipant,
     array $assignmentDetails,
     array $configSnapshot,
+    string $inputFingerprint,
+    int $inputFingerprintVersion,
   ): void {
     $snapshot = [
       'created_at' => $this->time->getCurrentTime(),
@@ -96,6 +98,8 @@ final class MatchingRunStorage {
         'summary_json' => $this->encode($summary),
         'snapshot_json' => $snapshotJson,
         'result_hash' => hash('sha256', $snapshotJson),
+        'input_fingerprint' => $inputFingerprint,
+        'input_fingerprint_version' => $inputFingerprintVersion,
         'error_message' => NULL,
       ])
       ->condition('id', $runId)
@@ -124,6 +128,18 @@ final class MatchingRunStorage {
     }
     if (empty($run['result_hash']) || strlen((string) $run['result_hash']) !== 64) {
       throw new \RuntimeException(sprintf('Matching-Run #%d besitzt keinen gültigen Snapshot-Hash.', $runId));
+    }
+    if (empty($run['input_fingerprint']) || !preg_match('/^[a-f0-9]{64}$/', (string) $run['input_fingerprint'])) {
+      throw new \RuntimeException(sprintf(
+        'Matching-Run #%d besitzt keinen verifizierbaren Eingabe-Fingerprint. Bitte ein neues Matching starten.',
+        $runId,
+      ));
+    }
+    if (empty($run['input_fingerprint_version']) || (int) $run['input_fingerprint_version'] < 1) {
+      throw new \RuntimeException(sprintf(
+        'Matching-Run #%d besitzt keine gültige Fingerprint-Version. Bitte ein neues Matching starten.',
+        $runId,
+      ));
     }
     if (empty($run['snapshot']) || empty($run['snapshot']['by_participant']) || !is_array($run['snapshot']['by_participant'])) {
       throw new \RuntimeException(sprintf('Matching-Run #%d besitzt keinen anwendbaren Snapshot.', $runId));
@@ -291,6 +307,8 @@ final class MatchingRunStorage {
         'finished_at',
         'created_uid',
         'result_hash',
+        'input_fingerprint',
+        'input_fingerprint_version',
         'error_message',
         'apply_status',
         'applied_at',
@@ -315,6 +333,8 @@ final class MatchingRunStorage {
         'finished_at' => $row->finished_at !== NULL ? (int) $row->finished_at : NULL,
         'created_uid' => (int) $row->created_uid,
         'result_hash' => $row->result_hash !== NULL ? (string) $row->result_hash : NULL,
+        'input_fingerprint' => $row->input_fingerprint !== NULL ? (string) $row->input_fingerprint : NULL,
+        'input_fingerprint_version' => $row->input_fingerprint_version !== NULL ? (int) $row->input_fingerprint_version : NULL,
         'error_message' => $row->error_message !== NULL ? (string) $row->error_message : NULL,
         'apply_status' => $row->apply_status !== NULL ? (string) $row->apply_status : 'not_applied',
         'applied_at' => $row->applied_at !== NULL ? (int) $row->applied_at : NULL,
@@ -355,6 +375,12 @@ final class MatchingRunStorage {
       'summary' => !empty($row['summary_json']) ? $this->decode((string) $row['summary_json']) : [],
       'snapshot' => $snapshot,
       'result_hash' => $row['result_hash'] !== NULL ? (string) $row['result_hash'] : NULL,
+      'input_fingerprint' => isset($row['input_fingerprint']) && $row['input_fingerprint'] !== NULL
+        ? (string) $row['input_fingerprint']
+        : NULL,
+      'input_fingerprint_version' => isset($row['input_fingerprint_version']) && $row['input_fingerprint_version'] !== NULL
+        ? (int) $row['input_fingerprint_version']
+        : NULL,
       'error_message' => $row['error_message'] !== NULL ? (string) $row['error_message'] : NULL,
       'apply_status' => isset($row['apply_status']) && $row['apply_status'] !== NULL
         ? (string) $row['apply_status']

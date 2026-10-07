@@ -48,6 +48,11 @@ final class MatchingDashboardController extends ControllerBase {
     $activeRun = $this->runStorage->latestActive();
     $currentApplied = $this->runStorage->currentApplied();
     $matchingConfig = $this->readMatchingConfigFromDrupal();
+    $latestFreshness = (
+      $latestRun
+      && $latestRun['status'] === 'completed'
+      && $latestRun['apply_status'] !== 'applied'
+    ) ? $this->freshnessForRun($latestRun) : NULL;
 
     $build = [
       '#type' => 'container',
@@ -163,7 +168,7 @@ final class MatchingDashboardController extends ControllerBase {
     ];
 
     if ($latestRun) {
-      $build += $this->buildRunResult($latestRun);
+      $build += $this->buildRunResult($latestRun, $latestFreshness);
     }
     else {
       $build['result_empty'] = [
@@ -189,6 +194,7 @@ final class MatchingDashboardController extends ControllerBase {
       && $latestRun['status'] === 'completed'
       && !empty($latestRun['snapshot']['by_participant'])
       && $latestRun['apply_status'] !== 'applied'
+      && ($latestFreshness['state'] ?? '') === 'current'
     ) {
       $build['actions']['apply'] = [
         '#type' => 'inline_template',
@@ -200,6 +206,19 @@ final class MatchingDashboardController extends ControllerBase {
           )->toString(),
           'label' => $this->t('Run #@id festschreiben', ['@id' => $latestRun['id']]),
         ],
+      ];
+    }
+
+    elseif (
+      $latestRun
+      && $latestRun['status'] === 'completed'
+      && !empty($latestRun['snapshot']['by_participant'])
+      && $latestRun['apply_status'] !== 'applied'
+    ) {
+      $build['actions']['apply_blocked'] = [
+        '#markup' => '<p><strong>' . $this->t('Festschreiben blockiert:') . '</strong> '
+          . $this->escape((string) ($latestFreshness['message'] ?? $this->t('Der Eingabestand konnte nicht verifiziert werden.')))
+          . '</p>',
       ];
     }
 
@@ -350,6 +369,14 @@ final class MatchingDashboardController extends ControllerBase {
   public function actionApply(int $run_id, Request $request) {
     try {
       $run = $this->runStorage->loadApplicable($run_id);
+      $freshness = $this->freshnessForRun($run);
+      if (($freshness['state'] ?? '') !== 'current') {
+        throw new \RuntimeException((string) (
+          $freshness['message']
+          ?? 'Der Matching-Eingabestand konnte nicht als aktuell verifiziert werden.'
+        ));
+      }
+
       $snapshot = $run['snapshot'];
       $resultHash = (string) $run['result_hash'];
 
@@ -420,7 +447,69 @@ final class MatchingDashboardController extends ControllerBase {
     }
   }
 
-  private function buildRunResult(array $run): array {
+  /**
+   * Prüft, ob der beim Run verwendete Matching-Input noch dem aktuellen
+   * normalisierten Eingabestand des Matching-Service entspricht.
+   */
+  private function freshnessForRun(?array $run): array {
+    if (!$run || ($run['status'] ?? '') !== 'completed') {
+      return [
+        'state' => 'not_applicable',
+        'message' => '',
+      ];
+    }
+
+    $storedFingerprint = strtolower(trim((string) ($run['input_fingerprint'] ?? '')));
+    $storedVersion = (int) ($run['input_fingerprint_version'] ?? 0);
+    if (!preg_match('/^[a-f0-9]{64}$/', $storedFingerprint) || $storedVersion < 1) {
+      return [
+        'state' => 'unverifiable',
+        'message' => (string) $this->t(
+          'Dieser Lauf wurde ohne verifizierbaren Eingabe-Fingerprint gespeichert. Bitte ein neues Matching starten.'
+        ),
+      ];
+    }
+
+    try {
+      $current = $this->client->inputFingerprint();
+    }
+    catch (\Throwable $e) {
+      return [
+        'state' => 'check_failed',
+        'message' => (string) $this->t(
+          'Der aktuelle Matching-Eingabestand konnte nicht geprüft werden. Apply bleibt sicherheitshalber blockiert: @message',
+          ['@message' => $e->getMessage()],
+        ),
+      ];
+    }
+
+    $currentFingerprint = strtolower((string) $current['input_fingerprint']);
+    $currentVersion = (int) $current['input_fingerprint_version'];
+    if ($currentVersion !== $storedVersion) {
+      return [
+        'state' => 'stale',
+        'message' => (string) $this->t(
+          'Die Fingerprint-Version des aktuellen Eingabestands unterscheidet sich von diesem Run. Bitte ein neues Matching starten.'
+        ),
+      ];
+    }
+
+    if (!hash_equals($storedFingerprint, $currentFingerprint)) {
+      return [
+        'state' => 'stale',
+        'message' => (string) $this->t(
+          'Teilnehmer, Wünsche, Workshops, Kapazitäten oder die Matching-Konfiguration haben sich seit der Berechnung geändert. Bitte ein neues Matching starten.'
+        ),
+      ];
+    }
+
+    return [
+      'state' => 'current',
+      'message' => (string) $this->t('Der Matching-Eingabestand ist unverändert.'),
+    ];
+  }
+
+  private function buildRunResult(array $run, ?array $freshness = NULL): array {
     $build = [];
 
     $statusLabels = [
@@ -440,6 +529,27 @@ final class MatchingDashboardController extends ControllerBase {
 
     if (!empty($run['result_hash'])) {
       $metaRows[] = [$this->t('Snapshot-Hash'), substr($run['result_hash'], 0, 16) . '…'];
+    }
+
+    if (!empty($run['input_fingerprint'])) {
+      $metaRows[] = [
+        $this->t('Input-Fingerprint'),
+        substr((string) $run['input_fingerprint'], 0, 16) . '…'
+          . ' (v' . (int) ($run['input_fingerprint_version'] ?? 0) . ')',
+      ];
+    }
+
+    if ($run['status'] === 'completed' && $freshness !== NULL) {
+      $freshnessLabels = [
+        'current' => $this->t('aktuell – Apply möglich'),
+        'stale' => $this->t('VERALTET – Apply blockiert'),
+        'unverifiable' => $this->t('nicht verifizierbar – Apply blockiert'),
+        'check_failed' => $this->t('Prüfung fehlgeschlagen – Apply blockiert'),
+      ];
+      $metaRows[] = [
+        $this->t('Eingabestand'),
+        (string) ($freshnessLabels[$freshness['state'] ?? ''] ?? ($freshness['state'] ?? 'unbekannt')),
+      ];
     }
 
     $applyStatusLabels = [
@@ -469,6 +579,18 @@ final class MatchingDashboardController extends ControllerBase {
       '#header' => [$this->t('Run-Metadatum'), $this->t('Wert')],
       '#rows' => $metaRows,
     ];
+
+    if (
+      $run['status'] === 'completed'
+      && $freshness !== NULL
+      && ($freshness['state'] ?? '') !== 'current'
+    ) {
+      $build['run_freshness_warning'] = [
+        '#markup' => '<p><strong>' . $this->t('Apply nicht möglich:') . '</strong> '
+          . $this->escape((string) ($freshness['message'] ?? $this->t('Der Eingabestand konnte nicht verifiziert werden.')))
+          . '</p>',
+      ];
+    }
 
     if ($run['status'] === 'failed') {
       $build['run_error'] = [

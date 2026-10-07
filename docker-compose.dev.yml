@@ -62,6 +62,10 @@ services:
       - ./drupal/web/themes/custom:/opt/drupal/web/themes/custom
 
   matching:
+    build:
+      context: ./matching
+      dockerfile: Dockerfile
+      target: dev
     env_file:
       - ./.env.development
 

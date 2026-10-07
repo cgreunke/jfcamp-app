@@ -6,6 +6,8 @@ use Psr\Log\LoggerInterface;
 
 final class MatchingRunProcessor {
 
+  private const RECOVERY_AFTER_SECONDS = 1200;
+
   public function __construct(
     private MatchingClient $client,
     private MatchingRunStorage $runStorage,
@@ -13,22 +15,37 @@ final class MatchingRunProcessor {
   ) {}
 
   public function process(int $runId): void {
-    $run = $this->runStorage->load($runId);
-    if (!$run) {
-      $this->logger->error('Matching-Run #@run existiert nicht.', ['@run' => $runId]);
-      return;
-    }
+    $claim = $this->runStorage->claimForProcessing(
+      $runId,
+      self::RECOVERY_AFTER_SECONDS,
+    );
 
-    if ($run['status'] !== 'queued') {
-      return;
-    }
+    if ($claim === NULL) {
+      $run = $this->runStorage->load($runId);
+      if (!$run) {
+        $this->logger->error('Matching-Run #@run existiert nicht.', ['@run' => $runId]);
+        return;
+      }
 
-    if (!$this->runStorage->markRunning($runId)) {
       $this->logger->notice(
-        'Matching-Run #@run wurde bereits von einem anderen Worker übernommen.',
-        ['@run' => $runId],
+        'Matching-Run #@run wird nicht übernommen (Status: @status).',
+        [
+          '@run' => $runId,
+          '@status' => $run['status'],
+        ],
       );
       return;
+    }
+
+    $claimStartedAt = (int) $claim['started_at'];
+    if (!empty($claim['recovered'])) {
+      $this->logger->warning(
+        'Verwaister Matching-Run #@run wird nach mehr als @seconds Sekunden erneut übernommen.',
+        [
+          '@run' => $runId,
+          '@seconds' => self::RECOVERY_AFTER_SECONDS,
+        ],
+      );
     }
 
     try {
@@ -73,6 +90,7 @@ final class MatchingRunProcessor {
         $effectiveConfig,
         $inputFingerprint,
         $inputFingerprintVersion,
+        $claimStartedAt,
       );
 
       $this->logger->notice(
@@ -85,7 +103,17 @@ final class MatchingRunProcessor {
     }
     catch (\Throwable $e) {
       try {
-        $this->runStorage->markFailed($runId, $e->getMessage());
+        $markedFailed = $this->runStorage->markFailed(
+          $runId,
+          $e->getMessage(),
+          $claimStartedAt,
+        );
+        if (!$markedFailed) {
+          $this->logger->notice(
+            'Matching-Run #@run wurde nach Verlust des Processing-Claims nicht mehr als failed überschrieben.',
+            ['@run' => $runId],
+          );
+        }
       }
       catch (\Throwable $storageError) {
         $this->logger->error(

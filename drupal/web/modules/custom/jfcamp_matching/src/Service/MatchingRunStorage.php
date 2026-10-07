@@ -35,11 +35,24 @@ final class MatchingRunStorage {
     return (int) $id;
   }
 
-  public function markRunning(int $runId): bool {
+  /**
+   * Atomically claims a queued run or recovers an abandoned running run.
+   *
+   * The returned started_at value is the processing ownership token. Any
+   * completion/failure write must still match that exact value, otherwise a
+   * stale worker could overwrite the result of a newer recovery attempt.
+   */
+  public function claimForProcessing(int $runId, int $recoveryAfterSeconds): ?array {
+    if ($recoveryAfterSeconds < 1) {
+      throw new \InvalidArgumentException('Recovery-Grenze muss größer als 0 Sekunden sein.');
+    }
+
+    $now = $this->time->getCurrentTime();
+
     $affected = $this->database->update(self::TABLE)
       ->fields([
         'status' => 'running',
-        'started_at' => $this->time->getCurrentTime(),
+        'started_at' => $now,
         'finished_at' => NULL,
         'error_message' => NULL,
       ])
@@ -47,7 +60,34 @@ final class MatchingRunStorage {
       ->condition('status', 'queued')
       ->execute();
 
-    return $affected === 1;
+    if ($affected === 1) {
+      return [
+        'started_at' => $now,
+        'recovered' => FALSE,
+      ];
+    }
+
+    $cutoff = $now - $recoveryAfterSeconds;
+    $affected = $this->database->update(self::TABLE)
+      ->fields([
+        'status' => 'running',
+        'started_at' => $now,
+        'finished_at' => NULL,
+        'error_message' => NULL,
+      ])
+      ->condition('id', $runId)
+      ->condition('status', 'running')
+      ->condition('started_at', $cutoff, '<=')
+      ->execute();
+
+    if ($affected === 1) {
+      return [
+        'started_at' => $now,
+        'recovered' => TRUE,
+      ];
+    }
+
+    return NULL;
   }
 
   public function hasActive(): bool {
@@ -80,6 +120,7 @@ final class MatchingRunStorage {
     array $configSnapshot,
     string $inputFingerprint,
     int $inputFingerprintVersion,
+    int $expectedStartedAt,
   ): void {
     $snapshot = [
       'created_at' => $this->time->getCurrentTime(),
@@ -105,6 +146,7 @@ final class MatchingRunStorage {
       ])
       ->condition('id', $runId)
       ->condition('status', 'running')
+      ->condition('started_at', $expectedStartedAt)
       ->execute();
 
     if ($affected !== 1) {
@@ -115,15 +157,26 @@ final class MatchingRunStorage {
     }
   }
 
-  public function markFailed(int $runId, string $message): void {
-    $this->database->update(self::TABLE)
+  public function markFailed(
+    int $runId,
+    string $message,
+    ?int $expectedStartedAt = NULL,
+  ): bool {
+    $query = $this->database->update(self::TABLE)
       ->fields([
         'status' => 'failed',
         'finished_at' => $this->time->getCurrentTime(),
         'error_message' => mb_substr($message, 0, 10000),
       ])
-      ->condition('id', $runId)
-      ->execute();
+      ->condition('id', $runId);
+
+    if ($expectedStartedAt !== NULL) {
+      $query
+        ->condition('status', 'running')
+        ->condition('started_at', $expectedStartedAt);
+    }
+
+    return $query->execute() === 1;
   }
 
 

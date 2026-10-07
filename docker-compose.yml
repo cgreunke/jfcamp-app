@@ -43,7 +43,7 @@ services:
       - |
         echo "[queue] jfcamp matching worker started"
         while true; do
-          vendor/bin/drush queue:run jfcamp_matching_runs || true
+          vendor/bin/drush queue:run jfcamp_matching_runs --lease-time=900 || true
           sleep 10
         done
     volumes:

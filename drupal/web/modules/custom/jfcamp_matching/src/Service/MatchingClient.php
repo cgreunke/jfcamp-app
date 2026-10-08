@@ -103,22 +103,6 @@ final class MatchingClient {
     }
   }
 
-  /**
-   * Legacy-Kompatibilität für vorhandene Drush-/Altaufrufe.
-   *
-   * Auch dieser Aufruf berechnet lediglich einen Dry-Run. Er schreibt keine
-   * Zuteilungen in Drupal. Die produktive Oberfläche nutzt diese Methode nicht.
-   */
-  public function run(array $params = []): array {
-    $this->logger->notice('MatchingClient::run ist Legacy-Kompatibilität und nutzt /matching/dry-run.');
-    return $this->post('/matching/dry-run');
-  }
-
-  /** Legacy-Kompatibilität für den derzeit noch vorhandenen ExportProxyController. */
-  public function exportUrl(string $path): string {
-    return $this->baseUrl() . $path;
-  }
-
   private function post(string $path, array $extraHeaders = []): array {
     $url = $this->baseUrl() . $path;
     try {

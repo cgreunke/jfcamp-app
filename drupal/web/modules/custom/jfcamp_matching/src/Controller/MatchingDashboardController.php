@@ -721,17 +721,37 @@ final class MatchingDashboardController extends ControllerBase {
     }
 
     $status = (string) ($sum['matching_quality_status'] ?? $sum['run_quality'] ?? 'unbekannt');
+    $participantsTotal = (int) ($sum['participants_total'] ?? count($snapshot['by_participant'] ?? []));
+    $participantsFullyAssigned = isset($sum['participants_fully_assigned'])
+      ? (int) $sum['participants_fully_assigned']
+      : NULL;
+    $participantsIncomplete = $participantsFullyAssigned === NULL
+      ? NULL
+      : max(0, $participantsTotal - $participantsFullyAssigned);
+    $trafficLight = $this->qualityTrafficLight($sum);
+
+    $build['quality_signal'] = [
+      '#markup' => '<p><strong>' . $this->escape($trafficLight['label']) . '</strong> '
+        . $this->escape($trafficLight['message']) . '</p>',
+    ];
+
     $rows = [
       [$this->t('Qualitätsstatus'), $status],
-      [$this->t('Teilnehmer'), (string) ($sum['participants_total'] ?? count($snapshot['by_participant'] ?? []))],
-      [$this->t('Vollständig zugeteilt'), (string) ($sum['participants_fully_assigned'] ?? 'n/a')],
+      [$this->t('Teilnehmer'), (string) $participantsTotal],
+      [$this->t('Vollständig zugeteilt'), $participantsFullyAssigned === NULL ? 'n/a' : (string) $participantsFullyAssigned],
+      [$this->t('Unvollständig zugeteilt'), $participantsIncomplete === NULL ? 'n/a' : (string) $participantsIncomplete],
+      [$this->t('Vollständig nur aus Wünschen versorgt'), (string) ($sum['participants_fully_assigned_by_wishes'] ?? 'n/a')],
+      [$this->t('Teilnehmer ohne Wünsche'), (string) ($sum['participants_no_wishes'] ?? 'n/a')],
       [$this->t('Zuteilungen gesamt'), $this->fraction($sum['assignments_total'] ?? NULL, $sum['target_assignments_total'] ?? NULL)],
       [$this->t('Wunsch-Zuteilungen'), (string) ($sum['wish_assignments'] ?? 'n/a')],
       [$this->t('Auffüllungen / Nicht-Wünsche'), (string) ($sum['filler_assignments'] ?? 'n/a')],
+      [$this->t('Top-1-Abdeckung'), $this->formatPercent($sum['top1_coverage'] ?? NULL)],
       [$this->t('Top-k-Treffer'), (string) ($sum['topk_hits'] ?? 'n/a')],
       [$this->t('Happy-Index'), $this->formatNumber($sum['happy_index'] ?? NULL)],
       [$this->t('Schlechtester Happy-Wert'), $this->formatNumber($sum['min_user_happy'] ?? NULL)],
       [$this->t('Median Happy-Wert'), $this->formatNumber($sum['median_user_happy'] ?? NULL)],
+      [$this->t('Gini der Unzufriedenheit'), $this->formatNumber($sum['gini_dissatisfaction'] ?? NULL, 4)],
+      [$this->t('Jain-Fairnessindex'), $this->formatNumber($sum['jain_index'] ?? NULL, 4)],
       [$this->t('Solver-Laufzeit'), isset($sum['total_solver_seconds']) ? $this->formatNumber($sum['total_solver_seconds'], 3) . ' s' : 'n/a'],
     ];
 
@@ -781,6 +801,29 @@ final class MatchingDashboardController extends ControllerBase {
         '#caption' => $this->t('Erfüllte Wünsche nach Rang'),
         '#header' => [$this->t('Rang'), $this->t('Anzahl')],
         '#rows' => $priorityRows,
+      ];
+    }
+
+    $topkCoverage = $sum['topk_coverage_hist'] ?? [];
+    if (is_array($topkCoverage) && $topkCoverage) {
+      $normalizedCoverage = [];
+      foreach ($topkCoverage as $hits => $count) {
+        $normalizedCoverage[(int) $hits] = (int) $count;
+      }
+      ksort($normalizedCoverage, SORT_NUMERIC);
+      $maxHits = max(array_keys($normalizedCoverage));
+      $coverageRows = [];
+      for ($hits = 0; $hits <= $maxHits; $hits++) {
+        $coverageRows[] = [
+          (string) $hits,
+          (string) ($normalizedCoverage[$hits] ?? 0),
+        ];
+      }
+      $build['topk_coverage_table'] = [
+        '#type' => 'table',
+        '#caption' => $this->t('Erfüllte Top-k-Wünsche pro Teilnehmer'),
+        '#header' => [$this->t('Anzahl Top-k-Wünsche'), $this->t('Teilnehmer')],
+        '#rows' => $coverageRows,
       ];
     }
 
@@ -892,6 +935,52 @@ final class MatchingDashboardController extends ControllerBase {
       '#header' => [$this->t('Einstellung'), $this->t('Wert')],
       '#rows' => $rows,
     ];
+  }
+
+  private function qualityTrafficLight(array $summary): array {
+    $assignments = isset($summary['assignments_total']) ? (int) $summary['assignments_total'] : NULL;
+    $target = isset($summary['target_assignments_total']) ? (int) $summary['target_assignments_total'] : NULL;
+    $capacityDeficit = (int) ($summary['warning_capacity_deficit'] ?? 0);
+    $allFilled = !array_key_exists('all_filled_to_slots', $summary) || !empty($summary['all_filled_to_slots']);
+
+    if (
+      !$allFilled
+      || $capacityDeficit > 0
+      || ($assignments !== NULL && $target !== NULL && $assignments < $target)
+    ) {
+      return [
+        'label' => (string) $this->t('ROT'),
+        'message' => (string) $this->t('Das Ergebnis ist unvollständig oder weist ein Kapazitätsproblem auf.'),
+      ];
+    }
+
+    $fillerAssignments = (int) ($summary['filler_assignments'] ?? 0);
+    $status = strtolower((string) ($summary['matching_quality_status'] ?? $summary['run_quality'] ?? ''));
+    $optimalStatus = in_array($status, ['optimal', 'proven_optimal'], TRUE);
+    $allStagesOptimal = !array_key_exists('all_stages_proven_optimal', $summary)
+      || !empty($summary['all_stages_proven_optimal']);
+
+    if ($fillerAssignments > 0 || !$optimalStatus || !$allStagesOptimal) {
+      return [
+        'label' => (string) $this->t('GELB'),
+        'message' => (string) $this->t('Das Matching ist vollständig nutzbar, enthält aber Qualitäts- oder Optimalitätshinweise.'),
+      ];
+    }
+
+    return [
+      'label' => (string) $this->t('GRÜN'),
+      'message' => (string) $this->t('Alle Teilnehmer sind vollständig zugeteilt und es liegen keine Qualitätswarnungen vor.'),
+    ];
+  }
+
+  private function formatPercent(mixed $value, int $decimals = 1): string {
+    if ($value === NULL || $value === '') {
+      return 'n/a';
+    }
+    if (!is_numeric($value)) {
+      return (string) $value;
+    }
+    return number_format((float) $value * 100, $decimals, ',', '.') . ' %';
   }
 
   private function fraction(mixed $value, mixed $target): string {

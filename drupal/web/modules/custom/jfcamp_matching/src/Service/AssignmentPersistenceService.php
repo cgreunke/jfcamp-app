@@ -3,7 +3,6 @@
 namespace Drupal\jfcamp_matching\Service;
 
 use Drupal\Core\Database\Connection;
-use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\node\NodeInterface;
 
@@ -14,7 +13,6 @@ final class AssignmentPersistenceService {
 
   public function __construct(
     private EntityTypeManagerInterface $entityTypeManager,
-    private EntityFieldManagerInterface $entityFieldManager,
     private Connection $database,
     private MatchingRunStorage $runStorage,
   ) {}
@@ -50,7 +48,7 @@ final class AssignmentPersistenceService {
     $transaction = $this->database->startTransaction();
 
     try {
-      foreach ($plan['participants'] as $participantUuid => $participantPlan) {
+      foreach ($plan['participants'] as $participantPlan) {
         /** @var \Drupal\node\NodeInterface $participant */
         $participant = $participantPlan['node'];
         $this->writeParticipant($participant, $plan, $participantPlan['slots']);
@@ -58,7 +56,6 @@ final class AssignmentPersistenceService {
 
         $result['updated_participants']++;
         $result['written_assignments'] += count($participantPlan['slots']);
-
       }
 
       $this->entityTypeManager->getStorage('node')->resetCache($plan['participant_ids']);
@@ -138,14 +135,7 @@ final class AssignmentPersistenceService {
     $nodeStorage = $this->entityTypeManager->getStorage('node');
     $participantBundle = (string) ($config['participant_bundle'] ?? 'teilnehmer');
     $workshopBundle = (string) ($config['workshop_bundle'] ?? 'workshop');
-    $mode = $this->resolveMode($config, $participantBundle);
-    $prefix = (string) ($config['slot_fields_prefix'] ?? 'field_slot_');
-    $numSlots = (int) ($config['num_slots'] ?? 3);
-    $multiField = (string) ($config['assigned_field'] ?? 'field_zugewiesen');
-
-    if ($numSlots <= 0) {
-      throw new \RuntimeException('Die konfigurierte Slot-Anzahl ist ungültig.');
-    }
+    $assignedField = (string) ($config['assigned_field'] ?? 'field_zugewiesen');
 
     $participants = [];
     $participantIds = [];
@@ -162,26 +152,18 @@ final class AssignmentPersistenceService {
       if (!$participant instanceof NodeInterface || $participant->bundle() !== $participantBundle) {
         throw new \RuntimeException(sprintf('Teilnehmer %s ist nicht mehr gültig.', $participantUuid));
       }
-
-      if ($mode === 'multi' && !$participant->hasField($multiField)) {
-        throw new \RuntimeException(sprintf('Teilnehmer %s besitzt das Zuteilungsfeld %s nicht.', $participantUuid, $multiField));
+      if (!$participant->hasField($assignedField)) {
+        throw new \RuntimeException(sprintf('Teilnehmer %s besitzt das Zuteilungsfeld %s nicht.', $participantUuid, $assignedField));
       }
 
       $normalizedSlots = [];
       foreach ($slotMap as $slotRaw => $workshopUuid) {
         $slot = (int) $slotRaw;
-        if (
-          $slot < 1
-          || ($mode === 'per_slot' && $slot > $numSlots)
-          || (string) $workshopUuid === ''
-        ) {
+        if ($slot < 1 || (string) $workshopUuid === '') {
           throw new \RuntimeException(sprintf('Teilnehmer %s enthält eine ungültige Slot-Zuteilung.', $participantUuid));
         }
         if (isset($normalizedSlots[$slot])) {
           throw new \RuntimeException(sprintf('Teilnehmer %s enthält Slot %d mehrfach.', $participantUuid, $slot));
-        }
-        if ($mode === 'per_slot' && !$participant->hasField($prefix . $slot)) {
-          throw new \RuntimeException(sprintf('Teilnehmer %s besitzt das Slot-Feld %s nicht.', $participantUuid, $prefix . $slot));
         }
         $normalizedSlots[$slot] = (string) $workshopUuid;
         $workshopUuids[(string) $workshopUuid] = TRUE;
@@ -207,10 +189,7 @@ final class AssignmentPersistenceService {
     }
 
     return [
-      'mode' => $mode,
-      'prefix' => $prefix,
-      'num_slots' => $numSlots,
-      'multi_field' => $multiField,
+      'assigned_field' => $assignedField,
       'participants' => $participants,
       'participant_ids' => $participantIds,
       'workshops' => $workshops,
@@ -221,10 +200,7 @@ final class AssignmentPersistenceService {
   private function buildResetPlan(array $config): array {
     $nodeStorage = $this->entityTypeManager->getStorage('node');
     $participantBundle = (string) ($config['participant_bundle'] ?? 'teilnehmer');
-    $mode = $this->resolveMode($config, $participantBundle);
-    $prefix = (string) ($config['slot_fields_prefix'] ?? 'field_slot_');
-    $numSlots = (int) ($config['num_slots'] ?? 3);
-    $multiField = (string) ($config['assigned_field'] ?? 'field_zugewiesen');
+    $assignedField = (string) ($config['assigned_field'] ?? 'field_zugewiesen');
 
     $ids = $nodeStorage->getQuery()
       ->accessCheck(FALSE)
@@ -233,54 +209,28 @@ final class AssignmentPersistenceService {
     $participants = $ids ? $nodeStorage->loadMultiple($ids) : [];
 
     foreach ($participants as $participant) {
-      if ($mode === 'multi' && !$participant->hasField($multiField)) {
-        throw new \RuntimeException(sprintf('Teilnehmer %s besitzt das Zuteilungsfeld %s nicht.', $participant->uuid(), $multiField));
-      }
-      if ($mode === 'per_slot') {
-        for ($slot = 1; $slot <= $numSlots; $slot++) {
-          if (!$participant->hasField($prefix . $slot)) {
-            throw new \RuntimeException(sprintf('Teilnehmer %s besitzt das Slot-Feld %s nicht.', $participant->uuid(), $prefix . $slot));
-          }
-        }
+      if (!$participant->hasField($assignedField)) {
+        throw new \RuntimeException(sprintf('Teilnehmer %s besitzt das Zuteilungsfeld %s nicht.', $participant->uuid(), $assignedField));
       }
     }
 
     return [
-      'mode' => $mode,
-      'prefix' => $prefix,
-      'num_slots' => $numSlots,
-      'multi_field' => $multiField,
+      'assigned_field' => $assignedField,
       'participants' => $participants,
       'participant_ids' => array_map('intval', array_keys($participants)),
     ];
   }
 
   private function writeParticipant(NodeInterface $participant, array $plan, array $slots): void {
-    if ($plan['mode'] === 'per_slot') {
-      for ($slot = 1; $slot <= $plan['num_slots']; $slot++) {
-        $participant->set($plan['prefix'] . $slot, NULL);
-      }
-      foreach ($slots as $slot => $workshopUuid) {
-        $participant->set($plan['prefix'] . $slot, $plan['workshops'][$workshopUuid]->id());
-      }
-      return;
-    }
-
     $items = [];
     foreach ($slots as $workshopUuid) {
       $items[] = ['target_id' => $plan['workshops'][$workshopUuid]->id()];
     }
-    $participant->set($plan['multi_field'], $items);
+    $participant->set($plan['assigned_field'], $items);
   }
 
   private function clearParticipant(NodeInterface $participant, array $plan): void {
-    if ($plan['mode'] === 'per_slot') {
-      for ($slot = 1; $slot <= $plan['num_slots']; $slot++) {
-        $participant->set($plan['prefix'] . $slot, NULL);
-      }
-      return;
-    }
-    $participant->set($plan['multi_field'], []);
+    $participant->set($plan['assigned_field'], []);
   }
 
   private function verifyAppliedState(array $plan): void {
@@ -293,22 +243,9 @@ final class AssignmentPersistenceService {
         throw new \RuntimeException(sprintf('Teilnehmer %s konnte nach Apply nicht erneut geladen werden.', $participantUuid));
       }
 
-      if ($plan['mode'] === 'per_slot') {
-        for ($slot = 1; $slot <= $plan['num_slots']; $slot++) {
-          $field = $plan['prefix'] . $slot;
-          $actualTarget = $participant->get($field)->target_id;
-          $expectedUuid = $participantPlan['slots'][$slot] ?? NULL;
-          $expectedTarget = $expectedUuid !== NULL ? (int) $plan['workshops'][$expectedUuid]->id() : NULL;
-          if (($actualTarget !== NULL ? (int) $actualTarget : NULL) !== $expectedTarget) {
-            throw new \RuntimeException(sprintf('Persistierte Zuteilung von Teilnehmer %s stimmt in Slot %d nicht mit dem Snapshot überein.', $participantUuid, $slot));
-          }
-        }
-        continue;
-      }
-
       $actual = array_map(
         static fn(array $item): int => (int) $item['target_id'],
-        $participant->get($plan['multi_field'])->getValue(),
+        $participant->get($plan['assigned_field'])->getValue(),
       );
       $expected = array_map(
         fn(string $workshopUuid): int => (int) $plan['workshops'][$workshopUuid]->id(),
@@ -329,33 +266,10 @@ final class AssignmentPersistenceService {
       if (!$participant instanceof NodeInterface) {
         throw new \RuntimeException(sprintf('Teilnehmer %s konnte nach Reset nicht erneut geladen werden.', $original->uuid()));
       }
-
-      if ($plan['mode'] === 'per_slot') {
-        for ($slot = 1; $slot <= $plan['num_slots']; $slot++) {
-          if (!$participant->get($plan['prefix'] . $slot)->isEmpty()) {
-            throw new \RuntimeException(sprintf('Zuteilung von Teilnehmer %s ist nach Reset nicht leer.', $participant->uuid()));
-          }
-        }
-        continue;
-      }
-
-      if (!$participant->get($plan['multi_field'])->isEmpty()) {
+      if (!$participant->get($plan['assigned_field'])->isEmpty()) {
         throw new \RuntimeException(sprintf('Zuteilungen von Teilnehmer %s sind nach Reset nicht leer.', $participant->uuid()));
       }
     }
-  }
-
-  private function resolveMode(array $config, string $participantBundle): string {
-    $mode = (string) ($config['assignment_mode'] ?? 'auto');
-    if ($mode === 'auto') {
-      $prefix = (string) ($config['slot_fields_prefix'] ?? 'field_slot_');
-      $defs = $this->entityFieldManager->getFieldDefinitions('node', $participantBundle);
-      $mode = isset($defs[$prefix . '1']) ? 'per_slot' : 'multi';
-    }
-    if (!in_array($mode, ['per_slot', 'multi'], TRUE)) {
-      throw new \RuntimeException(sprintf('Unbekannter Zuteilungsmodus: %s', $mode));
-    }
-    return $mode;
   }
 
 }

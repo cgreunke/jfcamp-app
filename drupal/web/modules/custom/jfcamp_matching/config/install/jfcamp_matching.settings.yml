@@ -1,7 +1,4 @@
 endpoint: 'http://matching:5001'
 participant_bundle: 'teilnehmer'
 workshop_bundle: 'workshop'
-assignment_mode: 'multi'
-slot_fields_prefix: 'field_slot_'
-num_slots: 3
 assigned_field: 'field_zugewiesen'

@@ -11,15 +11,6 @@ jfcamp_matching.settings:
     workshop_bundle:
       type: string
       label: 'Bundle Workshop'
-    assignment_mode:
-      type: string
-      label: 'Zuweisungsmodus (auto|per_slot|multi)'
-    slot_fields_prefix:
-      type: string
-      label: 'Slot-Feldpräfix (bei per_slot)'
-    num_slots:
-      type: integer
-      label: 'Anzahl Slots'
     assigned_field:
       type: string
-      label: 'Mehrfach-Referenzfeld (bei multi)'
+      label: 'Mehrfach-Referenzfeld für Zuteilungen'

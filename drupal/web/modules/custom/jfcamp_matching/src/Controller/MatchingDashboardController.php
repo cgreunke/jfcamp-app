@@ -38,9 +38,6 @@ final class MatchingDashboardController extends ControllerBase {
     return [
       'participant_bundle' => $c->get('participant_bundle') ?? 'teilnehmer',
       'workshop_bundle' => $c->get('workshop_bundle') ?? 'workshop',
-      'assignment_mode' => $c->get('assignment_mode') ?? 'auto',
-      'slot_fields_prefix' => $c->get('slot_fields_prefix') ?? 'field_slot_',
-      'num_slots' => (int) ($c->get('num_slots') ?? 3),
       'assigned_field' => $c->get('assigned_field') ?? 'field_zugewiesen',
     ];
   }
@@ -820,10 +817,6 @@ final class MatchingDashboardController extends ControllerBase {
     if ($matchingConfig) {
       $numSlots = (int) ($matchingConfig['values']['field_num_zuteilung'] ?? 0);
     }
-    if ($numSlots <= 0) {
-      $numSlots = max(1, (int) ($this->cfg()['num_slots'] ?? 1));
-    }
-
     for ($slot = 1; $slot <= $numSlots; $slot++) {
       $build['slot_' . $slot] = Link::fromTextAndUrl(
         $this->t('Slot @slot (CSV)', ['@slot' => $slot]),

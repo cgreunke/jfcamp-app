@@ -13,7 +13,7 @@ services:
 
   jfcamp_matching.assignment_persistence:
     class: 'Drupal\jfcamp_matching\Service\AssignmentPersistenceService'
-    arguments: ['@entity_type.manager', '@entity_field.manager', '@database', '@jfcamp_matching.run_storage']
+    arguments: ['@entity_type.manager', '@database', '@jfcamp_matching.run_storage']
 
   jfcamp_matching.run_processor:
     class: 'Drupal\jfcamp_matching\Service\MatchingRunProcessor'

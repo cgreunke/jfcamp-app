@@ -11,37 +11,31 @@ final class ExportController extends ControllerBase {
     $c = \Drupal::config('jfcamp_matching.settings');
     return [
       'participant_bundle' => $c->get('participant_bundle') ?? 'teilnehmer',
-      'workshop_bundle' => $c->get('workshop_bundle') ?? 'workshop',
-      'assignment_mode' => $c->get('assignment_mode') ?? 'auto',
-      'slot_fields_prefix' => $c->get('slot_fields_prefix') ?? 'field_slot_',
-      'num_slots' => (int) ($c->get('num_slots') ?? 3),
       'assigned_field' => $c->get('assigned_field') ?? 'field_zugewiesen',
     ];
   }
 
+  /**
+   * Reads assignments from the canonical multi-value reference field.
+   *
+   * The list order represents slot 1..n because Apply persists the matching
+   * snapshot in numeric slot order.
+   */
   private function getAssigned($participant, array $cfg): array {
+    $field = $cfg['assigned_field'];
+    if (!$participant->hasField($field) || $participant->get($field)->isEmpty()) {
+      return [];
+    }
+
     $items = [];
-    $mode = $cfg['assignment_mode'];
-    if ($mode === 'auto') {
-      $defs = \Drupal::service('entity_field.manager')->getFieldDefinitions('node', $cfg['participant_bundle']);
-      $mode = isset($defs[$cfg['slot_fields_prefix'].'1']) ? 'per_slot' : 'multi';
+    $slot = 1;
+    foreach ($participant->get($field) as $ref) {
+      $items[] = [
+        'slot' => $slot++,
+        'wid' => (int) $ref->target_id,
+      ];
     }
-    if ($mode === 'per_slot') {
-      for ($i = 1; $i <= $cfg['num_slots']; $i++) {
-        $f = $cfg['slot_fields_prefix'].$i;
-        if ($participant->hasField($f) && !$participant->get($f)->isEmpty()) {
-          $items[] = ['slot' => $i, 'wid' => (int) $participant->get($f)->target_id];
-        }
-      }
-    } else {
-      $f = $cfg['assigned_field'];
-      if ($participant->hasField($f) && !$participant->get($f)->isEmpty()) {
-        $slot = 1;
-        foreach ($participant->get($f) as $ref) {
-          $items[] = ['slot' => $slot++, 'wid' => (int) $ref->target_id];
-        }
-      }
-    }
+
     return $items;
   }
 

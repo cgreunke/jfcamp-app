@@ -107,6 +107,40 @@ function jfcamp_matching_update_10005(): void {
 }
 
 /**
+ * Removes legacy assignment-mode and per-slot settings.
+ */
+function jfcamp_matching_update_10006(): void {
+  $config = \Drupal::configFactory()->getEditable('jfcamp_matching.settings');
+  foreach (['assignment_mode', 'slot_fields_prefix', 'num_slots'] as $key) {
+    $config->clear($key);
+  }
+  $config->save(TRUE);
+}
+
+/**
+ * Backfills canonical technical matching settings if they are missing.
+ */
+function jfcamp_matching_update_10007(): void {
+  $config = \Drupal::configFactory()->getEditable('jfcamp_matching.settings');
+
+  $defaults = [
+    'endpoint' => 'http://matching:5001',
+    'participant_bundle' => 'teilnehmer',
+    'workshop_bundle' => 'workshop',
+    'assigned_field' => 'field_zugewiesen',
+  ];
+
+  foreach ($defaults as $key => $value) {
+    $current = $config->get($key);
+    if ($current === NULL || $current === '') {
+      $config->set($key, $value);
+    }
+  }
+
+  $config->save(TRUE);
+}
+
+/**
  * Shared schema definition for matching runs.
  */
 function jfcamp_matching_run_table_definition(): array {

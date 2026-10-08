@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 #[QueueWorker(
   id: 'jfcamp_matching_runs',
   title: new TranslatableMarkup('JFCamp Matching runs'),
-  cron: ['time' => 900],
+  cron: ['time' => MatchingRunProcessor::PROCESSING_LEASE_SECONDS],
 )]
 final class MatchingRunQueueWorker extends QueueWorkerBase implements ContainerFactoryPluginInterface {
 

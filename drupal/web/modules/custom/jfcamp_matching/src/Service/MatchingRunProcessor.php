@@ -6,7 +6,14 @@ use Psr\Log\LoggerInterface;
 
 final class MatchingRunProcessor {
 
-  private const RECOVERY_AFTER_SECONDS = 1200;
+  /**
+   * Queue lease and processing recovery threshold must stay identical.
+   *
+   * Once a queue lease expires, the same queue item may be delivered again.
+   * At that point the corresponding running run must already be recoverable,
+   * otherwise the retry could be consumed without taking over the run.
+   */
+  public const PROCESSING_LEASE_SECONDS = 900;
 
   public function __construct(
     private MatchingClient $client,
@@ -17,7 +24,7 @@ final class MatchingRunProcessor {
   public function process(int $runId): void {
     $claim = $this->runStorage->claimForProcessing(
       $runId,
-      self::RECOVERY_AFTER_SECONDS,
+      self::PROCESSING_LEASE_SECONDS,
     );
 
     if ($claim === NULL) {
@@ -43,7 +50,7 @@ final class MatchingRunProcessor {
         'Verwaister Matching-Run #@run wird nach mehr als @seconds Sekunden erneut übernommen.',
         [
           '@run' => $runId,
-          '@seconds' => self::RECOVERY_AFTER_SECONDS,
+          '@seconds' => self::PROCESSING_LEASE_SECONDS,
         ],
       );
     }

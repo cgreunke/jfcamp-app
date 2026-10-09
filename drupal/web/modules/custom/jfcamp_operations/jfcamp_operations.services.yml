@@ -1,0 +1,5 @@
+services:
+  jfcamp_operations.participant_overview:
+    class: Drupal\jfcamp_operations\Service\ParticipantOverviewService
+    arguments:
+      - '@entity_type.manager'

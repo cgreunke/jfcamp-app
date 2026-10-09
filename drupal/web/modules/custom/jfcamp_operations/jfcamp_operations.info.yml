@@ -1,0 +1,8 @@
+name: 'JF Startercamp Operations'
+type: module
+description: 'Operative Teilnehmer- und Zuteilungsübersichten für die JF Camp App.'
+core_version_requirement: ^10 || ^11
+package: 'JF Camp'
+dependencies:
+  - drupal:node
+  - jfcamp_admin:jfcamp_admin

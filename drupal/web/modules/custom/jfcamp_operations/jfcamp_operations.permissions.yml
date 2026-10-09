@@ -1,0 +1,4 @@
+view jfcamp participant overview:
+  title: 'Teilnehmer- und Zuteilungsübersicht ansehen'
+  description: 'Erlaubt den lesenden Zugriff auf die operative Teilnehmer- und Zuteilungsübersicht.'
+  restrict access: true

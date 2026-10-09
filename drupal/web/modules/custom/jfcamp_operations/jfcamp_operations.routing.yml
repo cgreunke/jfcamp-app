@@ -1,0 +1,9 @@
+jfcamp_operations.participants:
+  path: '/admin/config/jfcamp/participants'
+  defaults:
+    _controller: '\Drupal\jfcamp_operations\Controller\ParticipantOverviewController::overview'
+    _title: 'Teilnehmende & Zuteilungen'
+  requirements:
+    _permission: 'view jfcamp participant overview'
+  options:
+    _admin_route: TRUE

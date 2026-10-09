@@ -1,0 +1,6 @@
+jfcamp_operations.participants:
+  title: 'Teilnehmende & Zuteilungen'
+  description: 'Teilnehmende, Wunschabgaben und aktuelle Zuteilungen ansehen'
+  route_name: jfcamp_operations.participants
+  parent: jfcamp_admin.overview
+  weight: 0

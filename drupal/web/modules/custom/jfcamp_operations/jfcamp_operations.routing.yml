@@ -7,3 +7,12 @@ jfcamp_operations.participants:
     _permission: 'view jfcamp participant overview'
   options:
     _admin_route: TRUE
+
+jfcamp_operations.participants_export:
+  path: '/admin/config/jfcamp/participants/export'
+  defaults:
+    _controller: '\Drupal\jfcamp_operations\Controller\ParticipantOverviewController::export'
+  requirements:
+    _permission: 'view jfcamp participant overview'
+  options:
+    _admin_route: TRUE

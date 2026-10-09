@@ -6,7 +6,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\node\NodeInterface;
 
 /**
- * Builds the read-only participant overview from the canonical Drupal data.
+ * Builds the participant overview and export data from canonical Drupal data.
  */
 final class ParticipantOverviewService {
 
@@ -23,57 +23,57 @@ final class ParticipantOverviewService {
   private const FIELD_WISH_PARTICIPANT = 'field_teilnehmer';
   private const FIELD_WISHES = 'field_wuensche';
   private const FIELD_NUM_ASSIGNMENTS = 'field_num_zuteilung';
+  private const FIELD_NUM_WISHES = 'field_num_wuensche';
 
   public function __construct(
     private EntityTypeManagerInterface $entityTypeManager,
   ) {}
 
   /**
-   * Returns one paged, read-only participant overview.
+   * Returns the complete filtered overview.
+   *
+   * Pagination deliberately happens in the controller so table and CSV share
+   * exactly the same result set and filtering rules.
    *
    * @return array{
    *   rows: array<int, array<string, mixed>>,
    *   total: int,
-   *   assignment_columns: int
+   *   assignment_columns: int,
+   *   wish_columns: int,
+   *   regions: string[],
+   *   workshops: array<int, string>
    * }
    */
-  public function getPage(int $pageSize = 50): array {
-    if ($pageSize < 1) {
-      throw new \InvalidArgumentException('Die Seitengröße muss größer als 0 sein.');
-    }
-
+  public function getOverview(array $filters = []): array {
+    $filters = $this->normalizeFilters($filters);
     $nodeStorage = $this->entityTypeManager->getStorage('node');
-
-    $total = (int) $nodeStorage->getQuery()
-      ->accessCheck(FALSE)
-      ->condition('type', self::PARTICIPANT_BUNDLE)
-      ->count()
-      ->execute();
 
     $participantIds = $nodeStorage->getQuery()
       ->accessCheck(FALSE)
       ->condition('type', self::PARTICIPANT_BUNDLE)
-      ->sort(self::FIELD_REGION, 'ASC')
-      ->sort(self::FIELD_LAST_NAME, 'ASC')
-      ->sort(self::FIELD_FIRST_NAME, 'ASC')
-      ->sort('nid', 'ASC')
-      ->pager($pageSize)
       ->execute();
+
+    $assignmentColumns = max(1, $this->readConfiguredAssignmentCount());
+    $wishColumns = max(1, $this->readConfiguredWishCount());
 
     if (!$participantIds) {
       return [
         'rows' => [],
-        'total' => $total,
-        'assignment_columns' => max(1, $this->readConfiguredAssignmentCount()),
+        'total' => 0,
+        'assignment_columns' => $assignmentColumns,
+        'wish_columns' => $wishColumns,
+        'regions' => [],
+        'workshops' => $this->loadWorkshopOptions(),
       ];
     }
 
+    $participantIds = array_map('intval', array_values($participantIds));
     $participants = $nodeStorage->loadMultiple($participantIds);
-    $wishCounts = $this->loadWishCounts(array_map('intval', $participantIds));
+    $wishData = $this->loadWishData($participantIds);
 
-    $workshopIds = [];
+    $referencedWorkshopIds = [];
     $participantAssignments = [];
-    $maxAssignmentsInPage = 0;
+    $maxAssignments = 0;
 
     foreach ($participantIds as $participantId) {
       $participant = $participants[$participantId] ?? NULL;
@@ -87,68 +87,222 @@ final class ParticipantOverviewService {
           $workshopId = (int) ($item->target_id ?? 0);
           if ($workshopId > 0) {
             $assignmentIds[] = $workshopId;
-            $workshopIds[$workshopId] = $workshopId;
+            $referencedWorkshopIds[$workshopId] = $workshopId;
           }
         }
       }
 
-      $participantAssignments[(int) $participantId] = $assignmentIds;
-      $maxAssignmentsInPage = max($maxAssignmentsInPage, count($assignmentIds));
+      foreach ($wishData[$participantId]['wish_ids'] ?? [] as $workshopId) {
+        $referencedWorkshopIds[$workshopId] = $workshopId;
+      }
+
+      $participantAssignments[$participantId] = $assignmentIds;
+      $maxAssignments = max($maxAssignments, count($assignmentIds));
     }
 
-    $workshopLabels = [];
-    if ($workshopIds) {
-      foreach ($nodeStorage->loadMultiple(array_values($workshopIds)) as $workshop) {
-        if ($workshop instanceof NodeInterface && $workshop->bundle() === self::WORKSHOP_BUNDLE) {
-          $workshopLabels[(int) $workshop->id()] = $workshop->label();
-        }
-      }
-    }
+    $workshopLabels = $this->loadWorkshopLabels(array_values($referencedWorkshopIds));
+    $allWorkshopOptions = $this->loadWorkshopOptions();
 
     $rows = [];
+    $regions = [];
+
     foreach ($participantIds as $participantId) {
       $participant = $participants[$participantId] ?? NULL;
       if (!$participant instanceof NodeInterface) {
         continue;
       }
 
-      $assignmentLabels = [];
-      foreach ($participantAssignments[(int) $participantId] ?? [] as $workshopId) {
-        $assignmentLabels[] = $workshopLabels[$workshopId] ?? sprintf('#%d', $workshopId);
+      $region = $this->fieldValue($participant, self::FIELD_REGION);
+      if ($region !== '') {
+        $regions[$region] = $region;
       }
 
-      $rows[] = [
+      $assignmentIds = $participantAssignments[$participantId] ?? [];
+      $assignmentLabels = array_map(
+        static fn (int $workshopId): string => $workshopLabels[$workshopId] ?? sprintf('#%d', $workshopId),
+        $assignmentIds,
+      );
+
+      $wishIds = $wishData[$participantId]['wish_ids'] ?? [];
+      $wishLabels = array_map(
+        static fn (int $workshopId): string => $workshopLabels[$workshopId] ?? sprintf('#%d', $workshopId),
+        $wishIds,
+      );
+
+      $row = [
         'participant_id' => (int) $participant->id(),
         'code' => $this->fieldValue($participant, self::FIELD_CODE),
         'first_name' => $this->fieldValue($participant, self::FIELD_FIRST_NAME),
         'last_name' => $this->fieldValue($participant, self::FIELD_LAST_NAME),
-        'region' => $this->fieldValue($participant, self::FIELD_REGION),
-        'wish_count' => (int) ($wishCounts[(int) $participant->id()] ?? 0),
+        'region' => $region,
+        'wish_count' => count($wishIds),
+        'wish_ids' => $wishIds,
+        'wishes' => $wishLabels,
+        'assignment_ids' => $assignmentIds,
         'assignments' => $assignmentLabels,
+        'fully_assigned' => count($assignmentIds) >= $assignmentColumns,
       ];
+
+      if ($this->matchesFilters($row, $filters)) {
+        $rows[] = $row;
+      }
     }
+
+    usort($rows, static function (array $a, array $b): int {
+      foreach (['region', 'last_name', 'first_name', 'code'] as $key) {
+        $cmp = strnatcasecmp((string) $a[$key], (string) $b[$key]);
+        if ($cmp !== 0) {
+          return $cmp;
+        }
+      }
+      return $a['participant_id'] <=> $b['participant_id'];
+    });
+
+    ksort($regions, SORT_NATURAL | SORT_FLAG_CASE);
 
     return [
       'rows' => $rows,
-      'total' => $total,
-      'assignment_columns' => max(
-        1,
-        $this->readConfiguredAssignmentCount(),
-        $maxAssignmentsInPage,
-      ),
+      'total' => count($rows),
+      'assignment_columns' => max($assignmentColumns, $maxAssignments),
+      'wish_columns' => $wishColumns,
+      'regions' => array_values($regions),
+      'workshops' => $allWorkshopOptions,
     ];
   }
 
   /**
-   * Loads the latest published wish node per participant and counts wishes.
-   *
-   * @param int[] $participantIds
-   *   Participant node IDs from the current page.
-   *
-   * @return array<int, int>
-   *   Wish count keyed by participant node ID.
+   * Returns selectable export columns keyed by stable query identifier.
    */
-  private function loadWishCounts(array $participantIds): array {
+  public function getExportColumns(int $assignmentColumns, int $wishColumns): array {
+    $columns = [
+      'code' => 'Code',
+      'first_name' => 'Vorname',
+      'last_name' => 'Nachname',
+      'region' => 'Regionalverband',
+      'wish_count' => 'Anzahl Wünsche',
+    ];
+
+    for ($rank = 1; $rank <= $wishColumns; $rank++) {
+      $columns['wish_' . $rank] = 'Wunsch ' . $rank;
+    }
+
+    for ($slot = 1; $slot <= $assignmentColumns; $slot++) {
+      $columns['assignment_' . $slot] = 'Zuteilung ' . $slot;
+    }
+
+    return $columns;
+  }
+
+  /**
+   * Default export mirrors the useful operational columns of the table.
+   */
+  public function getDefaultExportColumns(int $assignmentColumns): array {
+    $columns = ['code', 'first_name', 'last_name', 'region', 'wish_count'];
+    for ($slot = 1; $slot <= $assignmentColumns; $slot++) {
+      $columns[] = 'assignment_' . $slot;
+    }
+    return $columns;
+  }
+
+  /**
+   * Converts one overview row to one scalar export row.
+   */
+  public function buildExportRow(array $row, array $columnKeys): array {
+    $values = [];
+
+    foreach ($columnKeys as $key) {
+      if (preg_match('/^wish_(\d+)$/', $key, $match)) {
+        $index = ((int) $match[1]) - 1;
+        $values[] = (string) ($row['wishes'][$index] ?? '');
+        continue;
+      }
+
+      if (preg_match('/^assignment_(\d+)$/', $key, $match)) {
+        $index = ((int) $match[1]) - 1;
+        $values[] = (string) ($row['assignments'][$index] ?? '');
+        continue;
+      }
+
+      $values[] = match ($key) {
+        'code' => (string) ($row['code'] ?? ''),
+        'first_name' => (string) ($row['first_name'] ?? ''),
+        'last_name' => (string) ($row['last_name'] ?? ''),
+        'region' => (string) ($row['region'] ?? ''),
+        'wish_count' => (string) ($row['wish_count'] ?? 0),
+        default => '',
+      };
+    }
+
+    return $values;
+  }
+
+  private function normalizeFilters(array $filters): array {
+    return [
+      'q' => trim((string) ($filters['q'] ?? '')),
+      'region' => trim((string) ($filters['region'] ?? '')),
+      'wishes' => in_array(($filters['wishes'] ?? ''), ['yes', 'no'], TRUE)
+        ? (string) $filters['wishes']
+        : '',
+      'complete' => in_array(($filters['complete'] ?? ''), ['yes', 'no'], TRUE)
+        ? (string) $filters['complete']
+        : '',
+      'workshop' => max(0, (int) ($filters['workshop'] ?? 0)),
+      'slot' => max(0, (int) ($filters['slot'] ?? 0)),
+    ];
+  }
+
+  private function matchesFilters(array $row, array $filters): bool {
+    if ($filters['region'] !== '' && $row['region'] !== $filters['region']) {
+      return FALSE;
+    }
+
+    if ($filters['wishes'] === 'yes' && (int) $row['wish_count'] < 1) {
+      return FALSE;
+    }
+    if ($filters['wishes'] === 'no' && (int) $row['wish_count'] > 0) {
+      return FALSE;
+    }
+
+    if ($filters['complete'] === 'yes' && empty($row['fully_assigned'])) {
+      return FALSE;
+    }
+    if ($filters['complete'] === 'no' && !empty($row['fully_assigned'])) {
+      return FALSE;
+    }
+
+    if ($filters['workshop'] > 0) {
+      if ($filters['slot'] > 0) {
+        $slotIndex = $filters['slot'] - 1;
+        if ((int) ($row['assignment_ids'][$slotIndex] ?? 0) !== $filters['workshop']) {
+          return FALSE;
+        }
+      }
+      elseif (!in_array($filters['workshop'], $row['assignment_ids'], TRUE)) {
+        return FALSE;
+      }
+    }
+
+    if ($filters['q'] !== '') {
+      $needle = mb_strtolower($filters['q']);
+      $haystack = mb_strtolower(implode(' ', [
+        $row['code'],
+        $row['first_name'],
+        $row['last_name'],
+      ]));
+      if (!str_contains($haystack, $needle)) {
+        return FALSE;
+      }
+    }
+
+    return TRUE;
+  }
+
+  /**
+   * Loads the latest published wish node per participant.
+   *
+   * @return array<int, array{wish_ids: int[]}>
+   */
+  private function loadWishData(array $participantIds): array {
     if (!$participantIds) {
       return [];
     }
@@ -167,7 +321,7 @@ final class ParticipantOverviewService {
       return [];
     }
 
-    $counts = [];
+    $data = [];
     foreach ($nodeStorage->loadMultiple($wishIds) as $wishNode) {
       if (!$wishNode instanceof NodeInterface || $wishNode->bundle() !== self::WISH_BUNDLE) {
         continue;
@@ -184,27 +338,70 @@ final class ParticipantOverviewService {
         continue;
       }
 
-      $wishCount = 0;
+      $participantWishIds = [];
       if ($wishNode->hasField(self::FIELD_WISHES)) {
         foreach ($wishNode->get(self::FIELD_WISHES) as $item) {
-          if (!empty($item->target_id)) {
-            $wishCount++;
+          $workshopId = (int) ($item->target_id ?? 0);
+          if ($workshopId > 0) {
+            $participantWishIds[] = $workshopId;
           }
         }
       }
 
-      // Queries are sorted oldest -> newest. Overwriting therefore leaves the
-      // latest published wish node as the operative state for this participant.
-      $counts[$participantId] = $wishCount;
+      // Oldest -> newest: the last published node becomes operative.
+      $data[$participantId] = ['wish_ids' => $participantWishIds];
     }
 
-    return $counts;
+    return $data;
+  }
+
+  private function loadWorkshopLabels(array $workshopIds): array {
+    if (!$workshopIds) {
+      return [];
+    }
+
+    $labels = [];
+    $nodeStorage = $this->entityTypeManager->getStorage('node');
+    foreach ($nodeStorage->loadMultiple($workshopIds) as $workshop) {
+      if ($workshop instanceof NodeInterface && $workshop->bundle() === self::WORKSHOP_BUNDLE) {
+        $labels[(int) $workshop->id()] = $workshop->label();
+      }
+    }
+    return $labels;
   }
 
   /**
-   * Reads the current published matching configuration for column rendering.
+   * @return array<int, string>
    */
+  private function loadWorkshopOptions(): array {
+    $nodeStorage = $this->entityTypeManager->getStorage('node');
+    $ids = $nodeStorage->getQuery()
+      ->accessCheck(FALSE)
+      ->condition('type', self::WORKSHOP_BUNDLE)
+      ->condition('status', 1)
+      ->sort('title', 'ASC')
+      ->execute();
+
+    $options = [];
+    foreach ($nodeStorage->loadMultiple($ids) as $workshop) {
+      if ($workshop instanceof NodeInterface && $workshop->bundle() === self::WORKSHOP_BUNDLE) {
+        $options[(int) $workshop->id()] = $workshop->label();
+      }
+    }
+
+    uasort($options, 'strnatcasecmp');
+    return $options;
+  }
+
   private function readConfiguredAssignmentCount(): int {
+    return $this->readMatchingConfigInteger(self::FIELD_NUM_ASSIGNMENTS);
+  }
+
+  private function readConfiguredWishCount(): int {
+    return $this->readMatchingConfigInteger(self::FIELD_NUM_WISHES);
+  }
+
+  private function readMatchingConfigInteger(string $fieldName): int {
     $nodeStorage = $this->entityTypeManager->getStorage('node');
     $ids = $nodeStorage->getQuery()
       ->accessCheck(FALSE)
@@ -222,13 +419,13 @@ final class ParticipantOverviewService {
     $config = $nodeStorage->load((int) reset($ids));
     if (
       !$config instanceof NodeInterface
-      || !$config->hasField(self::FIELD_NUM_ASSIGNMENTS)
-      || $config->get(self::FIELD_NUM_ASSIGNMENTS)->isEmpty()
+      || !$config->hasField($fieldName)
+      || $config->get($fieldName)->isEmpty()
     ) {
       return 0;
     }
 
-    return max(0, (int) $config->get(self::FIELD_NUM_ASSIGNMENTS)->value);
+    return max(0, (int) $config->get($fieldName)->value);
   }
 
   private function fieldValue(NodeInterface $node, string $fieldName): string {

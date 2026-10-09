@@ -33,6 +33,7 @@ final class ParticipantOverviewController extends ControllerBase {
   public function overview(Request $request): array {
     $filters = $this->filtersFromRequest($request);
     $data = $this->participantOverview->getOverview($filters);
+    $summary = $this->participantOverview->getSummary();
 
     $pager = $this->pagerManager->createPager($data['total'], self::PAGE_SIZE);
     $offset = $pager->getCurrentPage() * self::PAGE_SIZE;
@@ -82,6 +83,10 @@ final class ParticipantOverviewController extends ControllerBase {
 
     $build = [
       '#type' => 'container',
+      '#attributes' => ['class' => ['jfcamp-operations']],
+      '#attached' => [
+        'library' => ['jfcamp_operations/admin'],
+      ],
       '#cache' => ['max-age' => 0],
     ];
 
@@ -89,6 +94,28 @@ final class ParticipantOverviewController extends ControllerBase {
       '#markup' => '<p>' . $this->t(
         'Teilnehmende, Wunschabgaben und aktueller Zuteilungsstand. Filter wirken identisch auf Tabelle und CSV-Export.'
       ) . '</p>',
+    ];
+
+    $build['operational_summary'] = [
+      '#type' => 'inline_template',
+      '#template' => $this->summaryTemplate(),
+      '#context' => [
+        'total' => $summary['total'],
+        'with_wishes' => $summary['with_wishes'],
+        'without_wishes' => $summary['without_wishes'],
+        'fully_assigned' => $summary['fully_assigned'],
+        'incomplete' => $summary['incomplete'],
+        'all_url' => Url::fromRoute('jfcamp_operations.participants')->toString(),
+        'with_wishes_url' => Url::fromRoute('jfcamp_operations.participants', [], [
+          'query' => ['wishes' => 'yes'],
+        ])->toString(),
+        'without_wishes_url' => Url::fromRoute('jfcamp_operations.participants', [], [
+          'query' => ['wishes' => 'no'],
+        ])->toString(),
+        'incomplete_url' => Url::fromRoute('jfcamp_operations.participants', [], [
+          'query' => ['complete' => 'no'],
+        ])->toString(),
+      ],
     ];
 
     $build['filters'] = [
@@ -268,18 +295,52 @@ final class ParticipantOverviewController extends ControllerBase {
     return implode('-', $parts) . '.csv';
   }
 
+  private function summaryTemplate(): string {
+    return <<<'TWIG'
+<div class="jfcamp-operations__summary" role="list" aria-label="Übersicht">
+  <a class="jfcamp-operations__stat" href="{{ all_url }}" role="listitem">
+    <strong class="jfcamp-operations__stat-value">{{ total }}</strong>
+    <span class="jfcamp-operations__stat-label">Teilnehmende gesamt</span>
+  </a>
+
+  <a class="jfcamp-operations__stat" href="{{ with_wishes_url }}" role="listitem">
+    <strong class="jfcamp-operations__stat-value">{{ with_wishes }}</strong>
+    <span class="jfcamp-operations__stat-label">Wünsche abgegeben</span>
+  </a>
+
+  <a class="jfcamp-operations__stat jfcamp-operations__stat--warning" href="{{ without_wishes_url }}" role="listitem">
+    <strong class="jfcamp-operations__stat-value">{{ without_wishes }}</strong>
+    <span class="jfcamp-operations__stat-label">Ohne Wünsche</span>
+  </a>
+
+  {% if incomplete > 0 %}
+    <a class="jfcamp-operations__stat jfcamp-operations__stat--warning" href="{{ incomplete_url }}" role="listitem">
+      <strong class="jfcamp-operations__stat-value">{{ incomplete }}</strong>
+      <span class="jfcamp-operations__stat-label">Unvollständig zugeteilt</span>
+    </a>
+  {% else %}
+    <div class="jfcamp-operations__stat jfcamp-operations__stat--static" role="listitem">
+      <strong class="jfcamp-operations__stat-value">{{ fully_assigned }}</strong>
+      <span class="jfcamp-operations__stat-label">Vollständig zugeteilt</span>
+    </div>
+  {% endif %}
+</div>
+<p class="jfcamp-operations__help">„Ohne Wünsche“ zeigt Teilnehmende ohne verwertbare veröffentlichte Wunschliste. Ein Klick öffnet direkt die entsprechend gefilterte Liste; sie kann anschließend mit dem vorhandenen CSV-Export ausgegeben werden.</p>
+TWIG;
+  }
+
   private function filterTemplate(): string {
     return <<<'TWIG'
-<form method="get" action="{{ action }}" style="margin:1rem 0 1.25rem;">
-  <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:end;">
-    <label>
-      <span style="display:block;font-weight:600;">Name / Code</span>
-      <input type="search" name="q" value="{{ filters.q|e }}" placeholder="Suchen …">
+<form method="get" action="{{ action }}" class="jfcamp-operations__filter-form">
+  <div class="jfcamp-operations__filters-grid">
+    <label class="jfcamp-operations__field">
+      <span class="jfcamp-operations__label">Name / Code</span>
+      <input class="form-search" type="search" name="q" value="{{ filters.q|e }}" placeholder="Suchen …">
     </label>
 
-    <label>
-      <span style="display:block;font-weight:600;">Regionalverband</span>
-      <select name="region">
+    <label class="jfcamp-operations__field">
+      <span class="jfcamp-operations__label">Regionalverband</span>
+      <select class="form-select" name="region">
         <option value="">Alle</option>
         {% for option in regions %}
           <option value="{{ option.value|e }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
@@ -287,27 +348,27 @@ final class ParticipantOverviewController extends ControllerBase {
       </select>
     </label>
 
-    <label>
-      <span style="display:block;font-weight:600;">Wünsche</span>
-      <select name="wishes">
+    <label class="jfcamp-operations__field">
+      <span class="jfcamp-operations__label">Wünsche</span>
+      <select class="form-select" name="wishes">
         <option value="">Alle</option>
         <option value="yes"{% if filters.wishes == 'yes' %} selected{% endif %}>vorhanden</option>
         <option value="no"{% if filters.wishes == 'no' %} selected{% endif %}>keine</option>
       </select>
     </label>
 
-    <label>
-      <span style="display:block;font-weight:600;">Zuteilung</span>
-      <select name="complete">
+    <label class="jfcamp-operations__field">
+      <span class="jfcamp-operations__label">Zuteilung</span>
+      <select class="form-select" name="complete">
         <option value="">Alle</option>
         <option value="yes"{% if filters.complete == 'yes' %} selected{% endif %}>vollständig</option>
         <option value="no"{% if filters.complete == 'no' %} selected{% endif %}>unvollständig</option>
       </select>
     </label>
 
-    <label>
-      <span style="display:block;font-weight:600;">Workshop</span>
-      <select name="workshop">
+    <label class="jfcamp-operations__field jfcamp-operations__field--wide">
+      <span class="jfcamp-operations__label">Workshop</span>
+      <select class="form-select" name="workshop">
         <option value="">Alle</option>
         {% for option in workshops %}
           <option value="{{ option.value|e }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
@@ -315,38 +376,40 @@ final class ParticipantOverviewController extends ControllerBase {
       </select>
     </label>
 
-    <label>
-      <span style="display:block;font-weight:600;">Slot</span>
-      <select name="slot">
+    <label class="jfcamp-operations__field">
+      <span class="jfcamp-operations__label">Slot</span>
+      <select class="form-select" name="slot">
         <option value="">Alle</option>
         {% for option in slots %}
           <option value="{{ option.value|e }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
         {% endfor %}
       </select>
     </label>
+  </div>
 
+  <div class="jfcamp-operations__actions">
     <button class="button button--primary" type="submit">Filtern</button>
     <a class="button" href="{{ reset_url }}">Zurücksetzen</a>
   </div>
 
-  <p style="margin-top:.75rem;"><small>Für eine Teilnahmeliste für Dozent*innen: Workshop und Slot auswählen, filtern und anschließend die gewünschte CSV exportieren.</small></p>
+  <p class="jfcamp-operations__help">Für eine Teilnahmeliste für Dozent*innen: Workshop und Slot auswählen, filtern und anschließend die gewünschte CSV exportieren.</p>
 
-  <details style="margin-top:1rem;">
-    <summary style="cursor:pointer;font-weight:600;">CSV-Spalten auswählen</summary>
-    <div style="display:flex;flex-wrap:wrap;gap:.5rem 1rem;margin-top:.75rem;">
+  <details class="jfcamp-operations__details">
+    <summary>CSV-Spalten auswählen</summary>
+    <div class="jfcamp-operations__column-grid">
       {% for column in columns %}
-        <label style="white-space:nowrap;">
+        <label>
           <input type="checkbox" name="columns[]" value="{{ column.key|e }}"{% if column.checked %} checked{% endif %}>
           {{ column.label }}
         </label>
       {% endfor %}
     </div>
-    <p><small>Die Auswahl wird beim nächsten Filtern übernommen und für den CSV-Export verwendet.</small></p>
+    <p class="jfcamp-operations__help">Die Auswahl wird beim nächsten Filtern übernommen und für den CSV-Export verwendet.</p>
   </details>
 
-  <p style="margin-top:1rem;">
+  <div class="jfcamp-operations__export-action">
     <a class="button button--primary" href="{{ export_url }}">Gefilterte Liste als CSV exportieren</a>
-  </p>
+  </div>
 </form>
 TWIG;
   }

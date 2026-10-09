@@ -171,6 +171,47 @@ final class ParticipantOverviewService {
   }
 
   /**
+   * Returns global operational counts independent of the active list filters.
+   *
+   * The summary deliberately derives from the same canonical overview data as
+   * the table and CSV export, so the dashboard counts cannot drift from the
+   * underlying participant list.
+   *
+   * @return array{
+   *   total: int,
+   *   with_wishes: int,
+   *   without_wishes: int,
+   *   fully_assigned: int,
+   *   incomplete: int
+   * }
+   */
+  public function getSummary(): array {
+    $overview = $this->getOverview([]);
+
+    $withWishes = 0;
+    $fullyAssigned = 0;
+
+    foreach ($overview['rows'] as $row) {
+      if ((int) ($row['wish_count'] ?? 0) > 0) {
+        $withWishes++;
+      }
+      if (!empty($row['fully_assigned'])) {
+        $fullyAssigned++;
+      }
+    }
+
+    $total = (int) $overview['total'];
+
+    return [
+      'total' => $total,
+      'with_wishes' => $withWishes,
+      'without_wishes' => max(0, $total - $withWishes),
+      'fully_assigned' => $fullyAssigned,
+      'incomplete' => max(0, $total - $fullyAssigned),
+    ];
+  }
+
+  /**
    * Returns selectable export columns keyed by stable query identifier.
    */
   public function getExportColumns(int $assignmentColumns, int $wishColumns): array {

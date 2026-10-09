@@ -6,6 +6,7 @@ use Drupal\Component\Utility\Html;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Pager\PagerManagerInterface;
 use Drupal\Core\Url;
+use Drupal\jfcamp_operations\Service\ParticipantAccessService;
 use Drupal\jfcamp_operations\Service\ParticipantOverviewService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,20 +21,23 @@ final class ParticipantOverviewController extends ControllerBase {
 
   public function __construct(
     private ParticipantOverviewService $participantOverview,
+    private ParticipantAccessService $participantAccess,
     private PagerManagerInterface $pagerManager,
   ) {}
 
   public static function create(ContainerInterface $container): self {
     return new self(
       $container->get('jfcamp_operations.participant_overview'),
+      $container->get('jfcamp_operations.participant_access'),
       $container->get('pager.manager'),
     );
   }
 
   public function overview(Request $request): array {
     $filters = $this->filtersFromRequest($request);
-    $data = $this->participantOverview->getOverview($filters);
-    $summary = $this->participantOverview->getSummary();
+    $allowedRegions = $this->participantAccess->getAllowedRegions();
+    $data = $this->participantOverview->getOverview($filters, $allowedRegions);
+    $summary = $this->participantOverview->getSummary($allowedRegions);
 
     $pager = $this->pagerManager->createPager($data['total'], self::PAGE_SIZE);
     $offset = $pager->getCurrentPage() * self::PAGE_SIZE;
@@ -95,6 +99,32 @@ final class ParticipantOverviewController extends ControllerBase {
         'Teilnehmende, Wunschabgaben und aktueller Zuteilungsstand. Filter wirken identisch auf Tabelle und CSV-Export.'
       ) . '</p>',
     ];
+
+    if ($allowedRegions !== NULL) {
+      if ($allowedRegions) {
+        $build['access_scope'] = [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['messages', 'messages--status']],
+          'content' => [
+            '#markup' => '<strong>' . $this->t('Regionalverbands-Sicht:') . '</strong> '
+              . Html::escape(implode(', ', $allowedRegions))
+              . '<br><small>'
+              . $this->t('Tabelle, Kennzahlen und CSV-Export sind serverseitig auf diese Regionalverbände beschränkt.')
+              . '</small>',
+          ],
+        ];
+      }
+      else {
+        $build['access_scope'] = [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['messages', 'messages--warning']],
+          'content' => [
+            '#markup' => '<strong>' . $this->t('Keine Regionalverbände zugeordnet.') . '</strong> '
+              . $this->t('Für dieses Benutzerkonto sind derzeit keine Teilnehmenden freigegeben.'),
+          ],
+        ];
+      }
+    }
 
     $build['operational_summary'] = [
       '#type' => 'inline_template',
@@ -192,7 +222,8 @@ final class ParticipantOverviewController extends ControllerBase {
 
   public function export(Request $request): StreamedResponse {
     $filters = $this->filtersFromRequest($request);
-    $data = $this->participantOverview->getOverview($filters);
+    $allowedRegions = $this->participantAccess->getAllowedRegions();
+    $data = $this->participantOverview->getOverview($filters, $allowedRegions);
     $availableColumns = $this->participantOverview->getExportColumns(
       $data['assignment_columns'],
       $data['wish_columns'],

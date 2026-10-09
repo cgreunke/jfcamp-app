@@ -2,3 +2,8 @@ view jfcamp participant overview:
   title: 'Teilnehmer- und Zuteilungsübersicht ansehen'
   description: 'Erlaubt den lesenden Zugriff auf die operative Teilnehmer- und Zuteilungsübersicht.'
   restrict access: true
+
+view all jfcamp participant regions:
+  title: 'Alle Regionalverbände in der Teilnehmerübersicht ansehen'
+  description: 'Hebt die Regionalverbands-Einschränkung in der operativen Teilnehmer- und Zuteilungsübersicht auf.'
+  restrict access: true

@@ -1,9 +1,9 @@
 jfcamp_admin.overview:
-  path: '/admin/config/jfcamp'
+  path: '/admin/jfcamp'
   defaults:
     _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
-    _title: 'JF Startercamp'
+    _title: 'JF Camp'
   requirements:
-    _permission: 'access administration pages'
+    _permission: 'access jfcamp administration'
   options:
     _admin_route: TRUE

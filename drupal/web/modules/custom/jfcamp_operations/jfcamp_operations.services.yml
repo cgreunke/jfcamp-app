@@ -1,4 +1,10 @@
 services:
+  jfcamp_operations.participant_access:
+    class: Drupal\jfcamp_operations\Service\ParticipantAccessService
+    arguments:
+      - '@current_user'
+      - '@entity_type.manager'
+
   jfcamp_operations.participant_overview:
     class: Drupal\jfcamp_operations\Service\ParticipantOverviewService
     arguments:

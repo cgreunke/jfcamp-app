@@ -1,6 +1,6 @@
 jfcamp_admin.overview:
-  title: 'JF Startercamp'
-  description: 'Einstellungen & Tools für das Startercamp bündeln.'
+  title: 'JF Camp'
+  description: 'Operative Werkzeuge für das JF Camp.'
   route_name: jfcamp_admin.overview
-  parent: system.admin_config
-  weight: -50
+  parent: system.admin
+  weight: -20

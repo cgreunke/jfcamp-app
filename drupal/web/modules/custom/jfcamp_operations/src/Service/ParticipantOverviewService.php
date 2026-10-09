@@ -44,14 +44,28 @@ final class ParticipantOverviewService {
    *   workshops: array<int, string>
    * }
    */
-  public function getOverview(array $filters = []): array {
+  public function getOverview(array $filters = [], ?array $allowedRegions = NULL): array {
     $filters = $this->normalizeFilters($filters);
+    $allowedRegions = $this->normalizeAllowedRegions($allowedRegions);
     $nodeStorage = $this->entityTypeManager->getStorage('node');
 
-    $participantIds = $nodeStorage->getQuery()
+    $participantQuery = $nodeStorage->getQuery()
       ->accessCheck(FALSE)
-      ->condition('type', self::PARTICIPANT_BUNDLE)
-      ->execute();
+      ->condition('type', self::PARTICIPANT_BUNDLE);
+
+    if ($allowedRegions !== NULL) {
+      if (!$allowedRegions) {
+        $participantIds = [];
+      }
+      else {
+        $participantIds = $participantQuery
+          ->condition(self::FIELD_REGION, $allowedRegions, 'IN')
+          ->execute();
+      }
+    }
+    else {
+      $participantIds = $participantQuery->execute();
+    }
 
     $assignmentColumns = max(1, $this->readConfiguredAssignmentCount());
     $wishColumns = max(1, $this->readConfiguredWishCount());
@@ -185,8 +199,8 @@ final class ParticipantOverviewService {
    *   incomplete: int
    * }
    */
-  public function getSummary(): array {
-    $overview = $this->getOverview([]);
+  public function getSummary(?array $allowedRegions = NULL): array {
+    $overview = $this->getOverview([], $allowedRegions);
 
     $withWishes = 0;
     $fullyAssigned = 0;
@@ -275,6 +289,31 @@ final class ParticipantOverviewService {
     }
 
     return $values;
+  }
+
+
+  /**
+   * Normalizes the server-side Regionalverband access scope.
+   *
+   * NULL means unrestricted access. An empty array means no regions.
+   *
+   * @return string[]|null
+   */
+  private function normalizeAllowedRegions(?array $allowedRegions): ?array {
+    if ($allowedRegions === NULL) {
+      return NULL;
+    }
+
+    $normalized = [];
+    foreach ($allowedRegions as $region) {
+      $region = strtoupper(trim((string) $region));
+      if ($region !== '') {
+        $normalized[$region] = $region;
+      }
+    }
+
+    ksort($normalized, SORT_NATURAL | SORT_FLAG_CASE);
+    return array_values($normalized);
   }
 
   private function normalizeFilters(array $filters): array {

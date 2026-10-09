@@ -1,0 +1,105 @@
+<?php
+
+/**
+ * @file
+ * Install/update hooks for JF Startercamp Operations.
+ */
+
+use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
+use Drupal\Core\Field\FieldStorageDefinitionInterface;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\user\Entity\Role;
+
+/**
+ * Creates the Teamer scope field and baseline role/permissions.
+ */
+function jfcamp_operations_install(): void {
+  _jfcamp_operations_ensure_teamer_access_model();
+}
+
+/**
+ * Adds Regionalverband-scoped Teamer access to existing installations.
+ */
+function jfcamp_operations_update_10001(): void {
+  _jfcamp_operations_ensure_teamer_access_model();
+}
+
+
+/**
+ * Moves JF Camp tools into their own top-level admin area.
+ */
+function jfcamp_operations_update_10002(): void {
+  _jfcamp_operations_ensure_teamer_access_model();
+}
+
+/**
+ * Ensures field, role and permissions for Regionalverband-scoped access.
+ */
+function _jfcamp_operations_ensure_teamer_access_model(): void {
+  $field_name = 'field_jfcamp_regionalverbaende';
+
+  $storage = FieldStorageConfig::loadByName('user', $field_name);
+  if (!$storage) {
+    $storage = FieldStorageConfig::create([
+      'field_name' => $field_name,
+      'entity_type' => 'user',
+      'type' => 'string',
+      'cardinality' => FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED,
+      'settings' => [
+        'max_length' => 32,
+        'case_sensitive' => FALSE,
+        'is_ascii' => TRUE,
+      ],
+    ]);
+    $storage->save();
+  }
+
+  $field = FieldConfig::loadByName('user', 'user', $field_name);
+  if (!$field) {
+    $field = FieldConfig::create([
+      'field_storage' => $storage,
+      'bundle' => 'user',
+      'label' => 'JF Camp Regionalverbände',
+      'description' => 'Regionalverbands-Codes, deren Teilnehmende dieses Benutzerkonto in der Camp-Übersicht sehen darf, z. B. BER.',
+      'required' => FALSE,
+    ]);
+    $field->save();
+  }
+
+  $display_repository = \Drupal::service('entity_display.repository');
+  $form_display = $display_repository->getFormDisplay('user', 'user', 'default');
+  if ($form_display instanceof EntityFormDisplayInterface) {
+    $form_display->setComponent($field_name, [
+      'type' => 'string_textfield',
+      'weight' => 20,
+      'settings' => [
+        'size' => 20,
+        'placeholder' => 'BER',
+      ],
+    ])->save();
+  }
+
+  $teamer = Role::load('teamer');
+  if (!$teamer) {
+    $teamer = Role::create([
+      'id' => 'teamer',
+      'label' => 'Teamer*in',
+    ]);
+  }
+  $teamer->grantPermission('view jfcamp participant overview');
+  $teamer->grantPermission('access toolbar');
+  $teamer->grantPermission('access jfcamp administration');
+  $teamer->save();
+
+  // The existing "Team" role currently represents the camp leadership in the
+  // application. Keep its existing permissions untouched, but make its
+  // participant overview explicitly unrestricted.
+  $team = Role::load('team');
+  if ($team) {
+    $team->grantPermission('view jfcamp participant overview');
+    $team->grantPermission('view all jfcamp participant regions');
+    $team->grantPermission('access jfcamp administration');
+    $team->save();
+  }
+}

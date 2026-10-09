@@ -1,0 +1,4 @@
+access jfcamp administration:
+  title: 'JF Camp Verwaltungsbereich aufrufen'
+  description: 'Erlaubt den Zugriff auf den zentralen JF-Camp-Bereich im Drupal-Backend.'
+  restrict access: true

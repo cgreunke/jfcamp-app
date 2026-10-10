@@ -28,3 +28,13 @@ jfcamp_operations.assignment_edit:
     slot: '\d+'
   options:
     _admin_route: TRUE
+
+jfcamp_operations.assignment_audit:
+  path: '/admin/jfcamp/assignment-audit'
+  defaults:
+    _controller: '\Drupal\jfcamp_operations\Controller\AssignmentAuditController::overview'
+    _title: 'Änderungsprotokoll'
+  requirements:
+    _permission: 'view jfcamp assignment audit'
+  options:
+    _admin_route: TRUE

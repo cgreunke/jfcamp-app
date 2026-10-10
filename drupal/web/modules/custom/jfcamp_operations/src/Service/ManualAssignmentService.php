@@ -24,6 +24,7 @@ final class ManualAssignmentService {
     private EntityTypeManagerInterface $entityTypeManager,
     private Connection $database,
     private LockBackendInterface $lock,
+    private AssignmentAuditService $assignmentAudit,
   ) {}
 
   /**
@@ -131,6 +132,7 @@ final class ManualAssignmentService {
 
       $workshop = $this->loadWorkshop($workshopId);
       $oldWorkshopId = (int) ($assignmentIds[$slot - 1] ?? 0);
+      $oldWorkshop = $this->loadAssignedWorkshop($oldWorkshopId);
 
       if ($oldWorkshopId === $workshopId) {
         return [
@@ -177,6 +179,16 @@ final class ManualAssignmentService {
           throw new \RuntimeException('Die gespeicherte Zuteilung konnte nach dem Schreiben nicht verifiziert werden.');
         }
 
+        // The audit insert uses the same database connection and therefore the
+        // same transaction: assignment and audit either both persist or both
+        // roll back.
+        $auditId = $this->assignmentAudit->recordChange(
+          $reloaded,
+          $slot,
+          $oldWorkshop,
+          $workshop,
+        );
+
         // Commit before releasing the cross-request manual-assignment lock.
         unset($transaction);
 
@@ -189,6 +201,7 @@ final class ManualAssignmentService {
           'new_workshop_label' => $workshop->label(),
           'slot_occupancy_after' => $occupancy + 1,
           'slot_capacity' => $capacity,
+          'audit_id' => $auditId,
         ];
       }
       catch (\Throwable $e) {
@@ -208,6 +221,14 @@ final class ManualAssignmentService {
     }
     if (!$node->hasField(self::FIELD_ASSIGNMENTS)) {
       throw new \RuntimeException('Teilnehmer besitzt kein Zuteilungsfeld.');
+    }
+    return $node;
+  }
+
+  private function loadAssignedWorkshop(int $workshopId): NodeInterface {
+    $node = $this->entityTypeManager->getStorage('node')->load($workshopId);
+    if (!$node instanceof NodeInterface || $node->bundle() !== self::WORKSHOP_BUNDLE) {
+      throw new \RuntimeException('Die bisherige Workshop-Zuteilung ist nicht mehr gültig.');
     }
     return $node;
   }

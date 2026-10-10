@@ -128,3 +128,121 @@ function _jfcamp_operations_ensure_teamer_access_model(): void {
     $team->save();
   }
 }
+
+/**
+ * Adds the immutable audit trail for manual assignment changes.
+ */
+function jfcamp_operations_update_10005(): void {
+  $schema = \Drupal::database()->schema();
+  if (!$schema->tableExists('jfcamp_assignment_audit')) {
+    $definition = jfcamp_operations_schema()['jfcamp_assignment_audit'];
+    $schema->createTable('jfcamp_assignment_audit', $definition);
+  }
+}
+
+/**
+ * Implements hook_schema().
+ */
+function jfcamp_operations_schema(): array {
+  return [
+    'jfcamp_assignment_audit' => [
+      'description' => 'Immutable audit trail of manual participant assignment changes.',
+      'fields' => [
+        'id' => [
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'created_at' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'uid' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'participant_id' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'participant_uuid' => [
+          'type' => 'varchar',
+          'length' => 36,
+          'not null' => TRUE,
+        ],
+        'participant_code' => [
+          'type' => 'varchar',
+          'length' => 128,
+          'not null' => TRUE,
+          'default' => '',
+        ],
+        'slot' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'old_workshop_id' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'old_workshop_uuid' => [
+          'type' => 'varchar',
+          'length' => 36,
+          'not null' => TRUE,
+        ],
+        'old_workshop_label' => [
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+        ],
+        'new_workshop_id' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'new_workshop_uuid' => [
+          'type' => 'varchar',
+          'length' => 36,
+          'not null' => TRUE,
+        ],
+        'new_workshop_label' => [
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+        ],
+        'base_matching_run_id' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => FALSE,
+        ],
+        'base_matching_hash' => [
+          'type' => 'varchar',
+          'length' => 64,
+          'not null' => FALSE,
+        ],
+      ],
+      'primary key' => ['id'],
+      'indexes' => [
+        'participant' => ['participant_id', 'id'],
+        'created' => ['created_at'],
+        'base_run' => ['base_matching_run_id'],
+      ],
+    ],
+  ];
+}
+
+/**
+ * Grants assignment-audit visibility to the camp-leadership role.
+ */
+function jfcamp_operations_update_10006(): void {
+  $team = \Drupal\user\Entity\Role::load('team');
+  if ($team) {
+    $team->grantPermission('view jfcamp assignment audit');
+    $team->save();
+  }
+}

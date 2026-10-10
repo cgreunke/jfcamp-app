@@ -12,3 +12,8 @@ edit jfcamp participant assignments:
   title: 'Zuteilungen manuell ändern'
   description: 'Erlaubt der Camp-Leitung, einzelne Workshop-Zuteilungen manuell und kapazitätsgeprüft zu ändern.'
   restrict access: true
+
+view jfcamp assignment audit:
+  title: 'JF Camp Änderungsprotokoll ansehen'
+  description: 'Erlaubt den Zugriff auf das unveränderliche Protokoll manueller Zuteilungsänderungen.'
+  restrict access: true

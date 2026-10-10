@@ -4,3 +4,10 @@ jfcamp_operations.participants:
   route_name: jfcamp_operations.participants
   parent: jfcamp_admin.overview
   weight: 0
+
+jfcamp_operations.assignment_audit:
+  title: 'Änderungsprotokoll'
+  description: 'Manuelle Änderungen an Workshop-Zuteilungen nachvollziehen'
+  route_name: jfcamp_operations.assignment_audit
+  parent: jfcamp_admin.overview
+  weight: 20

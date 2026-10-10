@@ -16,3 +16,12 @@ services:
       - '@entity_type.manager'
       - '@database'
       - '@lock'
+      - '@jfcamp_operations.assignment_audit'
+
+
+  jfcamp_operations.assignment_audit:
+    class: Drupal\jfcamp_operations\Service\AssignmentAuditService
+    arguments:
+      - '@database'
+      - '@current_user'
+      - '@datetime.time'

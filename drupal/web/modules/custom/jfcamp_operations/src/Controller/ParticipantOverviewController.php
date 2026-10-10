@@ -7,6 +7,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Link;
 use Drupal\Core\Pager\PagerManagerInterface;
 use Drupal\Core\Url;
+use Drupal\jfcamp_operations\Service\AssignmentAuditService;
 use Drupal\jfcamp_operations\Service\ParticipantAccessService;
 use Drupal\jfcamp_operations\Service\ParticipantOverviewService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -23,6 +24,7 @@ final class ParticipantOverviewController extends ControllerBase {
   public function __construct(
     private ParticipantOverviewService $participantOverview,
     private ParticipantAccessService $participantAccess,
+    private AssignmentAuditService $assignmentAudit,
     private PagerManagerInterface $pagerManager,
   ) {}
 
@@ -30,6 +32,7 @@ final class ParticipantOverviewController extends ControllerBase {
     return new self(
       $container->get('jfcamp_operations.participant_overview'),
       $container->get('jfcamp_operations.participant_access'),
+      $container->get('jfcamp_operations.assignment_audit'),
       $container->get('pager.manager'),
     );
   }
@@ -39,6 +42,7 @@ final class ParticipantOverviewController extends ControllerBase {
     $allowedRegions = $this->participantAccess->getAllowedRegions();
     $data = $this->participantOverview->getOverview($filters, $allowedRegions);
     $summary = $this->participantOverview->getSummary($allowedRegions);
+    $assignmentStatus = $this->assignmentAudit->getCurrentAssignmentStatus();
 
     $pager = $this->pagerManager->createPager($data['total'], self::PAGE_SIZE);
     $offset = $pager->getCurrentPage() * self::PAGE_SIZE;
@@ -125,6 +129,22 @@ final class ParticipantOverviewController extends ControllerBase {
       '#markup' => '<p>' . $this->t(
         'Teilnehmende, Wunschabgaben und aktueller Zuteilungsstand. Filter wirken identisch auf Tabelle und CSV-Export.'
       ) . '</p>',
+    ];
+
+    $baseText = $assignmentStatus['base_run_id'] !== NULL
+      ? (string) $this->t('Matching Run #@run', ['@run' => $assignmentStatus['base_run_id']])
+      : (string) $this->t('Bestehender Zuteilungsstand – kein Matching-Run angewendet');
+
+    $build['assignment_status'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['messages', $assignmentStatus['base_run_id'] !== NULL ? 'messages--status' : 'messages--warning'],
+      ],
+      'content' => [
+        '#markup' => '<strong>' . $this->t('Zuteilungsbasis:') . '</strong> ' . $baseText
+          . '<br><strong>' . $this->t('Manuelle Änderungen seit dieser Basis:') . '</strong> '
+          . $assignmentStatus['manual_changes'],
+      ],
     ];
 
     if ($allowedRegions !== NULL) {

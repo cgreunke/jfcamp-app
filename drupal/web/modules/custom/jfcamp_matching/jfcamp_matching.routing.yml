@@ -49,26 +49,3 @@ jfcamp_matching.action_reset:
     _csrf_token: 'TRUE'
     run_id: '^\d+$'
   methods: [POST]
-
-# CSV-Exporte lesen ausschließlich aus den in Drupal festgeschriebenen Zuteilungen.
-jfcamp_matching.export_attendance_all:
-  path: '/admin/reports/jfcamp/matching/export/slots.csv'
-  defaults:
-    _controller: '\Drupal\jfcamp_matching\Controller\ExportController::attendanceAll'
-  requirements:
-    _permission: 'run jfcamp matching'
-
-jfcamp_matching.export_attendance_slot:
-  path: '/admin/reports/jfcamp/matching/export/slot/{slot}.csv'
-  defaults:
-    _controller: '\Drupal\jfcamp_matching\Controller\ExportController::attendanceSlot'
-  requirements:
-    _permission: 'run jfcamp matching'
-    slot: '^\d+$'
-
-jfcamp_matching.export_regions:
-  path: '/admin/reports/jfcamp/matching/export/regions.csv'
-  defaults:
-    _controller: '\Drupal\jfcamp_matching\Controller\ExportController::regions'
-  requirements:
-    _permission: 'run jfcamp matching'

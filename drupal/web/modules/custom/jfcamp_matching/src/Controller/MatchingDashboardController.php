@@ -3,7 +3,6 @@
 namespace Drupal\jfcamp_matching\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\jfcamp_matching\Service\AssignmentPersistenceService;
 use Drupal\jfcamp_matching\Service\MatchingRunStorage;
@@ -266,16 +265,6 @@ final class MatchingDashboardController extends ControllerBase {
         ],
       ];
     }
-
-    $build['exports_title'] = [
-      '#markup' => '<h2>' . $this->t('Exporte aus Drupal') . '</h2>',
-    ];
-    $build['exports_hint'] = [
-      '#markup' => '<p><small>' . $this->t(
-        'Diese Exporte enthalten die aktuell in Drupal festgeschriebenen Zuteilungen, nicht automatisch den letzten Matching-Run.'
-      ) . '</small></p>',
-    ];
-    $build['exports'] = $this->buildExportLinks($matchingConfig);
 
     return $build;
   }
@@ -841,36 +830,6 @@ final class MatchingDashboardController extends ControllerBase {
         '#rows' => $slotRows,
       ];
     }
-
-    return $build;
-  }
-
-  private function buildExportLinks(?array $matchingConfig): array {
-    $build = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['container-inline']],
-    ];
-
-    $build['all'] = Link::fromTextAndUrl(
-      $this->t('Alle Slots (CSV)'),
-      Url::fromRoute('jfcamp_matching.export_attendance_all')
-    )->toRenderable() + ['#attributes' => ['class' => ['button', 'button--primary']]];
-
-    $numSlots = 0;
-    if ($matchingConfig) {
-      $numSlots = (int) ($matchingConfig['values']['field_num_zuteilung'] ?? 0);
-    }
-    for ($slot = 1; $slot <= $numSlots; $slot++) {
-      $build['slot_' . $slot] = Link::fromTextAndUrl(
-        $this->t('Slot @slot (CSV)', ['@slot' => $slot]),
-        Url::fromRoute('jfcamp_matching.export_attendance_slot', ['slot' => $slot])
-      )->toRenderable() + ['#attributes' => ['class' => ['button']]];
-    }
-
-    $build['regions'] = Link::fromTextAndUrl(
-      $this->t('Regionalverbände (CSV)'),
-      Url::fromRoute('jfcamp_matching.export_regions')
-    )->toRenderable() + ['#attributes' => ['class' => ['button']]];
 
     return $build;
   }

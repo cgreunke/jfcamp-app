@@ -34,6 +34,20 @@ function jfcamp_operations_update_10002(): void {
 }
 
 /**
+ * Grants manual assignment editing to the existing Camp-Leitung role.
+ */
+function jfcamp_operations_update_10003(): void {
+  _jfcamp_operations_ensure_teamer_access_model();
+}
+
+/**
+ * Enables the Drupal administration theme for JF Camp backend roles.
+ */
+function jfcamp_operations_update_10004(): void {
+  _jfcamp_operations_ensure_teamer_access_model();
+}
+
+/**
  * Ensures field, role and permissions for Regionalverband-scoped access.
  */
 function _jfcamp_operations_ensure_teamer_access_model(): void {
@@ -80,6 +94,14 @@ function _jfcamp_operations_ensure_teamer_access_model(): void {
     ])->save();
   }
 
+  // Zuteilungen must be changed through the guarded operations form, not
+  // through the generic participant node edit form where capacity/duplicate
+  // checks would be bypassed.
+  $participant_form_display = $display_repository->getFormDisplay('node', 'teilnehmer', 'default');
+  if ($participant_form_display instanceof EntityFormDisplayInterface) {
+    $participant_form_display->removeComponent('field_zugewiesen')->save();
+  }
+
   $teamer = Role::load('teamer');
   if (!$teamer) {
     $teamer = Role::create([
@@ -90,6 +112,7 @@ function _jfcamp_operations_ensure_teamer_access_model(): void {
   $teamer->grantPermission('view jfcamp participant overview');
   $teamer->grantPermission('access toolbar');
   $teamer->grantPermission('access jfcamp administration');
+  $teamer->grantPermission('view the administration theme');
   $teamer->save();
 
   // The existing "Team" role currently represents the camp leadership in the
@@ -100,6 +123,8 @@ function _jfcamp_operations_ensure_teamer_access_model(): void {
     $team->grantPermission('view jfcamp participant overview');
     $team->grantPermission('view all jfcamp participant regions');
     $team->grantPermission('access jfcamp administration');
+    $team->grantPermission('edit jfcamp participant assignments');
+    $team->grantPermission('view the administration theme');
     $team->save();
   }
 }

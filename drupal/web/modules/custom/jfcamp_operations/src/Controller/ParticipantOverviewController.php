@@ -4,6 +4,7 @@ namespace Drupal\jfcamp_operations\Controller;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Link;
 use Drupal\Core\Pager\PagerManagerInterface;
 use Drupal\Core\Url;
 use Drupal\jfcamp_operations\Service\ParticipantAccessService;
@@ -53,6 +54,8 @@ final class ParticipantOverviewController extends ControllerBase {
       $this->participantOverview->getDefaultExportColumns($data['assignment_columns']),
     );
 
+    $canEditAssignments = $this->currentUser()->hasPermission('edit jfcamp participant assignments');
+
     $header = [
       $this->t('Code'),
       $this->t('Vorname'),
@@ -63,6 +66,10 @@ final class ParticipantOverviewController extends ControllerBase {
 
     for ($slot = 1; $slot <= $data['assignment_columns']; $slot++) {
       $header[] = $this->t('Zuteilung @slot', ['@slot' => $slot]);
+    }
+
+    if ($canEditAssignments) {
+      $header[] = $this->t('Aktionen');
     }
 
     $rows = [];
@@ -77,6 +84,26 @@ final class ParticipantOverviewController extends ControllerBase {
 
       for ($slot = 0; $slot < $data['assignment_columns']; $slot++) {
         $row[] = $participant['assignments'][$slot] ?? '—';
+      }
+
+      if ($canEditAssignments) {
+        $actionItems = [];
+        for ($slot = 1; $slot <= $data['assignment_columns']; $slot++) {
+          $actionItems[] = Link::fromTextAndUrl(
+            $this->t('Slot @slot ändern', ['@slot' => $slot]),
+            Url::fromRoute('jfcamp_operations.assignment_edit', [
+              'participant_id' => $participant['participant_id'],
+              'slot' => $slot,
+            ]),
+          )->toRenderable();
+        }
+        $row[] = [
+          'data' => [
+            '#theme' => 'item_list',
+            '#items' => $actionItems,
+            '#attributes' => ['class' => ['jfcamp-assignment-actions']],
+          ],
+        ];
       }
 
       $rows[] = $row;

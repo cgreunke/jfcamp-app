@@ -7,3 +7,8 @@ view all jfcamp participant regions:
   title: 'Alle Regionalverbände in der Teilnehmerübersicht ansehen'
   description: 'Hebt die Regionalverbands-Einschränkung in der operativen Teilnehmer- und Zuteilungsübersicht auf.'
   restrict access: true
+
+edit jfcamp participant assignments:
+  title: 'Zuteilungen manuell ändern'
+  description: 'Erlaubt der Camp-Leitung, einzelne Workshop-Zuteilungen manuell und kapazitätsgeprüft zu ändern.'
+  restrict access: true

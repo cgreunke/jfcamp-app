@@ -16,3 +16,15 @@ jfcamp_operations.participants_export:
     _permission: 'view jfcamp participant overview'
   options:
     _admin_route: TRUE
+
+jfcamp_operations.assignment_edit:
+  path: '/admin/jfcamp/participants/{participant_id}/assignments/{slot}'
+  defaults:
+    _form: '\Drupal\jfcamp_operations\Form\ManualAssignmentForm'
+    _title: 'Zuteilung ändern'
+  requirements:
+    _permission: 'edit jfcamp participant assignments'
+    participant_id: '\d+'
+    slot: '\d+'
+  options:
+    _admin_route: TRUE

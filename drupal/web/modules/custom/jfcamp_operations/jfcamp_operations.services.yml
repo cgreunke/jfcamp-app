@@ -9,3 +9,10 @@ services:
     class: Drupal\jfcamp_operations\Service\ParticipantOverviewService
     arguments:
       - '@entity_type.manager'
+
+  jfcamp_operations.manual_assignment:
+    class: Drupal\jfcamp_operations\Service\ManualAssignmentService
+    arguments:
+      - '@entity_type.manager'
+      - '@database'
+      - '@lock'

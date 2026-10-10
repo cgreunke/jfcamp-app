@@ -38,3 +38,13 @@ jfcamp_operations.assignment_audit:
     _permission: 'view jfcamp assignment audit'
   options:
     _admin_route: TRUE
+
+jfcamp_operations.workshop_capacity:
+  path: '/admin/jfcamp/workshops-capacity'
+  defaults:
+    _controller: '\Drupal\jfcamp_operations\Controller\WorkshopCapacityController::overview'
+    _title: 'Workshops & Kapazitäten'
+  requirements:
+    _permission: 'view jfcamp workshop capacities'
+  options:
+    _admin_route: TRUE

@@ -25,3 +25,8 @@ services:
       - '@database'
       - '@current_user'
       - '@datetime.time'
+
+  jfcamp_operations.workshop_capacity:
+    class: Drupal\jfcamp_operations\Service\WorkshopCapacityService
+    arguments:
+      - '@entity_type.manager'

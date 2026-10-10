@@ -246,3 +246,14 @@ function jfcamp_operations_update_10006(): void {
     $team->save();
   }
 }
+
+/**
+ * Grants workshop-capacity overview access to the camp-leadership role.
+ */
+function jfcamp_operations_update_10007(): void {
+  $team = \Drupal\user\Entity\Role::load('team');
+  if ($team) {
+    $team->grantPermission('view jfcamp workshop capacities');
+    $team->save();
+  }
+}

@@ -11,3 +11,10 @@ jfcamp_operations.assignment_audit:
   route_name: jfcamp_operations.assignment_audit
   parent: jfcamp_admin.overview
   weight: 20
+
+jfcamp_operations.workshop_capacity:
+  title: 'Workshops & Kapazitäten'
+  description: 'Belegung und freie Plätze pro Workshop und Slot ansehen'
+  route_name: jfcamp_operations.workshop_capacity
+  parent: jfcamp_admin.overview
+  weight: 10

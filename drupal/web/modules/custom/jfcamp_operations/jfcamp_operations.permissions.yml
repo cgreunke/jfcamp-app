@@ -17,3 +17,8 @@ view jfcamp assignment audit:
   title: 'JF Camp Änderungsprotokoll ansehen'
   description: 'Erlaubt den Zugriff auf das unveränderliche Protokoll manueller Zuteilungsänderungen.'
   restrict access: true
+
+view jfcamp workshop capacities:
+  title: 'JF Camp Workshop-Kapazitäten ansehen'
+  description: 'Erlaubt den Zugriff auf die operative Workshop- und Kapazitätsübersicht.'
+  restrict access: true

@@ -1,6 +1,6 @@
 jfcamp_matching.dashboard_menu:
   title: 'Matching'
-  description: 'Matching berechnen, prüfen, festschreiben und exportieren'
+  description: 'Matching berechnen, prüfen und festschreiben'
   route_name: jfcamp_matching.dashboard
   parent: jfcamp_admin.overview
   weight: 10

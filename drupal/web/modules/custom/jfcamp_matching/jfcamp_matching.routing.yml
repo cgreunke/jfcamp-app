@@ -1,6 +1,6 @@
 # Zentrales Matching-Dashboard.
 jfcamp_matching.dashboard:
-  path: '/admin/reports/jfcamp/matching'
+  path: '/admin/jfcamp/matching'
   defaults:
     _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::dashboard'
     _title: 'Matching'
@@ -10,9 +10,8 @@ jfcamp_matching.dashboard:
     _admin_route: TRUE
 
 # Status-Polling für aktive Runs.
-
 jfcamp_matching.run_status:
-  path: '/admin/reports/jfcamp/matching/run/{run_id}/status'
+  path: '/admin/jfcamp/matching/run/{run_id}/status'
   defaults:
     _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::runStatus'
   requirements:
@@ -22,7 +21,7 @@ jfcamp_matching.run_status:
 
 # Aktionen vom Dashboard.
 jfcamp_matching.action_dry_run:
-  path: '/admin/reports/jfcamp/matching/dry-run'
+  path: '/admin/jfcamp/matching/dry-run'
   defaults:
     _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::actionDryRun'
   requirements:
@@ -31,7 +30,7 @@ jfcamp_matching.action_dry_run:
   methods: [POST]
 
 jfcamp_matching.action_apply:
-  path: '/admin/reports/jfcamp/matching/run/{run_id}/apply'
+  path: '/admin/jfcamp/matching/run/{run_id}/apply'
   defaults:
     _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::actionApply'
   requirements:
@@ -41,7 +40,7 @@ jfcamp_matching.action_apply:
   methods: [POST]
 
 jfcamp_matching.action_reset:
-  path: '/admin/reports/jfcamp/matching/run/{run_id}/reset'
+  path: '/admin/jfcamp/matching/run/{run_id}/reset'
   defaults:
     _controller: '\Drupal\jfcamp_matching\Controller\MatchingDashboardController::actionReset'
   requirements:

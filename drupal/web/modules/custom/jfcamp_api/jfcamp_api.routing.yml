@@ -17,7 +17,7 @@ jfcamp_api.teilnehmer_id:
     _access: 'TRUE'
 
 jfcamp_api.csv_import:
-  path: '/admin/config/jfcamp/csv-import'
+  path: '/admin/jfcamp/csv-import'
   defaults:
     _form: '\Drupal\jfcamp_api\Form\CsvImportForm'
     _title: 'JFCamp CSV-Import'

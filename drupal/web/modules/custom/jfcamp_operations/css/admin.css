@@ -145,3 +145,92 @@
     grid-column: auto;
   }
 }
+
+
+/* Participant table: keep identity and actions compact while giving workshop
+ * titles the horizontal space they need. */
+.jfcamp-participant-overview {
+  width: 100%;
+  table-layout: auto;
+}
+
+.jfcamp-participant-overview th {
+  white-space: nowrap;
+}
+
+.jfcamp-participant-overview th,
+.jfcamp-participant-overview td {
+  vertical-align: middle;
+}
+
+.jfcamp-participant-overview__participant {
+  min-width: 10rem;
+}
+
+.jfcamp-participant-overview__participant-link {
+  display: inline-block;
+  font-weight: 700;
+  line-height: 1.35;
+  text-decoration-thickness: 1px;
+  text-underline-offset: .15em;
+}
+
+.jfcamp-participant-overview__code-link {
+  display: block;
+  margin-top: .2rem;
+  color: var(--jfcamp-muted);
+  font-size: .8125rem;
+  line-height: 1.3;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.jfcamp-participant-overview__code-link:hover,
+.jfcamp-participant-overview__code-link:focus {
+  color: var(--jfcamp-primary);
+  text-decoration: underline;
+}
+
+.jfcamp-participant-overview__region,
+.jfcamp-participant-overview__wish-count {
+  width: 1%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.jfcamp-participant-overview__assignment {
+  min-width: 12rem;
+  line-height: 1.4;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.jfcamp-participant-overview__actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.jfcamp-assignment-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: .375rem;
+  align-items: center;
+}
+
+.jfcamp-assignment-actions .button {
+  margin: 0;
+  padding-inline: .625rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+  .jfcamp-participant-overview__assignment {
+    min-width: 10rem;
+  }
+
+  .jfcamp-assignment-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

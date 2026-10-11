@@ -61,15 +61,13 @@ final class ParticipantOverviewController extends ControllerBase {
     $canEditAssignments = $this->currentUser()->hasPermission('edit jfcamp participant assignments');
 
     $header = [
-      $this->t('Code'),
-      $this->t('Vorname'),
-      $this->t('Nachname'),
+      $this->t('Teilnehmer*in'),
       $this->t('Regionalverband'),
       $this->t('Wünsche'),
     ];
 
     for ($slot = 1; $slot <= $data['assignment_columns']; $slot++) {
-      $header[] = $this->t('Zuteilung @slot', ['@slot' => $slot]);
+      $header[] = $this->t('Slot @slot', ['@slot' => $slot]);
     }
 
     if ($canEditAssignments) {
@@ -78,35 +76,69 @@ final class ParticipantOverviewController extends ControllerBase {
 
     $rows = [];
     foreach ($pageRows as $participant) {
+      $participantName = trim($participant['first_name'] . ' ' . $participant['last_name']);
+      if ($participantName === '') {
+        $participantName = $participant['code'] !== '' ? $participant['code'] : (string) $this->t('Teilnehmer*in #@id', [
+          '@id' => $participant['participant_id'],
+        ]);
+      }
+
+      $participantUrl = Url::fromRoute('entity.node.canonical', [
+        'node' => $participant['participant_id'],
+      ]);
+      $participantLink = Link::fromTextAndUrl($participantName, $participantUrl)->toRenderable();
+      $participantLink['#attributes']['class'][] = 'jfcamp-participant-overview__participant-link';
+
+      $participantCell = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['jfcamp-participant-overview__participant']],
+        'name' => $participantLink,
+      ];
+      if ($participant['code'] !== '') {
+        $codeLink = Link::fromTextAndUrl($participant['code'], $participantUrl)->toRenderable();
+        $codeLink['#attributes']['class'][] = 'jfcamp-participant-overview__code-link';
+        $participantCell['code'] = $codeLink;
+      }
+
       $row = [
-        $participant['code'] !== '' ? $participant['code'] : '—',
-        $participant['first_name'] !== '' ? $participant['first_name'] : '—',
-        $participant['last_name'] !== '' ? $participant['last_name'] : '—',
-        $participant['region'] !== '' ? $participant['region'] : '—',
-        (string) $participant['wish_count'],
+        ['data' => $participantCell],
+        [
+          'data' => $participant['region'] !== '' ? $participant['region'] : '—',
+          'class' => ['jfcamp-participant-overview__region'],
+        ],
+        [
+          'data' => (string) $participant['wish_count'],
+          'class' => ['jfcamp-participant-overview__wish-count'],
+        ],
       ];
 
       for ($slot = 0; $slot < $data['assignment_columns']; $slot++) {
-        $row[] = $participant['assignments'][$slot] ?? '—';
+        $row[] = [
+          'data' => $participant['assignments'][$slot] ?? '—',
+          'class' => ['jfcamp-participant-overview__assignment'],
+        ];
       }
 
       if ($canEditAssignments) {
-        $actionItems = [];
+        $actionItems = [
+          '#type' => 'container',
+          '#attributes' => ['class' => ['jfcamp-assignment-actions']],
+        ];
         for ($slot = 1; $slot <= $data['assignment_columns']; $slot++) {
-          $actionItems[] = Link::fromTextAndUrl(
-            $this->t('Slot @slot ändern', ['@slot' => $slot]),
+          $action = Link::fromTextAndUrl(
+            $this->t('Slot @slot', ['@slot' => $slot]),
             Url::fromRoute('jfcamp_operations.assignment_edit', [
               'participant_id' => $participant['participant_id'],
               'slot' => $slot,
             ]),
           )->toRenderable();
+          $action['#attributes']['class'] = ['button', 'button--small', 'jfcamp-assignment-actions__link'];
+          $action['#attributes']['title'] = (string) $this->t('Zuteilung in Slot @slot ändern', ['@slot' => $slot]);
+          $actionItems['slot_' . $slot] = $action;
         }
         $row[] = [
-          'data' => [
-            '#theme' => 'item_list',
-            '#items' => $actionItems,
-            '#attributes' => ['class' => ['jfcamp-assignment-actions']],
-          ],
+          'data' => $actionItems,
+          'class' => ['jfcamp-participant-overview__actions'],
         ];
       }
 

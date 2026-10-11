@@ -6,3 +6,8 @@ services:
       - '@current_user'
     tags:
       - { name: theme_negotiator, priority: 1000 }
+
+  jfcamp_admin.breadcrumb:
+    class: Drupal\jfcamp_admin\Breadcrumb\JfCampBreadcrumbBuilder
+    tags:
+      - { name: breadcrumb_builder, priority: 1000 }

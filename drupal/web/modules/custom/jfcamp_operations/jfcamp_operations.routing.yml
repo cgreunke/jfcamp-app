@@ -1,5 +1,5 @@
 jfcamp_operations.participants:
-  path: '/admin/config/jfcamp/participants'
+  path: '/admin/jfcamp/participants'
   defaults:
     _controller: '\Drupal\jfcamp_operations\Controller\ParticipantOverviewController::overview'
     _title: 'Teilnehmende & Zuteilungen'
@@ -9,7 +9,7 @@ jfcamp_operations.participants:
     _admin_route: TRUE
 
 jfcamp_operations.participants_export:
-  path: '/admin/config/jfcamp/participants/export'
+  path: '/admin/jfcamp/participants/export'
   defaults:
     _controller: '\Drupal\jfcamp_operations\Controller\ParticipantOverviewController::export'
   requirements:
@@ -40,7 +40,7 @@ jfcamp_operations.assignment_audit:
     _admin_route: TRUE
 
 jfcamp_operations.workshop_capacity:
-  path: '/admin/jfcamp/workshops-capacity'
+  path: '/admin/jfcamp/workshops'
   defaults:
     _controller: '\Drupal\jfcamp_operations\Controller\WorkshopCapacityController::overview'
     _title: 'Workshops & Kapazitäten'

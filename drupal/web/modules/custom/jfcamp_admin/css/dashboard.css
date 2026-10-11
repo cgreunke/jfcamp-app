@@ -1,0 +1,86 @@
+.jfcamp-dashboard__intro {
+  max-width: 78rem;
+  margin-bottom: 1.5rem;
+}
+
+.jfcamp-dashboard__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 2rem;
+}
+
+.jfcamp-dashboard__card {
+  min-width: 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--gin-border-color, #d3d4d9);
+  border-radius: var(--gin-border-m, 8px);
+  background: var(--gin-bg-layer, #fff);
+  box-shadow: var(--gin-shadow-l1, 0 1px 2px rgba(0, 0, 0, .08));
+}
+
+.jfcamp-dashboard__card-label {
+  margin-bottom: .35rem;
+  color: var(--gin-color-text-light, #545560);
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+.jfcamp-dashboard__card-value {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.jfcamp-dashboard__card-note {
+  margin-top: .4rem;
+  color: var(--gin-color-text-light, #545560);
+  font-size: .85rem;
+}
+
+.jfcamp-dashboard__card--warning {
+  border-color: var(--gin-color-warning, #d8a400);
+}
+
+.jfcamp-dashboard__card--danger {
+  border-color: var(--gin-color-danger, #dc2323);
+}
+
+.jfcamp-dashboard__section {
+  margin: 2rem 0;
+}
+
+.jfcamp-dashboard__actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: .75rem;
+  max-width: 78rem;
+}
+
+.jfcamp-dashboard__action {
+  display: block;
+  padding: 1rem;
+  border: 1px solid var(--gin-border-color, #d3d4d9);
+  border-radius: var(--gin-border-m, 8px);
+  background: var(--gin-bg-layer, #fff);
+  text-decoration: none;
+}
+
+.jfcamp-dashboard__action:hover,
+.jfcamp-dashboard__action:focus {
+  border-color: var(--gin-color-primary, #003cc5);
+  text-decoration: none;
+}
+
+.jfcamp-dashboard__action-title {
+  display: block;
+  margin-bottom: .25rem;
+  font-weight: 700;
+}
+
+.jfcamp-dashboard__action-description {
+  display: block;
+  color: var(--gin-color-text-light, #545560);
+  font-size: .875rem;
+}

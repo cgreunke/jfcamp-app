@@ -1,0 +1,6 @@
+jfcamp_team.overview:
+  title: 'Teamverwaltung'
+  description: 'Teamer*innen und Regionalverbände verwalten'
+  route_name: jfcamp_team.overview
+  parent: jfcamp_admin.overview
+  weight: 30

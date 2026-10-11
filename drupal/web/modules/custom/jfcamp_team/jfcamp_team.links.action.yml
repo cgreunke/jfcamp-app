@@ -1,0 +1,5 @@
+jfcamp_team.add:
+  route_name: jfcamp_team.add
+  title: 'Teamer*in hinzufügen'
+  appears_on:
+    - jfcamp_team.overview

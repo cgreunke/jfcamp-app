@@ -1,0 +1,20 @@
+<?php
+
+/**
+ * @file
+ * Install hooks for JF Camp team management.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function jfcamp_team_install(): void {
+  $role_storage = \Drupal::entityTypeManager()->getStorage('user_role');
+
+  $team = $role_storage->load('team');
+  if ($team) {
+    $team->set('label', 'Camp-Leitung');
+    $team->grantPermission('manage jfcamp teamers');
+    $team->save();
+  }
+}

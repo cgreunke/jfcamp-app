@@ -1,0 +1,4 @@
+manage jfcamp teamers:
+  title: 'Teamer*innen verwalten'
+  description: 'Teamer*innen-Konten anlegen, bearbeiten, sperren und Regionalverbände zuweisen.'
+  restrict access: true

@@ -1,0 +1,30 @@
+jfcamp_team.overview:
+  path: '/admin/jfcamp/team'
+  defaults:
+    _controller: '\Drupal\jfcamp_team\Controller\TeamManagementController::overview'
+    _title: 'Teamverwaltung'
+  requirements:
+    _permission: 'manage jfcamp teamers'
+  options:
+    _admin_route: TRUE
+
+jfcamp_team.add:
+  path: '/admin/jfcamp/team/add'
+  defaults:
+    _form: '\Drupal\jfcamp_team\Form\TeamerForm'
+    _title: 'Teamer*in hinzufügen'
+  requirements:
+    _permission: 'manage jfcamp teamers'
+  options:
+    _admin_route: TRUE
+
+jfcamp_team.edit:
+  path: '/admin/jfcamp/team/{user_id}/edit'
+  defaults:
+    _form: '\Drupal\jfcamp_team\Form\TeamerForm'
+    _title: 'Teamer*in bearbeiten'
+  requirements:
+    _permission: 'manage jfcamp teamers'
+    user_id: '^\d+$'
+  options:
+    _admin_route: TRUE

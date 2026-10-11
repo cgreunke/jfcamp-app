@@ -1,0 +1,5 @@
+services:
+  jfcamp_team.breadcrumb:
+    class: Drupal\jfcamp_team\Breadcrumb\JfCampTeamBreadcrumbBuilder
+    tags:
+      - { name: breadcrumb_builder, priority: 110 }

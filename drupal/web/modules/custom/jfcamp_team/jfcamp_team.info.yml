@@ -1,0 +1,10 @@
+name: 'JF Camp Teamverwaltung'
+type: module
+description: 'Verwaltet Teamer*innen und ihre Regionalverbände im JF-Camp-Backend.'
+package: 'JF Camp'
+core_version_requirement: ^10 || ^11
+dependencies:
+  - drupal:user
+  - drupal:node
+  - jfcamp_admin:jfcamp_admin
+  - jfcamp_operations:jfcamp_operations

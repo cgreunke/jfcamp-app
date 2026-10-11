@@ -115,9 +115,9 @@ function _jfcamp_operations_ensure_teamer_access_model(): void {
   $teamer->grantPermission('view the administration theme');
   $teamer->save();
 
-  // The existing "Team" role currently represents the camp leadership in the
-  // application. Keep its existing permissions untouched, but make its
-  // participant overview explicitly unrestricted.
+  // The existing "Team" role represents the camp leadership. Grant the
+  // dedicated JF Camp capabilities and remove historic generic content
+  // permissions that would bypass the guarded operations workflows.
   $team = Role::load('team');
   if ($team) {
     $team->grantPermission('view jfcamp participant overview');
@@ -125,6 +125,7 @@ function _jfcamp_operations_ensure_teamer_access_model(): void {
     $team->grantPermission('access jfcamp administration');
     $team->grantPermission('edit jfcamp participant assignments');
     $team->grantPermission('view the administration theme');
+    _jfcamp_operations_harden_team_role($team);
     $team->save();
   }
 }
@@ -255,5 +256,50 @@ function jfcamp_operations_update_10007(): void {
   if ($team) {
     $team->grantPermission('view jfcamp workshop capacities');
     $team->save();
+  }
+}
+
+/**
+ * Removes legacy generic content-management permissions from Camp-Leitung.
+ */
+function jfcamp_operations_update_10008(): void {
+  $team = Role::load('team');
+  if ($team) {
+    _jfcamp_operations_harden_team_role($team);
+    $team->save();
+  }
+}
+
+/**
+ * Keeps the Team role inside the dedicated JF Camp operations surface.
+ */
+function _jfcamp_operations_harden_team_role(Role $team): void {
+  $legacy_permissions = [
+    'access content overview',
+    'access site reports',
+    'create teilnehmer content',
+    'delete any teilnehmer content',
+    'delete own teilnehmer content',
+    'edit any teilnehmer content',
+    'edit own teilnehmer content',
+    'view teilnehmer revisions',
+    'create workshop content',
+    'delete any workshop content',
+    'delete own workshop content',
+    'edit any workshop content',
+    'edit own workshop content',
+    'view workshop revisions',
+    'create wunsch content',
+    'delete any wunsch content',
+    'delete own wunsch content',
+    'edit any wunsch content',
+    'edit own wunsch content',
+    'view wunsch revisions',
+  ];
+
+  foreach ($legacy_permissions as $permission) {
+    if ($team->hasPermission($permission)) {
+      $team->revokePermission($permission);
+    }
   }
 }

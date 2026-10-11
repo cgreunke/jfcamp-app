@@ -1,0 +1,88 @@
+.jfcamp-team-callout {
+  margin-block: 0 1.25rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--gin-border-color, #d8d9e0);
+  border-radius: var(--gin-border-m, 6px);
+  background: var(--gin-bg-layer2, #fff);
+  line-height: 1.5;
+}
+
+.jfcamp-team-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-block: 0 1.5rem;
+}
+
+.jfcamp-team-summary > div {
+  padding: 1rem;
+  border: 1px solid var(--gin-border-color, #d8d9e0);
+  border-radius: var(--gin-border-m, 6px);
+  background: var(--gin-bg-layer, #fff);
+}
+
+.jfcamp-team-summary strong,
+.jfcamp-team-summary span {
+  display: block;
+}
+
+.jfcamp-team-summary strong {
+  margin-bottom: .15rem;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.jfcamp-team-summary span {
+  color: var(--gin-color-text-light, #545560);
+}
+
+.jfcamp-team-status,
+.jfcamp-team-region {
+  display: inline-block;
+  padding: .2rem .5rem;
+  border: 1px solid var(--gin-border-color, #d8d9e0);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.jfcamp-team-status--active {
+  font-weight: 700;
+}
+
+.jfcamp-team-status--blocked {
+  font-weight: 700;
+  opacity: .72;
+}
+
+.jfcamp-team-region {
+  margin: .1rem .2rem .1rem 0;
+  font-size: .875rem;
+}
+
+.jfcamp-team-muted {
+  color: var(--gin-color-text-light, #545560);
+}
+
+.jfcamp-team__user-link {
+  font-weight: 700;
+}
+
+.jfcamp-team-table th:nth-child(2),
+.jfcamp-team-table td:nth-child(2),
+.jfcamp-team-table th:last-child,
+.jfcamp-team-table td:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.jfcamp-team-regions .form-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: .25rem .75rem;
+}
+
+@media (max-width: 48rem) {
+  .jfcamp-team-summary {
+    grid-template-columns: 1fr;
+  }
+}

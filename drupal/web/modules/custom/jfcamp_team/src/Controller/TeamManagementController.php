@@ -21,6 +21,9 @@ final class TeamManagementController extends ControllerBase {
       ->execute();
 
     $rows = [];
+    $active = 0;
+    $blocked = 0;
+
     foreach ($storage->loadMultiple($ids) as $account) {
       $roles = $account->getRoles(TRUE);
       $manageable = $roles === ['teamer'];
@@ -34,6 +37,13 @@ final class TeamManagementController extends ControllerBase {
         }
       }
       sort($regions, SORT_NATURAL | SORT_FLAG_CASE);
+
+      if ($account->isActive()) {
+        $active++;
+      }
+      else {
+        $blocked++;
+      }
 
       if ($manageable) {
         $edit_url = Url::fromRoute('jfcamp_team.edit', ['user_id' => $account->id()]);
@@ -52,25 +62,49 @@ final class TeamManagementController extends ControllerBase {
       }
       else {
         $name = ['#markup' => '<strong>' . htmlspecialchars($account->getAccountName(), ENT_QUOTES, 'UTF-8') . '</strong>'];
-        $operations = ['#markup' => $this->t('Zusätzliche Rolle – nur Administrator')];
+        $operations = ['#markup' => $this->t('Nur Administrator')];
       }
+
+      $status = $account->isActive()
+        ? '<span class="jfcamp-team-status jfcamp-team-status--active">' . $this->t('Aktiv') . '</span>'
+        : '<span class="jfcamp-team-status jfcamp-team-status--blocked">' . $this->t('Gesperrt') . '</span>';
+
+      $regionMarkup = $regions
+        ? implode(' ', array_map(
+          static fn(string $region): string => '<span class="jfcamp-team-region">' . htmlspecialchars($region, ENT_QUOTES, 'UTF-8') . '</span>',
+          $regions,
+        ))
+        : '<span class="jfcamp-team-muted">' . $this->t('Keine') . '</span>';
 
       $rows[] = [
         'name' => ['data' => $name],
-        'status' => $account->isActive() ? $this->t('Aktiv') : $this->t('Gesperrt'),
-        'regions' => $regions ? implode(', ', $regions) : $this->t('Keine'),
+        'status' => ['data' => ['#markup' => $status]],
+        'regions' => ['data' => ['#markup' => $regionMarkup]],
         'operations' => ['data' => $operations],
       ];
     }
 
     return [
+      '#attached' => [
+        'library' => ['jfcamp_team/admin'],
+      ],
       'intro' => [
-        '#markup' => '<p>' . $this->t('Hier verwaltet die Camp-Leitung ausschließlich Teamer*innen-Konten. Rollen mit zusätzlichen Rechten können nur von Administrator*innen bearbeitet werden.') . '</p>',
+        '#markup' => '<div class="jfcamp-team-callout">'
+          . $this->t('Die Camp-Leitung verwaltet hier ausschließlich Teamer*innen-Konten. Regionalverbände steuern serverseitig, welche Teilnehmenden sichtbar sind. Konten mit zusätzlichen Rollen bleiben der Administration vorbehalten.')
+          . '</div>',
+      ],
+      'summary' => [
+        '#markup' => '<div class="jfcamp-team-summary">'
+          . '<div><strong>' . count($ids) . '</strong><span>' . $this->t('Teamer*innen') . '</span></div>'
+          . '<div><strong>' . $active . '</strong><span>' . $this->t('Aktiv') . '</span></div>'
+          . '<div><strong>' . $blocked . '</strong><span>' . $this->t('Gesperrt') . '</span></div>'
+          . '</div>',
       ],
       'table' => [
         '#type' => 'table',
+        '#attributes' => ['class' => ['jfcamp-team-table']],
         '#header' => [
-          $this->t('Benutzername'),
+          $this->t('Teamer*in'),
           $this->t('Status'),
           $this->t('Regionalverbände'),
           $this->t('Aktionen'),

@@ -3,11 +3,12 @@
 namespace Drupal\jfcamp_operations\Service;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\user\UserInterface;
 
 /**
- * Resolves the Regionalverband scope for the current backend user.
+ * Resolves the Regionalverband scope for backend users.
  */
 final class ParticipantAccessService {
 
@@ -22,24 +23,36 @@ final class ParticipantAccessService {
   /**
    * Returns NULL for unrestricted access, otherwise the allowed region codes.
    *
-   * An empty array intentionally means "no participant access within the
-   * overview". This fail-closed behaviour prevents a Teamer account without a
-   * configured Regionalverband from accidentally seeing all participants.
-   *
    * @return string[]|null
+   *   NULL means unrestricted access. An empty array intentionally means no
+   *   regional participant access.
    */
   public function getAllowedRegions(): ?array {
-    if ($this->currentUser->hasPermission(self::PERMISSION_VIEW_ALL)) {
+    return $this->getAllowedRegionsFor($this->currentUser);
+  }
+
+  /**
+   * Resolves the Regionalverband scope for an arbitrary account.
+   *
+   * This variant is used by Drupal node-access checks, where the account being
+   * evaluated is passed explicitly and must not be inferred from the request.
+   *
+   * @return string[]|null
+   *   NULL means unrestricted access. An empty array intentionally means no
+   *   regional participant access.
+   */
+  public function getAllowedRegionsFor(AccountInterface $account): ?array {
+    if ($account->hasPermission(self::PERMISSION_VIEW_ALL)) {
       return NULL;
     }
 
-    if (!$this->currentUser->isAuthenticated()) {
+    if (!$account->isAuthenticated()) {
       return [];
     }
 
     $user = $this->entityTypeManager
       ->getStorage('user')
-      ->load((int) $this->currentUser->id());
+      ->load((int) $account->id());
 
     if (!$user instanceof UserInterface || !$user->hasField(self::FIELD_REGIONS)) {
       return [];

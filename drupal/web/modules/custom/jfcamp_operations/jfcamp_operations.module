@@ -1,0 +1,53 @@
+<?php
+
+/**
+ * @file
+ * Runtime hooks for JF Camp operations.
+ */
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\jfcamp_operations\Service\ParticipantAccessService;
+use Drupal\node\NodeInterface;
+
+/**
+ * Implements hook_node_access().
+ *
+ * Restricted JF Camp users may only view participant nodes from one of their
+ * assigned Regionalverbände. The regular Drupal node-access system remains
+ * responsible for deciding whether an in-scope participant is viewable at all
+ * (for example based on publication status).
+ */
+function jfcamp_operations_node_access(NodeInterface $node, $op, AccountInterface $account): AccessResult {
+  if ($node->bundle() !== 'teilnehmer' || $op !== 'view') {
+    return AccessResult::neutral();
+  }
+
+  // Camp leadership and other explicitly unrestricted accounts keep the normal
+  // Drupal node-access behaviour.
+  if ($account->hasPermission(ParticipantAccessService::PERMISSION_VIEW_ALL)) {
+    return AccessResult::neutral()
+      ->cachePerPermissions();
+  }
+
+  // Only accounts using the regional JF Camp participant overview are subject
+  // to this additional restriction. Other account types keep their existing
+  // node-access behaviour.
+  if (!$account->hasPermission('view jfcamp participant overview')) {
+    return AccessResult::neutral()
+      ->cachePerPermissions();
+  }
+
+  /** @var \Drupal\jfcamp_operations\Service\ParticipantAccessService $access */
+  $access = \Drupal::service('jfcamp_operations.participant_access');
+  $allowedRegions = $access->getAllowedRegionsFor($account) ?? [];
+  $participantRegion = strtoupper(trim((string) $node->get('field_regionalverband')->value));
+
+  $result = ($participantRegion !== '' && in_array($participantRegion, $allowedRegions, TRUE))
+    ? AccessResult::neutral()
+    : AccessResult::forbidden('Teilnehmer liegt außerhalb der zugewiesenen Regionalverbände.');
+
+  return $result
+    ->addCacheableDependency($node)
+    ->addCacheContexts(['user', 'user.permissions']);
+}

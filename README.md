@@ -316,7 +316,7 @@ Secrets gehören ausschließlich in `.env.production` und nicht ins Repository.
 
 ## Release
 
-Aktueller Release-Zweig: **v1.5.0**
+Aktueller Release-Zweig: **v1.5.1**
 
 Details siehe [CHANGELOG.md](CHANGELOG.md).
 

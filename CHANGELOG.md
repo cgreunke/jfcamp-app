@@ -6,6 +6,26 @@ Versionierung folgt **SemVer** (MAJOR.MINOR.PATCH).
 
 ---
 
+## [1.5.1] - 2026-10-12
+
+### Fixed
+
+- Beim Anlegen von Teamer*innen über die Teamverwaltung wird das eingegebene Startpasswort jetzt korrekt gespeichert.
+- Der Drupal-Healthcheck verwendet den konfigurierten öffentlichen Host und funktioniert damit auch bei aktivierter Trusted-Host-Prüfung.
+- Der interne Docker-Service-Name `drupal` wird als zulässiger Trusted Host berücksichtigt, sodass der Matching-Service Drupal über das interne Compose-Netz erreichen kann.
+
+### Verification
+
+- Produktions-Bootstrap auf einem externen Ubuntu-24.04-ARM64-Testserver erfolgreich ausgeführt.
+- Drupal und PostgreSQL im Produktions-Stack erfolgreich als `healthy` geprüft.
+- Matching-Service im Produktions-Stack erfolgreich als `healthy` geprüft.
+- Drupal-Healthcheck mit ausschließlich produktionsgeeigneter Trusted-Host-Konfiguration erfolgreich geprüft.
+- Interner Zugriff des Matching-Service auf Drupal über `http://drupal/jsonapi` erfolgreich geprüft.
+- Matching Dry Run mit importierten Test-Teilnehmenden, Workshops und Wünschen erfolgreich ausgeführt.
+- Wiederholter Produktions-Bootstrap auf der bereits installierten Instanz erfolgreich ausgeführt.
+
+---
+
 ## [1.5.0] - 2026-10-12
 
 ### Added

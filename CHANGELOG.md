@@ -6,6 +6,65 @@ Versionierung folgt **SemVer** (MAJOR.MINOR.PATCH).
 
 ---
 
+## [1.5.0] - 2026-10-12
+
+### Added
+
+- Expliziter Produktions-Bootstrap über `scripts/bootstrap-production.sh`.
+- Reproduzierbarer Drupal-Fresh-Install direkt aus der versionierten `config/sync`-Konfiguration.
+- Persistente Produktions-Volumes nur für PostgreSQL-Daten, öffentliche/private Drupal-Dateien und Caddy-Daten.
+- Eigener Queue-Worker auf Basis desselben unveränderlichen Drupal-Images.
+- Produktions-Build des Vue-Frontends als statisches Nginx-Image.
+- Caddy als einziger öffentlich erreichbarer Reverse Proxy für HTTPS.
+
+### Changed
+
+- Drupal-, Matching- und Vue-Anwendungscode wird für Produktion in Images gebaut statt aus dem Host-Dateisystem gemountet.
+- Composer-Abhängigkeiten werden beim Image-Build aus dem Lockfile installiert und nicht mehr beim Containerstart.
+- Der Drupal-Containerstart beschränkt sich auf Runtime-Vorbereitung und Apache-Start.
+- Produktionsinstallation, Datenbankupdates und API-Benutzer-Provisioning wurden aus dem normalen Containerstart in den expliziten Bootstrap verschoben.
+- Aktive Drupal-Konfiguration und `config/sync` wurden für reproduzierbare Fresh Installs abgeglichen.
+- Rollen und Berechtigungen werden bei Fresh Installs aus Drupal-Config geladen statt durch Install-Hooks nachträglich verändert.
+- Vue/Nginx-Konfiguration wurde in den Frontend-Build verschoben.
+- Docker Compose trennt DEV-spezifische Dienste und Host-Ports von der Produktionsarchitektur.
+
+### Removed
+
+- Persistentes Volume für das komplette Drupal-Projektverzeichnis.
+- Produktions-Bind-Mounts für Drupal-Code, Config, Vendor und Vue-Build.
+- Automatische Composer-, Installations-, Config-Import- und Update-Logik beim Drupal-Containerstart.
+- Fallback von `site:install --existing-config` auf eine Minimalinstallation.
+- Veraltete Matching-Konfigurationsfelder für historische Strategien, Seeds, Slicing und Gewichtungsparameter.
+- Alte produktive Vue-Nginx-Konfiguration unter `nginx/vue-site.conf`.
+
+### Safety
+
+- Der Bootstrap bricht bei fehlenden oder unveränderten Platzhalter-Secrets ab.
+- Drupal wird nur dann installiert, wenn der Bootstrap-Status eindeutig eine nicht installierte Site bestätigt.
+- Fehler beim Ermitteln des Drupal- oder Config-Status führen zum Abbruch.
+- Config-Drift zwischen Datenbank und `config/sync` wird nicht stillschweigend akzeptiert.
+- Der Matching-API-Benutzer erhält die versionierte `api_writer`-Rolle; Rollenrechte werden nicht beim Produktionsstart erweitert.
+
+### Verification
+
+- Vollständiger Clean-Room-Fresh-Install mit leerer PostgreSQL-Datenbank erfolgreich getestet.
+- `site:install --existing-config` erfolgreich.
+- Keine offenen Drupal-Datenbankupdates nach Installation.
+- Kein Unterschied zwischen aktiver Drupal-Konfiguration und `config/sync`.
+- Wiederholter Bootstrap auf bereits installierter Instanz erfolgreich getestet.
+- Drupal, PostgreSQL und Matching im finalen Stack healthy; Queue-Worker und Vue laufen.
+- `/jsonapi` und Vue-Startseite erfolgreich über Caddy geprüft.
+- Nur Caddy veröffentlicht Host-Ports 80/443.
+- Test-Container, Netzwerke und Volumes nach dem Clean-Room-Test vollständig entfernt.
+
+### Notes
+
+- Für diesen Release existiert derzeit keine laufende Produktionsinstanz, die migriert werden muss.
+- Ziel für die nächste Camp-Produktion ist ein neuer Server: Repository klonen, `.env.production` erstellen und `scripts/bootstrap-production.sh` ausführen.
+- Historische lokale Camp-Daten sind nicht Bestandteil des Produktions-Fresh-Installs.
+
+---
+
 ## [1.4.0] - 2026-10-12
 
 ### Added

@@ -226,10 +226,68 @@ In DEV läuft das Frontend über Vite. In PROD wird ein statisches Build über N
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
 
-### PROD starten
+### Produktion: Fresh Install
+
+Die Produktionsumgebung ist für einen neuen Server als reproduzierbarer Fresh Install ausgelegt.
+
+Voraussetzungen:
+
+- Linux-Server mit Docker Engine und Docker Compose Plugin
+- DNS für die gewünschte Domain zeigt auf den Server
+- Ports 80 und 443 sind erreichbar
+- Repository ist auf dem Server ausgecheckt
+
+Produktionskonfiguration anlegen:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+cp .env.production.example .env.production
+```
+
+Anschließend `.env.production` bearbeiten und insbesondere Domain, Passwörter und Hash-Salt durch produktive Werte ersetzen.
+
+Der initiale Bootstrap erfolgt explizit:
+
+```bash
+sudo ./scripts/bootstrap-production.sh
+```
+
+Der Bootstrap:
+
+- validiert die Produktionskonfiguration
+- baut die unveränderlichen Anwendungs-Images
+- startet PostgreSQL
+- installiert Drupal strikt mit `site:install --existing-config`
+- führt Datenbankupdates aus
+- stellt den Matching-API-Benutzer sicher
+- prüft den Drupal-Config-Status
+- startet Drupal, Queue-Worker, Matching, Vue und Caddy
+
+Es gibt keinen Fallback auf eine Minimalinstallation.
+
+Nach erfolgreichem Bootstrap ist nur Caddy über die Host-Ports 80/443 öffentlich erreichbar. Drupal, PostgreSQL, Matching und Vue bleiben innerhalb des Compose-Netzes.
+
+### Produktion normal starten
+
+Ein normaler Containerstart führt keine Installation, Composer-Aktionen oder Config-Änderungen aus:
+
+```bash
+docker compose \
+  --env-file .env.production \
+  -f docker-compose.yml \
+  -f docker-compose.prod.yml \
+  -f docker-compose.domain.yml \
+  up -d
+```
+
+Status prüfen:
+
+```bash
+docker compose \
+  --env-file .env.production \
+  -f docker-compose.yml \
+  -f docker-compose.prod.yml \
+  -f docker-compose.domain.yml \
+  ps
 ```
 
 ### Drush in DEV
@@ -239,26 +297,26 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml \
   exec drupal vendor/bin/drush <command>
 ```
 
-### Drupal-Updates
-
-Nach einem Deployment:
-
-```bash
-vendor/bin/drush updb -y
-vendor/bin/drush cr
-```
-
-Die Befehle müssen im Drupal-Container bzw. im dafür vorgesehenen Produktionskontext ausgeführt werden.
-
 ## Config-Management
 
-- DEV: `drush cex -y`
-- PROD: `drush cim -y`
-- Secrets gehören nicht ins Repository.
+Die versionierte Drupal-Konfiguration unter `drupal/config/sync` ist die Quelle für Fresh Installs.
+
+In DEV werden beabsichtigte Config-Änderungen exportiert und anschließend im Repository geprüft:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml \
+  exec drupal vendor/bin/drush cex -y
+```
+
+Ein Fresh Install in Produktion wird direkt aus dieser Sync-Konfiguration aufgebaut.
+
+Beim normalen Containerstart gibt es keinen automatischen Config-Import. Änderungen an einer später bereits bestehenden Produktionsinstallation müssen als bewusster Deployment-Schritt geprüft und ausgeführt werden.
+
+Secrets gehören ausschließlich in `.env.production` und nicht ins Repository.
 
 ## Release
 
-Aktueller Release-Zweig: **v1.4.0**
+Aktueller Release-Zweig: **v1.5.0**
 
 Details siehe [CHANGELOG.md](CHANGELOG.md).
 

@@ -39,31 +39,65 @@ final class WishEditForm extends FormBase {
     $last = $participant->hasField('field_name') ? trim((string) $participant->get('field_name')->value) : '';
     $name = trim($first . ' ' . $last);
     $code = $participant->hasField('field_code') ? trim((string) $participant->get('field_code')->value) : '';
+    $displayName = $name !== '' ? $name : ($code !== '' ? $code : '#' . $participant_id);
+
+    $form['#attributes']['class'][] = 'jfcamp-operation-form';
+    $form['#attributes']['class'][] = 'jfcamp-operation-form--wishes';
 
     $form['participant_id'] = [
       '#type' => 'hidden',
       '#value' => $participant_id,
     ];
 
-    $form['intro'] = [
+    $form['header'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['messages', 'messages--warning']],
-      'content' => [
-        '#markup' => '<strong>' . $this->t('Wünsche von @name bearbeiten', ['@name' => $name !== '' ? $name : $code]) . '</strong><br>'
-          . $this->t('Wunschänderungen verändern bestehende Zuteilungen nicht automatisch. Sie wirken erst bei einem neuen Matching oder wenn Zuteilungen anschließend manuell angepasst werden.'),
+      '#attributes' => ['class' => ['jfcamp-operation-form__header']],
+      'eyebrow' => [
+        '#markup' => '<div class="jfcamp-operation-form__eyebrow">' . $this->t('Camp-Leitung · Wünsche') . '</div>',
+      ],
+      'title' => [
+        '#markup' => '<h2 class="jfcamp-operation-form__title">' . $this->t('Wünsche bearbeiten') . '</h2>',
+      ],
+      'meta' => [
+        '#markup' => '<div class="jfcamp-operation-form__meta"><strong>' . $this->t('@name', ['@name' => $displayName]) . '</strong>'
+          . ($code !== '' ? ' · ' . $this->t('Code @code', ['@code' => $code]) : '') . '</div>',
       ],
     ];
 
+    $form['notice'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['jfcamp-operation-form__notice', 'is-warning']],
+      'title' => [
+        '#markup' => '<strong>' . $this->t('Bestehende Zuteilungen bleiben unverändert') . '</strong>',
+      ],
+      'content' => [
+        '#markup' => '<div>' . $this->t('Die neue Wunschreihenfolge wirkt erst bei einem neuen Matching oder wenn Zuteilungen anschließend manuell angepasst werden.') . '</div>',
+      ],
+    ];
+
+    $form['wishes'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['jfcamp-operation-form__panel', 'jfcamp-operation-form__fields']],
+    ];
+    $form['wishes']['intro'] = [
+      '#markup' => '<div class="jfcamp-operation-form__section-title">' . $this->t('Prioritäten 1–5') . '</div>'
+        . '<div class="jfcamp-operation-form__section-help">' . $this->t('Die Reihenfolge ist verbindlich: Wunsch 1 hat die höchste Priorität. Wünsche bitte ohne Lücken eintragen.') . '</div>',
+    ];
+
     for ($position = 1; $position <= WishManagementService::MAX_WISHES; $position++) {
-      $form['wish_' . $position] = [
+      $form['wishes']['wish_' . $position] = [
         '#type' => 'select',
         '#title' => $this->t('Wunsch @position', ['@position' => $position]),
         '#options' => $options,
         '#default_value' => $state['wish_ids'][$position - 1] ?? '',
+        '#wrapper_attributes' => ['class' => ['jfcamp-operation-form__field']],
       ];
     }
 
-    $form['actions'] = ['#type' => 'actions'];
+    $form['actions'] = [
+      '#type' => 'actions',
+      '#attributes' => ['class' => ['jfcamp-operation-form__actions']],
+    ];
     $form['actions']['submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Wünsche speichern'),
@@ -71,7 +105,7 @@ final class WishEditForm extends FormBase {
     ];
     $form['actions']['cancel'] = [
       '#type' => 'link',
-      '#title' => $this->t('Abbrechen'),
+      '#title' => $this->t('Zurück zum Teilnehmer'),
       '#url' => Url::fromRoute('jfcamp_operations.participant_detail', ['participant_id' => $participant_id]),
       '#attributes' => ['class' => ['button']],
     ];

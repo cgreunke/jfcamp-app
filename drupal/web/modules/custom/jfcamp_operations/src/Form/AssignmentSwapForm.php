@@ -38,74 +38,92 @@ final class AssignmentSwapForm extends FormBase {
       (int) $target_workshop_id,
     );
 
+    $form['#attributes']['class'][] = 'jfcamp-operation-form';
+    $form['#attributes']['class'][] = 'jfcamp-operation-form--swap';
+
     $form['participant_id'] = ['#type' => 'hidden', '#value' => $context['participant_id']];
     $form['slot'] = ['#type' => 'hidden', '#value' => $context['slot']];
     $form['target_workshop_id'] = ['#type' => 'hidden', '#value' => $context['target_workshop_id']];
 
-    $form['intro'] = [
+    $form['header'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['messages', 'messages--warning']],
+      '#attributes' => ['class' => ['jfcamp-operation-form__header']],
+      'eyebrow' => ['#markup' => '<div class="jfcamp-operation-form__eyebrow">' . $this->t('Camp-Leitung · Zuteilungstausch') . '</div>'],
+      'title' => ['#markup' => '<h2 class="jfcamp-operation-form__title">' . $this->t('Tausch für Slot @slot organisieren', ['@slot' => $context['slot']]) . '</h2>'],
+      'meta' => ['#markup' => '<div class="jfcamp-operation-form__meta"><strong>' . $this->t('@name', ['@name' => $context['participant_name']]) . '</strong></div>'],
+    ];
+
+    $form['notice'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['jfcamp-operation-form__notice', 'is-warning']],
+      'title' => ['#markup' => '<strong>' . $this->t('Zielworkshop ist voll – keine Überbuchung') . '</strong>'],
       'content' => [
-        '#markup' => $this->t(
-          '„@target“ ist in Slot @slot voll (@occupied/@capacity). Es wird nichts überbucht. Stattdessen können zwei Teilnehmende ihre Workshops in diesem Slot direkt tauschen.',
+        '#markup' => '<div>' . $this->t(
+          '„@target“ ist in Slot @slot mit @occupied/@capacity Plätzen belegt. Deshalb wird nur ein direkter 1:1-Tausch angeboten.',
           [
             '@target' => $context['target_workshop_label'],
             '@slot' => $context['slot'],
             '@occupied' => $context['target_occupancy'],
             '@capacity' => $context['target_capacity'],
           ],
-        ),
+        ) . '</div>',
       ],
     ];
 
-    $form['swap'] = [
-      '#type' => 'table',
-      '#header' => [$this->t('Person'), $this->t('Bisher'), $this->t('Nach dem Tausch')],
-      '#rows' => [
-        [
-          $context['participant_name'],
-          $context['old_workshop_label'],
-          $context['target_workshop_label'],
-        ],
-        [
-          $this->t('Ausgewählte Tauschperson'),
-          $context['target_workshop_label'],
-          $context['old_workshop_label'],
-        ],
+    $form['preview'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['jfcamp-operation-form__panel']],
+      'title' => ['#markup' => '<div class="jfcamp-operation-form__section-title">' . $this->t('Geplanter Tausch') . '</div>'],
+      'grid' => [
+        '#markup' => '<div class="jfcamp-swap-preview">'
+          . '<div class="jfcamp-swap-preview__row"><div><strong>' . $this->t('@name', ['@name' => $context['participant_name']]) . '</strong></div><div>'
+          . $this->t('@old → @target', ['@old' => $context['old_workshop_label'], '@target' => $context['target_workshop_label']]) . '</div></div>'
+          . '<div class="jfcamp-swap-preview__row"><div><strong>' . $this->t('Tauschperson') . '</strong></div><div>'
+          . $this->t('@target → @old', ['@target' => $context['target_workshop_label'], '@old' => $context['old_workshop_label']]) . '</div></div>'
+          . '</div>',
       ],
     ];
 
     if (!$context['candidates']) {
       $form['no_candidates'] = [
         '#type' => 'container',
-        '#attributes' => ['class' => ['messages', 'messages--error']],
+        '#attributes' => ['class' => ['jfcamp-operation-form__notice', 'is-error']],
+        'title' => ['#markup' => '<strong>' . $this->t('Kein direkter Tausch möglich') . '</strong>'],
         'content' => [
-          '#markup' => $this->t(
-            'Für diesen direkten Tausch gibt es aktuell keine kompatible Person. Personen, die „@old“ bereits in einem anderen Slot haben, werden aus Sicherheitsgründen nicht angeboten.',
+          '#markup' => '<div>' . $this->t(
+            'Aktuell gibt es keine kompatible Tauschperson. Personen, die „@old“ bereits in einem anderen Slot haben, werden aus Sicherheitsgründen nicht angeboten.',
             ['@old' => $context['old_workshop_label']],
-          ),
+          ) . '</div>',
         ],
       ];
     }
     else {
-      $form['partner_id'] = [
+      $form['partner'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['jfcamp-operation-form__panel']],
+      ];
+      $form['partner']['partner_id'] = [
         '#type' => 'select',
-        '#title' => $this->t('Tauschperson'),
+        '#title' => $this->t('Tauschperson auswählen'),
         '#options' => $context['candidates'],
         '#empty_option' => $this->t('- Person auswählen -'),
         '#required' => TRUE,
         '#description' => $this->t(
-          'Die ausgewählte Person wechselt in Slot @slot von „@target“ nach „@old“. Beide Änderungen werden gemeinsam gespeichert oder gemeinsam verworfen.',
+          'Die ausgewählte Person wechselt in Slot @slot von „@target“ nach „@old“. Beide Änderungen werden in einer Transaktion gespeichert oder vollständig verworfen.',
           [
             '@slot' => $context['slot'],
             '@target' => $context['target_workshop_label'],
             '@old' => $context['old_workshop_label'],
           ],
         ),
+        '#wrapper_attributes' => ['class' => ['jfcamp-operation-form__field']],
       ];
     }
 
-    $form['actions'] = ['#type' => 'actions'];
+    $form['actions'] = [
+      '#type' => 'actions',
+      '#attributes' => ['class' => ['jfcamp-operation-form__actions']],
+    ];
     if ($context['candidates']) {
       $form['actions']['submit'] = [
         '#type' => 'submit',
@@ -115,7 +133,7 @@ final class AssignmentSwapForm extends FormBase {
     }
     $form['actions']['back'] = [
       '#type' => 'link',
-      '#title' => $this->t('Zurück zur Zuteilung'),
+      '#title' => $this->t('Zurück zur Workshop-Auswahl'),
       '#url' => Url::fromRoute('jfcamp_operations.assignment_edit', [
         'participant_id' => $context['participant_id'],
         'slot' => $context['slot'],

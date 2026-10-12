@@ -486,3 +486,143 @@
     line-height: 1.4;
   }
 }
+
+/* Unified Camp-Leitung operation forms: wishes, assignments and swaps. */
+.jfcamp-operation-form {
+  max-width: 58rem;
+}
+
+.jfcamp-operation-form__header,
+.jfcamp-operation-form__panel,
+.jfcamp-operation-form__notice {
+  margin-block-end: 1rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--gin-border-color, #d9d9d9);
+  border-radius: var(--gin-border-m, .5rem);
+  background: var(--gin-bg-layer, #fff);
+}
+
+.jfcamp-operation-form__header {
+  padding-block: 1.25rem;
+}
+
+.jfcamp-operation-form__eyebrow,
+.jfcamp-operation-form__section-title {
+  font-size: .8125rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+
+.jfcamp-operation-form__eyebrow {
+  margin-bottom: .35rem;
+  color: var(--gin-color-text-light, #55565b);
+  text-transform: uppercase;
+}
+
+.jfcamp-operation-form__title {
+  margin: 0 0 .4rem;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  line-height: 1.15;
+}
+
+.jfcamp-operation-form__meta,
+.jfcamp-operation-form__section-help {
+  color: var(--gin-color-text-light, #55565b);
+  line-height: 1.45;
+}
+
+.jfcamp-operation-form__section-title {
+  margin-bottom: .25rem;
+  font-size: 1rem;
+}
+
+.jfcamp-operation-form__section-help {
+  margin-bottom: 1rem;
+  font-size: .875rem;
+}
+
+.jfcamp-operation-form__notice {
+  display: grid;
+  gap: .25rem;
+  border-inline-start-width: 4px;
+}
+
+.jfcamp-operation-form__notice.is-warning {
+  border-inline-start-color: var(--gin-color-warning, #d89b00);
+}
+
+.jfcamp-operation-form__notice.is-error {
+  border-inline-start-color: var(--gin-color-danger, #c9190b);
+}
+
+.jfcamp-operation-form__current-value {
+  display: grid;
+  gap: .2rem;
+  margin-top: .5rem;
+}
+
+.jfcamp-operation-form__current-value span {
+  color: var(--gin-color-text-light, #55565b);
+  font-size: .8125rem;
+  font-weight: 700;
+}
+
+.jfcamp-operation-form__field + .jfcamp-operation-form__field {
+  margin-top: .75rem;
+}
+
+.jfcamp-operation-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: 1.25rem;
+}
+
+.jfcamp-operation-form__actions .button {
+  margin: 0;
+}
+
+.jfcamp-swap-preview {
+  display: grid;
+  gap: .65rem;
+  margin-top: .75rem;
+}
+
+.jfcamp-swap-preview__row {
+  display: grid;
+  grid-template-columns: minmax(9rem, .8fr) minmax(0, 1.5fr);
+  gap: 1rem;
+  padding: .75rem;
+  border-radius: var(--gin-border-s, .375rem);
+  background: var(--gin-bg-layer2, #f6f6f6);
+}
+
+@media (max-width: 48rem) {
+  .jfcamp-operation-form {
+    max-width: none;
+  }
+
+  .jfcamp-operation-form__header,
+  .jfcamp-operation-form__panel,
+  .jfcamp-operation-form__notice {
+    padding: 1rem;
+  }
+
+  .jfcamp-operation-form__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .jfcamp-operation-form__actions .button,
+  .jfcamp-operation-form__actions input.button {
+    width: 100%;
+    min-height: 2.75rem;
+    margin: 0;
+    text-align: center;
+  }
+
+  .jfcamp-swap-preview__row {
+    grid-template-columns: 1fr;
+    gap: .2rem;
+  }
+}

@@ -53,51 +53,74 @@ final class ManualAssignmentForm extends FormBase {
       $name = $state['code'] !== '' ? $state['code'] : '#' . $participantId;
     }
 
+    $form['#attributes']['class'][] = 'jfcamp-operation-form';
+    $form['#attributes']['class'][] = 'jfcamp-operation-form--assignment';
+
     $form['participant_id'] = ['#type' => 'hidden', '#value' => $participantId];
     $form['slot'] = ['#type' => 'hidden', '#value' => $slotNumber];
 
-    $form['context'] = [
-      '#type' => 'table',
-      '#header' => [$this->t('Merkmal'), $this->t('Wert')],
-      '#rows' => [
-        [$this->t('Teilnehmer'), $name],
-        [$this->t('Code'), $state['code'] !== '' ? $state['code'] : '—'],
-        [$this->t('Regionalverband'), $state['region'] !== '' ? $state['region'] : '—'],
-        [$this->t('Slot'), (string) $slotNumber],
-        [$this->t('Aktuelle Zuteilung'), $currentWorkshop],
+    $form['header'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['jfcamp-operation-form__header']],
+      'eyebrow' => [
+        '#markup' => '<div class="jfcamp-operation-form__eyebrow">' . $this->t('Camp-Leitung · Zuteilung') . '</div>',
+      ],
+      'title' => [
+        '#markup' => '<h2 class="jfcamp-operation-form__title">' . $this->t('Slot @slot ändern', ['@slot' => $slotNumber]) . '</h2>',
+      ],
+      'meta' => [
+        '#markup' => '<div class="jfcamp-operation-form__meta"><strong>' . $this->t('@name', ['@name' => $name]) . '</strong>'
+          . ($state['code'] !== '' ? ' · ' . $this->t('Code @code', ['@code' => $state['code']]) : '')
+          . ($state['region'] !== '' ? ' · ' . $this->t('@region', ['@region' => $state['region']]) : '') . '</div>',
+      ],
+    ];
+
+    $form['current'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['jfcamp-operation-form__panel', 'jfcamp-operation-form__current']],
+      'label' => [
+        '#markup' => '<div class="jfcamp-operation-form__section-title">' . $this->t('Aktuelle Zuteilung') . '</div>',
+      ],
+      'value' => [
+        '#markup' => '<div class="jfcamp-operation-form__current-value"><span>' . $this->t('Slot @slot', ['@slot' => $slotNumber]) . '</span><strong>' . $this->t('@workshop', ['@workshop' => $currentWorkshop]) . '</strong></div>',
       ],
     ];
 
     $form['notice'] = [
       '#type' => 'container',
-      '#attributes' => ['class' => ['messages', 'messages--warning']],
+      '#attributes' => ['class' => ['jfcamp-operation-form__notice', 'is-warning']],
+      'title' => ['#markup' => '<strong>' . $this->t('Direkte Änderung des aktuellen Zuteilungsstands') . '</strong>'],
       'content' => [
-        '#markup' => $this->t(
-          'Die Änderung wird direkt in den aktuellen Zuteilungsstand geschrieben. Der gespeicherte Matching-Snapshot bleibt unverändert. Volle Workshops können gewählt werden; anschließend wird ein kapazitätssicherer 1:1-Tausch organisiert.'
-        ),
+        '#markup' => '<div>' . $this->t('Der gespeicherte Matching-Snapshot bleibt unverändert. Volle Workshops können ausgewählt werden; statt einer Überbuchung folgt dann automatisch ein kapazitätssicherer 1:1-Tausch.') . '</div>',
       ],
     ];
 
-    $form['workshop_id'] = [
+    $form['selection'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['jfcamp-operation-form__panel']],
+    ];
+    $form['selection']['workshop_id'] = [
       '#type' => 'select',
       '#title' => $this->t('Neue Zuteilung für Slot @slot', ['@slot' => $slotNumber]),
       '#options' => $choiceData['options'],
       '#default_value' => $currentWorkshopId ?: NULL,
       '#required' => TRUE,
-      '#description' => $this->t(
-        'Veröffentlichte Workshops werden mit ihrer aktuellen Belegung angezeigt. Volle Workshops sind auswählbar, werden aber niemals direkt überbucht. Bereits in einem anderen Slot zugeteilte Workshops werden ausgeblendet.'
-      ),
+      '#description' => $this->t('Alle veröffentlichten Workshops werden mit ihrer aktuellen Belegung angezeigt. Volle Workshops sind auswählbar, werden aber niemals direkt überbucht. Workshops, die diese Person bereits in einem anderen Slot hat, sind ausgeblendet.'),
+      '#wrapper_attributes' => ['class' => ['jfcamp-operation-form__field']],
     ];
 
-    $form['actions'] = ['#type' => 'actions'];
+    $form['actions'] = [
+      '#type' => 'actions',
+      '#attributes' => ['class' => ['jfcamp-operation-form__actions']],
+    ];
     $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Weiter'),
+      '#value' => $this->t('Änderung prüfen'),
       '#button_type' => 'primary',
     ];
     $form['actions']['cancel'] = [
       '#type' => 'link',
-      '#title' => $this->t('Abbrechen'),
+      '#title' => $this->t('Zurück zum Teilnehmer'),
       '#url' => Url::fromRoute('jfcamp_operations.participant_detail', [
         'participant_id' => $participantId,
       ]),

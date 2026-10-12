@@ -84,3 +84,220 @@
   color: var(--gin-color-text-light, #545560);
   font-size: .875rem;
 }
+
+/* Mobile-first Teamer*innen workspace. */
+.jfcamp-teamer-home__intro {
+  margin: 0 0 1rem;
+}
+
+.jfcamp-teamer-home__eyebrow {
+  margin-bottom: .2rem;
+  color: var(--gin-color-text-light, #545560);
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.jfcamp-teamer-home__intro h2 {
+  margin: 0 0 .25rem;
+  font-size: clamp(1.5rem, 6vw, 2.25rem);
+}
+
+.jfcamp-teamer-home__intro p {
+  margin: 0;
+  color: var(--gin-color-text-light, #545560);
+}
+
+.jfcamp-teamer-home__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .55rem;
+  margin: 1rem 0;
+}
+
+.jfcamp-teamer-home__stat {
+  min-width: 0;
+  padding: .8rem .7rem;
+  border: 1px solid var(--gin-border-color, #d3d4d9);
+  border-radius: var(--gin-border-m, 8px);
+  background: var(--gin-bg-layer, #fff);
+}
+
+.jfcamp-teamer-home__stat strong,
+.jfcamp-teamer-home__stat span {
+  display: block;
+}
+
+.jfcamp-teamer-home__stat strong {
+  margin-bottom: .2rem;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.jfcamp-teamer-home__stat span {
+  color: var(--gin-color-text-light, #545560);
+  font-size: .75rem;
+  line-height: 1.25;
+}
+
+.jfcamp-teamer-home__stat--warning {
+  border-color: var(--gin-color-warning, #d8a400);
+}
+
+.jfcamp-teamer-home__filters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .55rem;
+  margin: 1.25rem 0 1.5rem;
+}
+
+.jfcamp-teamer-home__filter {
+  display: flex;
+  align-items: center;
+  min-height: 3.25rem;
+  padding: .8rem 1rem;
+  border: 1px solid var(--gin-border-color, #d3d4d9);
+  border-radius: var(--gin-border-m, 8px);
+  background: var(--gin-bg-layer, #fff);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.jfcamp-teamer-home__filter:hover,
+.jfcamp-teamer-home__filter:focus,
+.jfcamp-teamer-home__filter.is-active {
+  border-color: var(--gin-color-primary, #003cc5);
+  background: var(--gin-color-primary-light, #e8efff);
+  text-decoration: none;
+}
+
+.jfcamp-teamer-home__list-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1rem 0 .75rem;
+}
+
+.jfcamp-teamer-home__list-heading h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.jfcamp-teamer-home__list-heading span {
+  color: var(--gin-color-text-light, #545560);
+  font-size: .85rem;
+}
+
+.jfcamp-teamer-home__participants {
+  max-width: 64rem;
+}
+
+.jfcamp-teamer-home__participant {
+  margin-bottom: .75rem;
+  padding: 1rem;
+  border: 1px solid var(--gin-border-color, #d3d4d9);
+  border-radius: var(--gin-border-m, 8px);
+  background: var(--gin-bg-layer, #fff);
+  box-shadow: var(--gin-shadow-l1, 0 1px 2px rgba(0, 0, 0, .06));
+}
+
+.jfcamp-teamer-home__participant-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.jfcamp-teamer-home__participant-link {
+  display: inline-block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.jfcamp-teamer-home__participant-meta {
+  margin-top: .15rem;
+  color: var(--gin-color-text-light, #545560);
+  font-size: .8rem;
+}
+
+.jfcamp-teamer-home__wish-status {
+  flex: 0 0 auto;
+  padding: .3rem .5rem;
+  border-radius: 999px;
+  background: var(--gin-bg-item-hover, #f0f1f2);
+  font-size: .72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.jfcamp-teamer-home__wish-status.is-warning {
+  background: #fff4cc;
+}
+
+.jfcamp-teamer-home__wish-status.is-ok {
+  background: #e6f5ea;
+}
+
+.jfcamp-teamer-home__assignments {
+  display: grid;
+  gap: .45rem;
+  margin-top: .85rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--gin-border-color, #d3d4d9);
+}
+
+.jfcamp-teamer-home__assignment {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: .5rem;
+  align-items: baseline;
+}
+
+.jfcamp-teamer-home__assignment span {
+  color: var(--gin-color-text-light, #545560);
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.jfcamp-teamer-home__assignment strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: .88rem;
+}
+
+.jfcamp-teamer-home__empty {
+  padding: 1.25rem;
+  border: 1px dashed var(--gin-border-color, #d3d4d9);
+  border-radius: var(--gin-border-m, 8px);
+  color: var(--gin-color-text-light, #545560);
+  background: var(--gin-bg-layer, #fff);
+}
+
+@media (min-width: 48rem) {
+  .jfcamp-teamer-home__summary {
+    max-width: 40rem;
+  }
+
+  .jfcamp-teamer-home__filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 52rem;
+  }
+
+  .jfcamp-teamer-home__participants {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+  }
+
+  .jfcamp-teamer-home__list-heading,
+  .jfcamp-teamer-home__empty {
+    grid-column: 1 / -1;
+  }
+
+  .jfcamp-teamer-home__participant {
+    margin-bottom: 0;
+  }
+}

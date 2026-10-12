@@ -2,3 +2,8 @@ dashboard:
   css:
     theme:
       css/dashboard.css: {}
+
+login:
+  css:
+    theme:
+      css/login.css: {}

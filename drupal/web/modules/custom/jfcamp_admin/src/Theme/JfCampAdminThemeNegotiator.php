@@ -29,11 +29,18 @@ final class JfCampAdminThemeNegotiator implements ThemeNegotiatorInterface {
    * {@inheritdoc}
    */
   public function applies(RouteMatchInterface $route_match): bool {
+    $routeName = (string) $route_match->getRouteName();
+
+    // There is no separate public frontend for the JF Camp app. Render the
+    // authentication entry points with the same administration theme so the
+    // experience is visually consistent even before login.
+    if (in_array($routeName, ['user.login', 'user.pass'], TRUE)) {
+      return TRUE;
+    }
+
     if (!$this->currentUser->hasPermission('view the administration theme')) {
       return FALSE;
     }
-
-    $routeName = (string) $route_match->getRouteName();
 
     if ($routeName === 'node.add') {
       $nodeType = $route_match->getParameter('node_type');

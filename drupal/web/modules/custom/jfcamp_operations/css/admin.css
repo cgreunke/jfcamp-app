@@ -234,3 +234,110 @@
     align-items: stretch;
   }
 }
+
+/* Operational participant detail page. */
+.jfcamp-participant-detail {
+  max-width: 72rem;
+}
+
+.jfcamp-participant-detail__hero {
+  margin-block-end: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--gin-border-color, #d9d9d9);
+  border-radius: var(--gin-border-m, 0.5rem);
+  background: var(--gin-bg-layer, #fff);
+}
+
+.jfcamp-participant-detail__eyebrow,
+.jfcamp-participant-detail__slot {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--gin-color-text-light, #55565b);
+}
+
+.jfcamp-participant-detail__name {
+  margin-block: 0.25rem;
+  font-size: clamp(1.75rem, 5vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.jfcamp-participant-detail__meta {
+  font-size: 1rem;
+  color: var(--gin-color-text-light, #55565b);
+}
+
+.jfcamp-participant-detail__card {
+  margin-block-end: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--gin-border-color, #d9d9d9);
+  border-radius: var(--gin-border-m, 0.5rem);
+  background: var(--gin-bg-layer, #fff);
+}
+
+.jfcamp-participant-detail__card h2 {
+  margin-block: 0 1rem;
+}
+
+.jfcamp-participant-detail__wishes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jfcamp-participant-detail__wishes li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding-block: 0.65rem;
+  border-block-end: 1px solid var(--gin-border-color, #e5e5e5);
+}
+
+.jfcamp-participant-detail__rank {
+  display: inline-grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gin-color-primary-light, #e8efff);
+  font-weight: 700;
+}
+
+.jfcamp-participant-detail__assignment {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding-block: 0.9rem;
+  border-block-end: 1px solid var(--gin-border-color, #e5e5e5);
+}
+
+.jfcamp-participant-detail__assignment:last-child,
+.jfcamp-participant-detail__wishes li:last-child {
+  border-block-end: 0;
+}
+
+.jfcamp-participant-detail__workshop {
+  font-weight: 600;
+}
+
+.jfcamp-participant-detail__empty {
+  margin: 0;
+  color: var(--gin-color-text-light, #55565b);
+}
+
+@media (max-width: 48rem) {
+  .jfcamp-participant-detail__hero,
+  .jfcamp-participant-detail__card {
+    padding: 1rem;
+  }
+
+  .jfcamp-participant-detail__assignment {
+    grid-template-columns: 1fr auto;
+  }
+
+  .jfcamp-participant-detail__slot {
+    grid-column: 1 / -1;
+  }
+}

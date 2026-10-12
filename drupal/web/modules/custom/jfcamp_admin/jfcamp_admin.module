@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Runtime UI hooks for the JF Camp administration shell.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+
+/**
+ * Implements hook_form_FORM_ID_alter() for the core login form.
+ */
+function jfcamp_admin_form_user_login_form_alter(array &$form, FormStateInterface $form_state): void {
+  $form['#attached']['library'][] = 'jfcamp_admin/login';
+  $form['jfcamp_brand'] = [
+    '#type' => 'container',
+    '#weight' => -100,
+    '#attributes' => ['class' => ['jfcamp-login__brand']],
+    'kicker' => ['#markup' => '<div class="jfcamp-login__kicker">JF Startercamp</div>'],
+    'title' => ['#markup' => '<div class="jfcamp-login__title">Camp-App</div>'],
+    'text' => ['#markup' => '<p>Anmelden, um Teilnehmende, Wünsche und Workshop-Zuteilungen zu verwalten.</p>'],
+  ];
+  $form['#attributes']['class'][] = 'jfcamp-login-form';
+}

@@ -83,8 +83,8 @@ final class ParticipantOverviewController extends ControllerBase {
         ]);
       }
 
-      $participantUrl = Url::fromRoute('entity.node.canonical', [
-        'node' => $participant['participant_id'],
+      $participantUrl = Url::fromRoute('jfcamp_operations.participant_detail', [
+        'participant_id' => $participant['participant_id'],
       ]);
       $participantLink = Link::fromTextAndUrl($participantName, $participantUrl)->toRenderable();
       $participantLink['#attributes']['class'][] = 'jfcamp-participant-overview__participant-link';

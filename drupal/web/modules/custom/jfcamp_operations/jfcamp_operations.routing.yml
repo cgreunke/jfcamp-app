@@ -48,3 +48,15 @@ jfcamp_operations.workshop_capacity:
     _permission: 'view jfcamp workshop capacities'
   options:
     _admin_route: TRUE
+
+jfcamp_operations.participant_detail:
+  path: '/admin/jfcamp/participants/{participant_id}'
+  defaults:
+    _controller: '\Drupal\jfcamp_operations\Controller\ParticipantDetailController::view'
+    _title_callback: '\Drupal\jfcamp_operations\Controller\ParticipantDetailController::title'
+  requirements:
+    _permission: 'view jfcamp participant overview'
+    _custom_access: '\Drupal\jfcamp_operations\Controller\ParticipantDetailController::access'
+    participant_id: '\d+'
+  options:
+    _admin_route: TRUE

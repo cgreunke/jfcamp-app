@@ -71,6 +71,19 @@ final class ParticipantDetailController extends ControllerBase {
       '#cache' => ['max-age' => 0],
     ];
 
+    $build['top_actions'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['jfcamp-participant-detail__top-actions']],
+      'back' => Link::fromTextAndUrl(
+        $this->t('Zur Teilnehmerübersicht'),
+        Url::fromRoute('jfcamp_operations.participants'),
+      )->toRenderable(),
+    ];
+    $build['top_actions']['back']['#attributes']['class'] = ['button'];
+
+    $wishStatusClass = $wishLabels ? 'is-ok' : 'is-warning';
+    $assignmentStatusClass = $assignments ? 'is-ok' : 'is-warning';
+
     $build['hero'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['jfcamp-participant-detail__hero']],
@@ -80,6 +93,16 @@ final class ParticipantDetailController extends ControllerBase {
           . '<div class="jfcamp-participant-detail__meta">'
           . htmlspecialchars($code !== '' ? $code : '—', ENT_QUOTES, 'UTF-8')
           . ($region !== '' ? ' · ' . htmlspecialchars($region, ENT_QUOTES, 'UTF-8') : '')
+          . '</div>',
+      ],
+      'status' => [
+        '#markup' => '<div class="jfcamp-participant-detail__status-row">'
+          . '<span class="jfcamp-participant-detail__status ' . $wishStatusClass . '">'
+          . ($wishLabels ? $this->formatPlural(count($wishLabels), '1 Wunsch', '@count Wünsche') : $this->t('Keine Wünsche'))
+          . '</span>'
+          . '<span class="jfcamp-participant-detail__status ' . $assignmentStatusClass . '">'
+          . ($assignments ? $this->formatPlural(count($assignments), '1 Zuteilung', '@count Zuteilungen') : $this->t('Keine Zuteilung'))
+          . '</span>'
           . '</div>',
       ],
     ];
@@ -95,24 +118,30 @@ final class ParticipantDetailController extends ControllerBase {
     $wishCard = [
       '#type' => 'container',
       '#attributes' => ['class' => ['jfcamp-participant-detail__card']],
-      'title' => ['#markup' => '<h2>' . $this->t('Wünsche') . '</h2>'],
+      'header' => [
+        '#markup' => '<div class="jfcamp-participant-detail__card-header"><div><div class="jfcamp-participant-detail__section-kicker">Prioritäten</div><h2>' . $this->t('Wünsche') . '</h2></div></div>',
+      ],
       'content' => $wishItems
         ? [
           '#theme' => 'item_list',
           '#items' => $wishItems,
           '#attributes' => ['class' => ['jfcamp-participant-detail__wishes']],
         ]
-        : ['#markup' => '<p class="jfcamp-participant-detail__empty">' . $this->t('Keine Wünsche abgegeben.') . '</p>'],
+        : ['#markup' => '<div class="jfcamp-participant-detail__callout is-warning"><strong>' . $this->t('Noch keine Wünsche abgegeben') . '</strong><span>' . $this->t('Für diese*n Teilnehmer*in sind aktuell keine Workshop-Wünsche hinterlegt.') . '</span></div>'],
     ];
     if ($canEditWishes) {
-      $wishCard['note'] = [
-        '#markup' => '<p class="jfcamp-participant-detail__empty">' . $this->t('Wunschänderungen verändern bestehende Zuteilungen nicht automatisch.') . '</p>',
+      $wishCard['actions'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['jfcamp-participant-detail__card-actions']],
+        'edit' => Link::fromTextAndUrl(
+          $this->t('Wünsche bearbeiten'),
+          Url::fromRoute('jfcamp_operations.wish_edit', ['participant_id' => $participant_id]),
+        )->toRenderable(),
+        'note' => [
+          '#markup' => '<span class="jfcamp-participant-detail__action-note">' . $this->t('Bestehende Zuteilungen bleiben unverändert.') . '</span>',
+        ],
       ];
-      $wishCard['edit'] = Link::fromTextAndUrl(
-        $this->t('Wünsche bearbeiten'),
-        Url::fromRoute('jfcamp_operations.wish_edit', ['participant_id' => $participant_id]),
-      )->toRenderable();
-      $wishCard['edit']['#attributes']['class'] = ['button'];
+      $wishCard['actions']['edit']['#attributes']['class'] = ['button', 'button--primary'];
     }
     $build['wishes'] = $wishCard;
 
@@ -126,7 +155,7 @@ final class ParticipantDetailController extends ControllerBase {
       ];
       if ($canEditAssignments) {
         $row['edit'] = Link::fromTextAndUrl(
-          $this->t('Ändern'),
+          $this->t('Zuteilung ändern'),
           Url::fromRoute('jfcamp_operations.assignment_edit', [
             'participant_id' => $participant_id,
             'slot' => $assignment['slot'],
@@ -140,9 +169,17 @@ final class ParticipantDetailController extends ControllerBase {
     $build['assignments'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['jfcamp-participant-detail__card']],
-      'title' => ['#markup' => '<h2>' . $this->t('Zuteilungen') . '</h2>'],
-      'content' => $assignmentItems ?: ['#markup' => '<p class="jfcamp-participant-detail__empty">' . $this->t('Noch keine Zuteilungen vorhanden.') . '</p>'],
+      'header' => [
+        '#markup' => '<div class="jfcamp-participant-detail__card-header"><div><div class="jfcamp-participant-detail__section-kicker">Aktueller Stand</div><h2>' . $this->t('Zuteilungen') . '</h2></div></div>',
+      ],
+      'content' => $assignmentItems ?: ['#markup' => '<div class="jfcamp-participant-detail__callout is-warning"><strong>' . $this->t('Noch keine Zuteilungen') . '</strong><span>' . $this->t('Für diese*n Teilnehmer*in sind aktuell keine Workshops zugeteilt.') . '</span></div>'],
     ];
+
+    if ($canEditAssignments) {
+      $build['assignments']['footer'] = [
+        '#markup' => '<p class="jfcamp-participant-detail__hint">' . $this->t('Bei vollen Workshops kann ein kapazitätssicherer Tausch organisiert werden.') . '</p>',
+      ];
+    }
 
     return $build;
   }

@@ -60,6 +60,7 @@ function _jfcamp_operations_ensure_teamer_access_model(): void {
       'entity_type' => 'user',
       'type' => 'string',
       'cardinality' => FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED,
+      'translatable' => TRUE,
       'settings' => [
         'max_length' => 32,
         'case_sensitive' => FALSE,
@@ -77,6 +78,7 @@ function _jfcamp_operations_ensure_teamer_access_model(): void {
       'label' => 'JF Camp Regionalverbände',
       'description' => 'Regionalverbands-Codes, deren Teilnehmende dieses Benutzerkonto in der Camp-Übersicht sehen darf, z. B. BER.',
       'required' => FALSE,
+      'translatable' => TRUE,
     ]);
     $field->save();
   }
@@ -120,11 +122,15 @@ function _jfcamp_operations_ensure_teamer_access_model(): void {
   // permissions that would bypass the guarded operations workflows.
   $team = Role::load('team');
   if ($team) {
+    $team->grantPermission('access administration pages');
+    $team->grantPermission('access toolbar');
     $team->grantPermission('view jfcamp participant overview');
     $team->grantPermission('view all jfcamp participant regions');
     $team->grantPermission('access jfcamp administration');
     $team->grantPermission('edit jfcamp participant assignments');
     $team->grantPermission('edit jfcamp participant wishes');
+    $team->grantPermission('view jfcamp assignment audit');
+    $team->grantPermission('view jfcamp workshop capacities');
     $team->grantPermission('view the administration theme');
     _jfcamp_operations_harden_team_role($team);
     $team->save();
@@ -305,6 +311,13 @@ function jfcamp_operations_update_10009(): void {
     $team->grantPermission('edit jfcamp participant wishes');
     $team->save();
   }
+}
+
+/**
+ * Reconciles the complete current Operations access model.
+ */
+function jfcamp_operations_update_10010(): void {
+  _jfcamp_operations_ensure_teamer_access_model();
 }
 
 /**

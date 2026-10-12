@@ -33,15 +33,6 @@ $bundles = [
   'matching_config' => [
     ['field_num_wuensche',       'number',           'number_integer'],
     ['field_num_zuteilung',      'number',           'number_integer'],
-    ['field_seed',               'string_textfield', 'string'],
-    ['field_slicing_mode',       'options_select',   'list_default'],
-    ['field_slicing_value',      'number',           'number_integer'],
-    ['field_topk_equals_slots',  'boolean_checkbox', 'boolean'],
-    ['field_weight_p1',          'number',           'number_decimal'],
-    ['field_weight_p2',          'number',           'number_decimal'],
-    ['field_weight_p3',          'number',           'number_decimal'],
-    ['field_weight_p4',          'number',           'number_decimal'],
-    ['field_weight_p5',          'number',           'number_decimal'],
   ],
 ];
 
@@ -56,9 +47,15 @@ foreach ($bundles as $bundle => $components) {
   $form = $repo->getFormDisplay('node', $bundle, 'default');
   $w = 0;
   foreach ($components as [$field, $widget, $formatter]) {
+    if ($bundle === 'teilnehmer' && $field === 'field_zugewiesen') {
+      continue;
+    }
     if (field_exists_for_bundle($bundle, $field)) {
       $form->setComponent($field, ['type' => $widget, 'weight' => $w++]);
     }
+  }
+  if ($bundle === 'teilnehmer') {
+    $form->removeComponent('field_zugewiesen');
   }
   $form->save();
 

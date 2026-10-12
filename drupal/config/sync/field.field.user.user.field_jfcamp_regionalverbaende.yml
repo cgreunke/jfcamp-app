@@ -1,0 +1,20 @@
+uuid: 60e69026-fecc-4f50-8a75-4382c965f822
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.storage.user.field_jfcamp_regionalverbaende
+  module:
+    - user
+id: user.user.field_jfcamp_regionalverbaende
+field_name: field_jfcamp_regionalverbaende
+entity_type: user
+bundle: user
+label: 'JF Camp Regionalverbände'
+description: 'Regionalverbands-Codes, deren Teilnehmende dieses Benutzerkonto in der Camp-Übersicht sehen darf, z. B. BER.'
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

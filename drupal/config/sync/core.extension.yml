@@ -15,7 +15,9 @@ module:
   jfcamp_admin: 0
   jfcamp_api: 0
   jfcamp_matching: 0
+  jfcamp_operations: 0
   jfcamp_public_api: 0
+  jfcamp_team: 0
   jsonapi: 0
   language: 0
   locale: 0

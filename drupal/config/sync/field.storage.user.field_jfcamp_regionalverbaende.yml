@@ -1,21 +1,21 @@
-uuid: 322d5412-d600-4516-9d6a-d9857c3a00a8
+uuid: fae6a34c-41ec-4a0b-aee2-335a757f328a
 langcode: de
 status: true
 dependencies:
   module:
-    - node
-id: node.field_seed
-field_name: field_seed
-entity_type: node
+    - user
+id: user.field_jfcamp_regionalverbaende
+field_name: field_jfcamp_regionalverbaende
+entity_type: user
 type: string
 settings:
   max_length: 32
   case_sensitive: false
-  is_ascii: false
+  is_ascii: true
 module: core
 locked: false
-cardinality: 1
-translatable: false
+cardinality: -1
+translatable: true
 indexes: {  }
 persist_with_no_fields: false
 custom_storage: false

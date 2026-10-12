@@ -112,41 +112,6 @@ ensure_field("node","matching_config","field_num_wuensche","Anzahl Wünsche");
 ensure_field_storage("node","field_num_zuteilung","integer",[],1,false);
 ensure_field("node","matching_config","field_num_zuteilung","Anzahl Zuteilungen (Slots)");
 
-ensure_field_storage("node","field_seed","string",["max_length"=>32],1,false);
-ensure_field("node","matching_config","field_seed","Seed (optional, leer = Zufall)");
-
-/* Matching Config – Slicing */
-$allowed = [
-  "off"      => "Off (kein Slicing)",
-  "relative" => "Relative (z.B. 50% pro Slot)",
-  "fixed"    => "Fixed (absolute Deckel pro Slot)",
-];
-
-$fs = FieldStorageConfig::loadByName("node","field_slicing_mode");
-if (!$fs) {
-  ensure_field_storage("node","field_slicing_mode","list_string",["allowed_values"=>$allowed],1,false);
-} else {
-  $current = $fs->getSetting("allowed_values");
-  $numericKeys = array_keys($current ?? []);
-  if (!$current || (count($numericKeys) && is_int($numericKeys[0]))) {
-    $fs->setSetting("allowed_values", $allowed);
-    $fs->save();
-  }
-}
-ensure_field("node","matching_config","field_slicing_mode","Slicing Mode");
-
-ensure_field_storage("node","field_slicing_value","integer",[],1,false);
-ensure_field("node","matching_config","field_slicing_value","Slicing Value");
-
-ensure_field_storage("node","field_topk_equals_slots","boolean",[],1,false);
-ensure_field("node","matching_config","field_topk_equals_slots","Top-K = Slots");
-
-/* Matching Config – Gewichtungen (float) */
-foreach ([1,2,3,4,5] as $i) {
-  ensure_field_storage("node","field_weight_p{$i}","float",[],1,false);
-  ensure_field("node","matching_config","field_weight_p{$i}","Gewicht Prio {$i}");
-}
-
 /* ---------------------- Default Matching-Node ---------------------- */
 $ids = \Drupal::entityQuery("node")->accessCheck(FALSE)
   ->condition("type","matching_config")
@@ -162,14 +127,6 @@ if (empty($ids)) {
   ]);
   $n->set("field_num_wuensche", 5);
   $n->set("field_num_zuteilung", 3);
-  $n->set("field_topk_equals_slots", 1);
-  $n->set("field_slicing_mode", "relative");
-  $n->set("field_slicing_value", 50);
-  $n->set("field_weight_p1", 1.0);
-  $n->set("field_weight_p2", 0.8);
-  $n->set("field_weight_p3", 0.6);
-  $n->set("field_weight_p4", 0.4);
-  $n->set("field_weight_p5", 0.2);
   $n->save();
 }
 
@@ -193,15 +150,6 @@ $bundles = [
   "matching_config" => [
     ["field_num_wuensche",       "number",            "number_integer"],
     ["field_num_zuteilung",      "number",            "number_integer"],
-    ["field_seed",               "string_textfield",  "string"],
-    ["field_slicing_mode",       "options_select",    "list_default"],
-    ["field_slicing_value",      "number",            "number_integer"],
-    ["field_topk_equals_slots",  "boolean_checkbox",  "boolean"],
-    ["field_weight_p1",          "number",            "number_decimal"],
-    ["field_weight_p2",          "number",            "number_decimal"],
-    ["field_weight_p3",          "number",            "number_decimal"],
-    ["field_weight_p4",          "number",            "number_decimal"],
-    ["field_weight_p5",          "number",            "number_decimal"],
   ],
 ];
 
@@ -211,9 +159,15 @@ foreach ($bundles as $bundle => $components) {
   $form = $repo->getFormDisplay("node", $bundle, "default");
   $w = 0;
   foreach ($components as [$field, $widget, $formatter]) {
+    if ($bundle === "teilnehmer" && $field === "field_zugewiesen") {
+      continue;
+    }
     if (field_exists_for_bundle($bundle, $field)) {
       $form->setComponent($field, ["type" => $widget, "weight" => $w++]);
     }
+  }
+  if ($bundle === "teilnehmer") {
+    $form->removeComponent("field_zugewiesen");
   }
   $form->save();
 

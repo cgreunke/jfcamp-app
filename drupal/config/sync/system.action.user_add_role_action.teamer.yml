@@ -1,0 +1,14 @@
+uuid: 442cd519-9fb7-468c-a93b-ea0fcd993af9
+langcode: de
+status: true
+dependencies:
+  config:
+    - user.role.teamer
+  module:
+    - user
+id: user_add_role_action.teamer
+label: 'Den ausgewählten Benutzern die Rolle Teamer*in zuweisen'
+type: user
+plugin: user_add_role_action
+configuration:
+  rid: teamer

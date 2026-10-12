@@ -1,0 +1,38 @@
+uuid: 44268edc-7f57-485d-ad97-731bd1ebebab
+langcode: de
+status: true
+dependencies:
+  config:
+    - field.field.user.user.field_jfcamp_regionalverbaende
+  module:
+    - user
+id: user.user.default
+targetEntityType: user
+bundle: user
+mode: default
+content:
+  account:
+    weight: -10
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_jfcamp_regionalverbaende:
+    type: string_textfield
+    weight: 20
+    region: content
+    settings:
+      size: 20
+      placeholder: BER
+    third_party_settings: {  }
+  language:
+    weight: 0
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  timezone:
+    weight: 6
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+hidden:
+  langcode: true

@@ -1,0 +1,18 @@
+uuid: 5defd203-5a06-43bc-bc71-71a8998e288f
+langcode: de
+status: true
+dependencies:
+  module:
+    - jfcamp_admin
+    - jfcamp_operations
+    - system
+    - toolbar
+id: teamer
+label: 'Teamer*in'
+weight: 4
+is_admin: false
+permissions:
+  - 'access jfcamp administration'
+  - 'access toolbar'
+  - 'view jfcamp participant overview'
+  - 'view the administration theme'

@@ -1,0 +1,14 @@
+uuid: 948ccb20-4db6-4744-8345-040ae5ada734
+langcode: de
+status: true
+dependencies:
+  config:
+    - user.role.teamer
+  module:
+    - user
+id: user_remove_role_action.teamer
+label: 'Den ausgewählten Benutzern die Rolle Teamer*in entziehen'
+type: user
+plugin: user_remove_role_action
+configuration:
+  rid: teamer

@@ -2,42 +2,29 @@ uuid: 4c16a9a6-4ead-400a-be42-d036fd4d4a07
 langcode: de
 status: true
 dependencies:
-  config:
-    - node.type.teilnehmer
-    - node.type.workshop
-    - node.type.wunsch
   module:
+    - jfcamp_admin
     - jfcamp_api
     - jfcamp_matching
-    - node
+    - jfcamp_operations
+    - jfcamp_team
     - system
     - toolbar
 id: team
-label: Team
+label: Camp-Leitung
 weight: 2
 is_admin: false
 permissions:
   - 'access administration pages'
-  - 'access content overview'
-  - 'access site reports'
+  - 'access jfcamp administration'
   - 'access toolbar'
-  - 'create teilnehmer content'
-  - 'create workshop content'
-  - 'create wunsch content'
-  - 'delete any teilnehmer content'
-  - 'delete any workshop content'
-  - 'delete any wunsch content'
-  - 'delete own teilnehmer content'
-  - 'delete own workshop content'
-  - 'delete own wunsch content'
-  - 'edit any teilnehmer content'
-  - 'edit any workshop content'
-  - 'edit any wunsch content'
-  - 'edit own teilnehmer content'
-  - 'edit own workshop content'
-  - 'edit own wunsch content'
+  - 'edit jfcamp participant assignments'
+  - 'edit jfcamp participant wishes'
   - 'import jfcamp csv'
+  - 'manage jfcamp teamers'
   - 'run jfcamp matching'
-  - 'view teilnehmer revisions'
-  - 'view workshop revisions'
-  - 'view wunsch revisions'
+  - 'view all jfcamp participant regions'
+  - 'view jfcamp assignment audit'
+  - 'view jfcamp participant overview'
+  - 'view jfcamp workshop capacities'
+  - 'view the administration theme'

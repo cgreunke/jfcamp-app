@@ -5,17 +5,8 @@ dependencies:
   config:
     - field.field.node.matching_config.field_num_wuensche
     - field.field.node.matching_config.field_num_zuteilung
-    - field.field.node.matching_config.field_seed
-    - field.field.node.matching_config.field_slicing_mode
-    - field.field.node.matching_config.field_slicing_value
     - field.field.node.matching_config.field_slot_end
     - field.field.node.matching_config.field_slot_start
-    - field.field.node.matching_config.field_topk_equals_slots
-    - field.field.node.matching_config.field_weight_p1
-    - field.field.node.matching_config.field_weight_p2
-    - field.field.node.matching_config.field_weight_p3
-    - field.field.node.matching_config.field_weight_p4
-    - field.field.node.matching_config.field_weight_p5
     - node.type.matching_config
 id: node.matching_config.default
 targetEntityType: node
@@ -42,27 +33,6 @@ content:
     settings:
       placeholder: ''
     third_party_settings: {  }
-  field_seed:
-    type: string_textfield
-    weight: 2
-    region: content
-    settings:
-      size: 60
-      placeholder: ''
-    third_party_settings: {  }
-  field_slicing_mode:
-    type: options_select
-    weight: 3
-    region: content
-    settings: {  }
-    third_party_settings: {  }
-  field_slicing_value:
-    type: number
-    weight: 4
-    region: content
-    settings:
-      placeholder: ''
-    third_party_settings: {  }
   field_slot_end:
     type: string_textfield
     weight: 122
@@ -77,48 +47,6 @@ content:
     region: content
     settings:
       size: 60
-      placeholder: ''
-    third_party_settings: {  }
-  field_topk_equals_slots:
-    type: boolean_checkbox
-    weight: 5
-    region: content
-    settings:
-      display_label: true
-    third_party_settings: {  }
-  field_weight_p1:
-    type: number
-    weight: 6
-    region: content
-    settings:
-      placeholder: ''
-    third_party_settings: {  }
-  field_weight_p2:
-    type: number
-    weight: 7
-    region: content
-    settings:
-      placeholder: ''
-    third_party_settings: {  }
-  field_weight_p3:
-    type: number
-    weight: 8
-    region: content
-    settings:
-      placeholder: ''
-    third_party_settings: {  }
-  field_weight_p4:
-    type: number
-    weight: 9
-    region: content
-    settings:
-      placeholder: ''
-    third_party_settings: {  }
-  field_weight_p5:
-    type: number
-    weight: 10
-    region: content
-    settings:
       placeholder: ''
     third_party_settings: {  }
   langcode:

@@ -5,6 +5,9 @@
  * Install/update hooks for JFCamp Matching.
  */
 
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
+
 /**
  * Implements hook_schema().
  */
@@ -138,6 +141,37 @@ function jfcamp_matching_update_10007(): void {
   }
 
   $config->save(TRUE);
+}
+
+/**
+ * Removes obsolete matching-config fields that are no longer used.
+ */
+function jfcamp_matching_update_10008(): void {
+  $field_names = [
+    'field_seed',
+    'field_slicing_mode',
+    'field_slicing_value',
+    'field_topk_equals_slots',
+    'field_weight_p1',
+    'field_weight_p2',
+    'field_weight_p3',
+    'field_weight_p4',
+    'field_weight_p5',
+  ];
+
+  foreach ($field_names as $field_name) {
+    $field = FieldConfig::loadByName('node', 'matching_config', $field_name);
+    if ($field) {
+      $field->delete();
+    }
+  }
+
+  foreach ($field_names as $field_name) {
+    $storage = FieldStorageConfig::loadByName('node', $field_name);
+    if ($storage) {
+      $storage->delete();
+    }
+  }
 }
 
 /**

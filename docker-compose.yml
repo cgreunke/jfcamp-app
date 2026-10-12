@@ -17,7 +17,11 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost/jsonapi"]
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS -H \"Host: $${APP_DOMAIN}\" http://localhost/jsonapi || exit 1"
+        ]
       interval: 20s
       timeout: 5s
       retries: 15

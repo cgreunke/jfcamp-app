@@ -74,7 +74,7 @@ final class JfCampBreadcrumbBuilder implements BreadcrumbBuilderInterface {
       return $breadcrumb;
     }
 
-    if ($routeName === 'jfcamp_operations.assignment_edit' || $routeName === 'jfcamp_operations.wish_edit') {
+    if (in_array($routeName, ['jfcamp_operations.assignment_edit', 'jfcamp_operations.assignment_swap', 'jfcamp_operations.wish_edit'], TRUE)) {
       $breadcrumb->addLink(Link::createFromRoute(
         'Teilnehmende & Zuteilungen',
         'jfcamp_operations.participants',

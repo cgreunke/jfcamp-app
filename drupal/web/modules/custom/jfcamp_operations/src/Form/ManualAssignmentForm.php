@@ -5,6 +5,7 @@ namespace Drupal\jfcamp_operations\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
+use Drupal\jfcamp_operations\Service\AssignmentSwapService;
 use Drupal\jfcamp_operations\Service\ManualAssignmentService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -15,10 +16,14 @@ final class ManualAssignmentForm extends FormBase {
 
   public function __construct(
     private ManualAssignmentService $manualAssignment,
+    private AssignmentSwapService $assignmentSwap,
   ) {}
 
   public static function create(ContainerInterface $container): self {
-    return new self($container->get('jfcamp_operations.manual_assignment'));
+    return new self(
+      $container->get('jfcamp_operations.manual_assignment'),
+      $container->get('jfcamp_operations.assignment_swap'),
+    );
   }
 
   public function getFormId(): string {
@@ -41,7 +46,7 @@ final class ManualAssignmentForm extends FormBase {
 
     $currentWorkshopId = (int) ($state['assignment_ids'][$slotNumber - 1] ?? 0);
     $currentWorkshop = (string) ($state['assignments'][$slotNumber - 1] ?? '—');
-    $choices = $this->manualAssignment->getWorkshopChoices($participantId, $slotNumber);
+    $choiceData = $this->assignmentSwap->getWorkshopChoices($participantId, $slotNumber);
 
     $name = trim($state['first_name'] . ' ' . $state['last_name']);
     if ($name === '') {
@@ -68,7 +73,7 @@ final class ManualAssignmentForm extends FormBase {
       '#attributes' => ['class' => ['messages', 'messages--warning']],
       'content' => [
         '#markup' => $this->t(
-          'Die Änderung wird direkt in den aktuellen Zuteilungsstand geschrieben. Der gespeicherte Matching-Snapshot bleibt unverändert.'
+          'Die Änderung wird direkt in den aktuellen Zuteilungsstand geschrieben. Der gespeicherte Matching-Snapshot bleibt unverändert. Volle Workshops können gewählt werden; anschließend wird ein kapazitätssicherer 1:1-Tausch organisiert.'
         ),
       ],
     ];
@@ -76,25 +81,25 @@ final class ManualAssignmentForm extends FormBase {
     $form['workshop_id'] = [
       '#type' => 'select',
       '#title' => $this->t('Neue Zuteilung für Slot @slot', ['@slot' => $slotNumber]),
-      '#options' => $choices,
+      '#options' => $choiceData['options'],
       '#default_value' => $currentWorkshopId ?: NULL,
       '#required' => TRUE,
       '#description' => $this->t(
-        'Angezeigt werden veröffentlichte Workshops mit freier Kapazität in diesem Slot. Bereits in einem anderen Slot zugeteilte Workshops werden ausgeblendet.'
+        'Veröffentlichte Workshops werden mit ihrer aktuellen Belegung angezeigt. Volle Workshops sind auswählbar, werden aber niemals direkt überbucht. Bereits in einem anderen Slot zugeteilte Workshops werden ausgeblendet.'
       ),
     ];
 
     $form['actions'] = ['#type' => 'actions'];
     $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Zuteilung speichern'),
+      '#value' => $this->t('Weiter'),
       '#button_type' => 'primary',
     ];
     $form['actions']['cancel'] = [
       '#type' => 'link',
       '#title' => $this->t('Abbrechen'),
-      '#url' => Url::fromRoute('jfcamp_operations.participants', [], [
-        'query' => $state['code'] !== '' ? ['q' => $state['code']] : [],
+      '#url' => Url::fromRoute('jfcamp_operations.participant_detail', [
+        'participant_id' => $participantId,
       ]),
       '#attributes' => ['class' => ['button']],
     ];
@@ -108,6 +113,15 @@ final class ManualAssignmentForm extends FormBase {
     $workshopId = (int) $form_state->getValue('workshop_id');
 
     try {
+      if ($this->assignmentSwap->requiresSwap($participantId, $slot, $workshopId)) {
+        $form_state->setRedirect('jfcamp_operations.assignment_swap', [
+          'participant_id' => $participantId,
+          'slot' => $slot,
+          'target_workshop_id' => $workshopId,
+        ]);
+        return;
+      }
+
       $result = $this->manualAssignment->changeAssignment($participantId, $slot, $workshopId);
       if (!empty($result['changed'])) {
         $this->messenger()->addStatus($this->t(
@@ -124,9 +138,8 @@ final class ManualAssignmentForm extends FormBase {
       return;
     }
 
-    $state = $this->manualAssignment->getParticipantState($participantId);
-    $form_state->setRedirect('jfcamp_operations.participants', [], [
-      'query' => $state['code'] !== '' ? ['q' => $state['code']] : [],
+    $form_state->setRedirect('jfcamp_operations.participant_detail', [
+      'participant_id' => $participantId,
     ]);
   }
 

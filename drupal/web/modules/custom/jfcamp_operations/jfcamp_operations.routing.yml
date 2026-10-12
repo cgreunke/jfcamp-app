@@ -29,6 +29,20 @@ jfcamp_operations.assignment_edit:
   options:
     _admin_route: TRUE
 
+
+jfcamp_operations.assignment_swap:
+  path: '/admin/jfcamp/participants/{participant_id}/assignments/{slot}/swap/{target_workshop_id}'
+  defaults:
+    _form: '\Drupal\jfcamp_operations\Form\AssignmentSwapForm'
+    _title: 'Zuteilung tauschen'
+  requirements:
+    _permission: 'edit jfcamp participant assignments'
+    participant_id: '\d+'
+    slot: '\d+'
+    target_workshop_id: '\d+'
+  options:
+    _admin_route: TRUE
+
 jfcamp_operations.assignment_audit:
   path: '/admin/jfcamp/assignment-audit'
   defaults:

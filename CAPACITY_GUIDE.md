@@ -28,7 +28,7 @@ Diese Anleitung beschreibt, wie du die **Systemkapazität** schrittweise erhöhs
 ## 1) Konfigurations-Stellschrauben
 
 ### 1.1 Nginx (vue-prod) – Rate Limiting (pro IP)
-Datei: `nginx/vue-site.conf`
+Datei: `vue-frontend/nginx/default.conf`
 ```nginx
 limit_req_zone $binary_remote_addr zone=api_per_ip:10m rate=10r/s;
 

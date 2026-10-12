@@ -1,0 +1,6 @@
+.git
+.gitignore
+vendor
+web/sites/default/files
+private
+*.log

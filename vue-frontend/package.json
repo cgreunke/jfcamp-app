@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "postinstall": "node -e \"try{require('@rollup/rollup-linux-x64-gnu');console.log('rollup native ok')}catch(e){console.log('installing native rollup…');process.exit(1)}\" || npm i -D @rollup/rollup-linux-x64-gnu@^4.21.0"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
@@ -18,7 +17,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
-    "@rollup/rollup-linux-x64-gnu": "^4.21.0",
     "@vitejs/plugin-vue": "^5.2.3",
     "@vue/eslint-config-prettier": "^10.2.0",
     "eslint": "^9.22.0",

@@ -12,13 +12,6 @@ use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\user\Entity\Role;
 
 /**
- * Creates the Teamer scope field and baseline role/permissions.
- */
-function jfcamp_operations_install(): void {
-  _jfcamp_operations_ensure_teamer_access_model();
-}
-
-/**
  * Adds Regionalverband-scoped Teamer access to existing installations.
  */
 function jfcamp_operations_update_10001(): void {

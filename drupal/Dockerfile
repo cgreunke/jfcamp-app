@@ -1,22 +1,23 @@
-# drupal/Dockerfile
 FROM drupal:11-apache
 
-# Systemlibs inkl. bash
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
       bash \
       libpng-dev \
       libjpeg62-turbo-dev \
       libfreetype6-dev \
       libpq-dev \
-      curl ca-certificates git unzip postgresql-client \
-  && rm -rf /var/lib/apt/lists/*
+      curl \
+      ca-certificates \
+      git \
+      unzip \
+      postgresql-client \
+ && rm -rf /var/lib/apt/lists/*
 
-# PHP-Extensions: gd + pdo_pgsql
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
  && docker-php-ext-install -j"$(nproc)" gd pdo_pgsql
 
-# Apache auf /opt/drupal/web umbiegen + Rewrite erlauben (deins ist okay)
-RUN a2enmod rewrite \
+RUN a2enmod rewrite reqtimeout headers expires \
  && sed -ri -e 's!/var/www/html!/opt/drupal/web!g' /etc/apache2/sites-available/000-default.conf \
  && sed -ri -e 's!/var/www/!/opt/drupal/web/!g' /etc/apache2/apache2.conf \
  && printf "<Directory /opt/drupal/web/>\n  AllowOverride All\n  Options FollowSymLinks\n  Require all granted\n</Directory>\n" \
@@ -25,26 +26,33 @@ RUN a2enmod rewrite \
  && printf "ServerName localhost\n" > /etc/apache2/conf-available/servername.conf \
  && a2enconf servername
 
-WORKDIR /opt/drupal
-
-# Drupal-Projektdateien aus dem Repository
-COPY composer.json composer.lock ./
-COPY web/modules/custom/ web/modules/custom/
-
-# Composer bereitstellen (wichtig, sonst kein vendor/bin/drush)
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
-# Startscript (PROD mitkopieren; in DEV darfst du es mounten)
-COPY scripts/start-drupal.sh /opt/drupal/start-drupal.sh
-RUN chmod +x /opt/drupal/start-drupal.sh
+WORKDIR /opt/drupal
 
-EXPOSE 80
-CMD ["bash", "/opt/drupal/start-drupal.sh"]
+# Dependencies are part of the immutable image.
+COPY composer.json composer.lock ./
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install \
+      --no-dev \
+      --prefer-dist \
+      --no-interaction \
+      --no-progress \
+      --optimize-autoloader
 
-# Apache-Module, die für obige Config nötig/ sinnvoll sind
-RUN a2enmod reqtimeout headers rewrite expires
+# Application/configuration sources.
+COPY config/ config/
+COPY scripts/ scripts/
+COPY web/modules/custom/ web/modules/custom/
+COPY web/sites/default/settings.php web/sites/default/settings.php
+COPY web/sites/default/cors.local.yml web/sites/default/cors.local.yml
 
-# Tuning-Dateien einspielen
 COPY apache/*.conf /etc/apache2/conf-enabled/
 COPY php/*.ini /usr/local/etc/php/conf.d/
 
+RUN chmod +x scripts/*.sh \
+ && mkdir -p web/sites/default/files private \
+ && chown -R www-data:www-data web/sites/default/files private
+
+EXPOSE 80
+
+CMD ["/opt/drupal/scripts/start-drupal.sh"]

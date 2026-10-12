@@ -3,63 +3,41 @@ services:
     env_file:
       - ./.env.development
     environment:
-      POSTGRES_DB: drupal
-      POSTGRES_USER: drupal
-      POSTGRES_PASSWORD: drupal
-    
+      POSTGRES_DB: ${DRUPAL_DB_NAME:-drupal}
+      POSTGRES_USER: ${DRUPAL_DB_USER:-drupal}
+      POSTGRES_PASSWORD: ${DRUPAL_DB_PASS:-drupal}
   drupal:
     env_file:
       - ./.env.development
     environment:
       DRUPAL_DB_HOST: postgres
-      DRUPAL_DB_NAME: drupal
-      DRUPAL_DB_USER: drupal
-      DRUPAL_DB_PASS: drupal
-      DRUPAL_ADMIN_USER: admin
-      DRUPAL_ADMIN_PASS: admin
-      DRUPAL_ADMIN_MAIL: admin@example.com
-      DRUPAL_TRUSTED_HOSTS: "^localhost$,^drupal$,^127\\.0\\.0\\.1$"
-      DRUPAL_SITE_NAME: "JF Startercamp - App"
-      MATCHING_BASE_URL: "http://matching:5001"
-      DRUPAL_AUTO_IMPORT_ON_START: "1"
-      CONFIG_SYNC_DIRECTORY: "/opt/drupal/config/sync"
-      # nur PROD/basis – kein Auto-Import hier; DEV übernimmt das
-    command: ["/bin/bash", "/opt/drupal/scripts/start-drupal.sh"]
+      DRUPAL_DB_PORT: 5432
+      MATCHING_BASE_URL: http://matching:5001
+      CONFIG_SYNC_DIRECTORY: /opt/drupal/config/sync
+      DRUPAL_ENABLE_DEV_CORS: "1"
+    ports:
+      - "8080:80"
     volumes:
-      # 🔁 Bind-Mounts (hier arbeitest du aktiv)
-      - ./drupal/composer.json:/opt/drupal/composer.json
-      - ./drupal/composer.lock:/opt/drupal/composer.lock
-      - ./drupal/config:/opt/drupal/config
-      - ./drupal/scripts:/opt/drupal/scripts
-      - ./drupal/web/modules/custom:/opt/drupal/web/modules/custom
-      - ./drupal/web/themes/custom:/opt/drupal/web/themes/custom
-      # 🧱 Behalte Rest als Named Volume aus base-compose (drupal_project)
-      # Option: files & private als eigenes Volume? Für DEV reicht das drupal_project-Volume.
-
+      - ./drupal/config:/opt/drupal/config:ro
+      - ./drupal/scripts:/opt/drupal/scripts:ro
+      - ./drupal/web/modules/custom:/opt/drupal/web/modules/custom:ro
+      - ./drupal/web/sites/default/settings.php:/opt/drupal/web/sites/default/settings.php:ro
+      - ./drupal/web/sites/default/cors.local.yml:/opt/drupal/web/sites/default/cors.local.yml:ro
 
   drupal-queue:
     env_file:
       - ./.env.development
     environment:
       DRUPAL_DB_HOST: postgres
-      DRUPAL_DB_NAME: drupal
-      DRUPAL_DB_USER: drupal
-      DRUPAL_DB_PASS: drupal
-      DRUPAL_ADMIN_USER: admin
-      DRUPAL_ADMIN_PASS: admin
-      DRUPAL_ADMIN_MAIL: admin@example.com
-      DRUPAL_TRUSTED_HOSTS: "^localhost$,^drupal$,^127\\.0\\.0\\.1$"
-      DRUPAL_SITE_NAME: "JF Startercamp - App"
-      MATCHING_BASE_URL: "http://matching:5001"
-      DRUPAL_AUTO_IMPORT_ON_START: "0"
-      CONFIG_SYNC_DIRECTORY: "/opt/drupal/config/sync"
+      DRUPAL_DB_PORT: 5432
+      MATCHING_BASE_URL: http://matching:5001
+      CONFIG_SYNC_DIRECTORY: /opt/drupal/config/sync
     volumes:
-      - ./drupal/composer.json:/opt/drupal/composer.json
-      - ./drupal/composer.lock:/opt/drupal/composer.lock
-      - ./drupal/config:/opt/drupal/config
-      - ./drupal/scripts:/opt/drupal/scripts
-      - ./drupal/web/modules/custom:/opt/drupal/web/modules/custom
-      - ./drupal/web/themes/custom:/opt/drupal/web/themes/custom
+      - ./drupal/config:/opt/drupal/config:ro
+      - ./drupal/scripts:/opt/drupal/scripts:ro
+      - ./drupal/web/modules/custom:/opt/drupal/web/modules/custom:ro
+      - ./drupal/web/sites/default/settings.php:/opt/drupal/web/sites/default/settings.php:ro
+      - ./drupal/web/sites/default/cors.local.yml:/opt/drupal/web/sites/default/cors.local.yml:ro
 
   matching:
     build:
@@ -68,6 +46,16 @@ services:
       target: dev
     env_file:
       - ./.env.development
+    ports:
+      - "5001:5001"
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    depends_on:
+      - postgres
+    ports:
+      - "8081:8080"
 
   vue:
     build:

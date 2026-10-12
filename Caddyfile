@@ -1,6 +1,4 @@
-# Bei einer späteren Wiederverwendung Domains und Routing prüfen.
-
-startercamp.jugendfeier-nordbrandenburg.de, startercamp.jugendfeier.org {
+{$APP_DOMAIN} {
     encode gzip zstd
 
     @drupal path \
@@ -19,7 +17,9 @@ startercamp.jugendfeier-nordbrandenburg.de, startercamp.jugendfeier.org {
         /update/* \
         /batch \
         /jsonapi \
-        /jsonapi/*
+        /jsonapi/* \
+        /api \
+        /api/*
 
     handle @drupal {
         reverse_proxy drupal:80

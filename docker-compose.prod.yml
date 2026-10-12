@@ -1,51 +1,53 @@
 services:
-
   postgres:
     env_file:
       - ./.env.production
     environment:
       POSTGRES_DB: ${DRUPAL_DB_NAME}
       POSTGRES_USER: ${DRUPAL_DB_USER}
-      POSTGRES_PASSWORD: ${DRUPAL_DB_PASS}  
-    
+      POSTGRES_PASSWORD: ${DRUPAL_DB_PASS}
+    restart: unless-stopped
+
   drupal:
     env_file:
       - ./.env.production
-    command: ["/bin/bash", "/opt/drupal/start-drupal.sh"]
+    environment:
+      DRUPAL_DB_HOST: postgres
+      DRUPAL_DB_PORT: 5432
+      MATCHING_BASE_URL: http://matching:5001
+      CONFIG_SYNC_DIRECTORY: /opt/drupal/config/sync
+      DRUPAL_REVERSE_PROXY: "1"
+      DRUPAL_REVERSE_PROXY_ADDRESSES: caddy
     restart: unless-stopped
-    # Persistente Verzeichnisse auf dem Server (anpassen!):
-    volumes:
-      # Config & private auf Serverpfad mounten (bind mounts):
-      - /opt/jfcamp-app/drupal/config:/opt/drupal/config
-      - /opt/jfcamp-app/drupal/private:/opt/drupal/private
-      # Optional: öffentliche Files, wenn genutzt (ansonsten bleiben in Container/Volume)
-      # - /srv/jfcamp/drupal/files:/opt/drupal/web/sites/default/files
-    depends_on:
-      postgres:
-        condition: service_healthy
-
 
   drupal-queue:
     env_file:
       - ./.env.production
+    environment:
+      DRUPAL_DB_HOST: postgres
+      DRUPAL_DB_PORT: 5432
+      MATCHING_BASE_URL: http://matching:5001
+      CONFIG_SYNC_DIRECTORY: /opt/drupal/config/sync
+      DRUPAL_REVERSE_PROXY: "1"
+      DRUPAL_REVERSE_PROXY_ADDRESSES: caddy
     restart: unless-stopped
-    volumes:
-      - /opt/jfcamp-app/drupal/config:/opt/drupal/config
-      - /opt/jfcamp-app/drupal/private:/opt/drupal/private
-    depends_on:
-      drupal:
-        condition: service_healthy
 
   matching:
     env_file:
       - ./.env.production
+    environment:
+      DRUPAL_URL: http://drupal/jsonapi
+      DRUPAL_USER: ${DRUPAL_API_USER}
+      DRUPAL_PASS: ${DRUPAL_API_PASS}
+    restart: unless-stopped
+
+  vue-prod:
+    build:
+      context: ./vue-frontend
+      dockerfile: Dockerfile
+      target: production
+    image: jfcamp-vue:${APP_VERSION:-local}
     restart: unless-stopped
     depends_on:
-      - drupal
-
-  # Für PROD-Web-Frontend (statisches Build via Nginx); Basis-compose enthält bereits "vue-prod"
-  vue-prod:
-    # Aktiv in PROD (deine Basis-compose setzt profiles: [prod])
-    restart: unless-stopped
-
-# Keine zusätzlichen Volumes nötig – benannte Volumes aus Basis-compose bleiben bestehen.
+      drupal:
+        condition: service_healthy

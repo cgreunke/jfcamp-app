@@ -168,9 +168,9 @@ final class TeamerForm extends FormBase {
       $account->setEmail('');
     }
 
-    $password = $form_state->getValue('pass');
-    if (is_array($password) && !empty($password['pass1'])) {
-      $account->setPassword((string) $password['pass1']);
+    $password = (string) $form_state->getValue('pass');
+    if ($password !== '') {
+      $account->setPassword($password);
     }
 
     $regions = array_values(array_filter($form_state->getValue('regionalverbaende') ?? []));

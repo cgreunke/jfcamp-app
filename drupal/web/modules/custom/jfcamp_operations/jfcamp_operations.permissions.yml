@@ -22,3 +22,8 @@ view jfcamp workshop capacities:
   title: 'JF Camp Workshop-Kapazitäten ansehen'
   description: 'Erlaubt den Zugriff auf die operative Workshop- und Kapazitätsübersicht.'
   restrict access: true
+
+edit jfcamp participant wishes:
+  title: 'Teilnehmerwünsche manuell ändern'
+  description: 'Erlaubt der Camp-Leitung, die priorisierte Wunschliste eines Teilnehmers manuell zu bearbeiten.'
+  restrict access: true

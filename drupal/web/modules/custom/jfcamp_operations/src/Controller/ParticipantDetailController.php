@@ -62,6 +62,7 @@ final class ParticipantDetailController extends ControllerBase {
     }
 
     $canEditAssignments = $this->currentUser()->hasPermission('edit jfcamp participant assignments');
+    $canEditWishes = $this->currentUser()->hasPermission('edit jfcamp participant wishes');
 
     $build = [
       '#type' => 'container',
@@ -91,7 +92,7 @@ final class ParticipantDetailController extends ControllerBase {
       ];
     }
 
-    $build['wishes'] = [
+    $wishCard = [
       '#type' => 'container',
       '#attributes' => ['class' => ['jfcamp-participant-detail__card']],
       'title' => ['#markup' => '<h2>' . $this->t('Wünsche') . '</h2>'],
@@ -103,6 +104,17 @@ final class ParticipantDetailController extends ControllerBase {
         ]
         : ['#markup' => '<p class="jfcamp-participant-detail__empty">' . $this->t('Keine Wünsche abgegeben.') . '</p>'],
     ];
+    if ($canEditWishes) {
+      $wishCard['note'] = [
+        '#markup' => '<p class="jfcamp-participant-detail__empty">' . $this->t('Wunschänderungen verändern bestehende Zuteilungen nicht automatisch.') . '</p>',
+      ];
+      $wishCard['edit'] = Link::fromTextAndUrl(
+        $this->t('Wünsche bearbeiten'),
+        Url::fromRoute('jfcamp_operations.wish_edit', ['participant_id' => $participant_id]),
+      )->toRenderable();
+      $wishCard['edit']['#attributes']['class'] = ['button'];
+    }
+    $build['wishes'] = $wishCard;
 
     $assignmentItems = [];
     foreach ($assignments as $assignment) {

@@ -60,3 +60,14 @@ jfcamp_operations.participant_detail:
     participant_id: '\d+'
   options:
     _admin_route: TRUE
+
+jfcamp_operations.wish_edit:
+  path: '/admin/jfcamp/participants/{participant_id}/wishes'
+  defaults:
+    _form: '\Drupal\jfcamp_operations\Form\WishEditForm'
+    _title: 'Wünsche bearbeiten'
+  requirements:
+    _permission: 'edit jfcamp participant wishes'
+    participant_id: '\d+'
+  options:
+    _admin_route: TRUE

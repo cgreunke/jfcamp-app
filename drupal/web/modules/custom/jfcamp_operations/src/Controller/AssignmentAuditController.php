@@ -6,6 +6,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\jfcamp_operations\Service\AssignmentAuditService;
+use Drupal\jfcamp_operations\Service\WishManagementService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -15,6 +16,7 @@ final class AssignmentAuditController extends ControllerBase {
 
   public function __construct(
     private AssignmentAuditService $audit,
+    private WishManagementService $wishManagement,
     private EntityTypeManagerInterface $userEntityTypeManager,
     private DateFormatterInterface $dateFormatter,
   ) {}
@@ -22,6 +24,7 @@ final class AssignmentAuditController extends ControllerBase {
   public static function create(ContainerInterface $container): self {
     return new self(
       $container->get('jfcamp_operations.assignment_audit'),
+      $container->get('jfcamp_operations.wish_management'),
       $container->get('entity_type.manager'),
       $container->get('date.formatter'),
     );
@@ -30,10 +33,11 @@ final class AssignmentAuditController extends ControllerBase {
   public function overview(): array {
     $status = $this->audit->getCurrentAssignmentStatus();
     $auditRows = $this->audit->recent(200);
+    $wishAuditRows = $this->wishManagement->recentAudit(200);
 
     $uids = array_values(array_unique(array_filter(array_map(
       static fn (array $row): int => (int) ($row['uid'] ?? 0),
-      $auditRows,
+      array_merge($auditRows, $wishAuditRows),
     ))));
     $users = $uids
       ? $this->userEntityTypeManager->getStorage('user')->loadMultiple($uids)
@@ -59,6 +63,31 @@ final class AssignmentAuditController extends ControllerBase {
       ];
     }
 
+    $wishRows = [];
+    foreach ($wishAuditRows as $row) {
+      $uid = (int) $row['uid'];
+      $userLabel = $uid === 0
+        ? (string) $this->t('System / CLI')
+        : (isset($users[$uid]) ? $users[$uid]->getDisplayName() : (string) $this->t('Benutzer #@uid', ['@uid' => $uid]));
+      $formatWishes = static function (array $items): string {
+        if (!$items) {
+          return '—';
+        }
+        return implode(' · ', array_map(
+          static fn (array $item, int $index): string => ($index + 1) . '. ' . (string) ($item['label'] ?? ('#' . ($item['id'] ?? '?'))),
+          $items,
+          array_keys($items),
+        ));
+      };
+      $wishRows[] = [
+        $this->dateFormatter->format((int) $row['created_at'], 'short'),
+        $userLabel,
+        $row['participant_code'] !== '' ? $row['participant_code'] : '#' . $row['participant_id'],
+        $formatWishes($row['old_wishes']),
+        $formatWishes($row['new_wishes']),
+      ];
+    }
+
     $baseText = $status['base_run_id'] !== NULL
       ? (string) $this->t('Matching Run #@run', ['@run' => $status['base_run_id']])
       : (string) $this->t('Bestehender Zuteilungsstand – kein Matching-Run angewendet');
@@ -80,8 +109,9 @@ final class AssignmentAuditController extends ControllerBase {
         ],
       ],
       'description' => [
-        '#markup' => '<p>' . $this->t('Das Protokoll ist unveränderlich und dokumentiert jede über die JF-Camp-Oberfläche gespeicherte manuelle Zuteilungsänderung.') . '</p>',
+        '#markup' => '<p>' . $this->t('Das Protokoll ist unveränderlich und dokumentiert manuelle Zuteilungs- und Wunschänderungen aus der JF-Camp-Oberfläche.') . '</p>',
       ],
+      'assignment_title' => ['#markup' => '<h2>' . $this->t('Zuteilungsänderungen') . '</h2>'],
       'table' => [
         '#type' => 'table',
         '#header' => [
@@ -95,6 +125,19 @@ final class AssignmentAuditController extends ControllerBase {
         ],
         '#rows' => $rows,
         '#empty' => $this->t('Noch keine manuellen Zuteilungsänderungen protokolliert.'),
+      ],
+      'wish_title' => ['#markup' => '<h2>' . $this->t('Wunschänderungen') . '</h2>'],
+      'wish_table' => [
+        '#type' => 'table',
+        '#header' => [
+          $this->t('Zeitpunkt'),
+          $this->t('Benutzer'),
+          $this->t('Teilnehmer'),
+          $this->t('Vorher'),
+          $this->t('Nachher'),
+        ],
+        '#rows' => $wishRows,
+        '#empty' => $this->t('Noch keine manuellen Wunschänderungen protokolliert.'),
       ],
     ];
   }

@@ -124,6 +124,7 @@ function _jfcamp_operations_ensure_teamer_access_model(): void {
     $team->grantPermission('view all jfcamp participant regions');
     $team->grantPermission('access jfcamp administration');
     $team->grantPermission('edit jfcamp participant assignments');
+    $team->grantPermission('edit jfcamp participant wishes');
     $team->grantPermission('view the administration theme');
     _jfcamp_operations_harden_team_role($team);
     $team->save();
@@ -234,6 +235,25 @@ function jfcamp_operations_schema(): array {
         'base_run' => ['base_matching_run_id'],
       ],
     ],
+    'jfcamp_wish_audit' => [
+      'description' => 'Immutable audit trail of manual participant wish changes.',
+      'fields' => [
+        'id' => ['type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE],
+        'created_at' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+        'uid' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0],
+        'participant_id' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+        'participant_uuid' => ['type' => 'varchar', 'length' => 36, 'not null' => TRUE],
+        'participant_code' => ['type' => 'varchar', 'length' => 128, 'not null' => TRUE, 'default' => ''],
+        'wish_node_id' => ['type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE],
+        'old_wishes_json' => ['type' => 'text', 'size' => 'big', 'not null' => TRUE],
+        'new_wishes_json' => ['type' => 'text', 'size' => 'big', 'not null' => TRUE],
+      ],
+      'primary key' => ['id'],
+      'indexes' => [
+        'participant' => ['participant_id', 'id'],
+        'created' => ['created_at'],
+      ],
+    ],
   ];
 }
 
@@ -266,6 +286,23 @@ function jfcamp_operations_update_10008(): void {
   $team = Role::load('team');
   if ($team) {
     _jfcamp_operations_harden_team_role($team);
+    $team->save();
+  }
+}
+
+
+/**
+ * Adds manual wish editing and its immutable audit trail.
+ */
+function jfcamp_operations_update_10009(): void {
+  $schema = \Drupal::database()->schema();
+  if (!$schema->tableExists('jfcamp_wish_audit')) {
+    $schema->createTable('jfcamp_wish_audit', jfcamp_operations_schema()['jfcamp_wish_audit']);
+  }
+
+  $team = Role::load('team');
+  if ($team) {
+    $team->grantPermission('edit jfcamp participant wishes');
     $team->save();
   }
 }

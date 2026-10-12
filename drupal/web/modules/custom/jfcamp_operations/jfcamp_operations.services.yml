@@ -30,3 +30,12 @@ services:
     class: Drupal\jfcamp_operations\Service\WorkshopCapacityService
     arguments:
       - '@entity_type.manager'
+
+  jfcamp_operations.wish_management:
+    class: Drupal\jfcamp_operations\Service\WishManagementService
+    arguments:
+      - '@entity_type.manager'
+      - '@database'
+      - '@lock'
+      - '@current_user'
+      - '@datetime.time'

@@ -1,89 +1,148 @@
 # JF Camp – Matching-Service
 
-Dieser Service liest **Teilnehmende**, **Workshops** und **Wünsche** aus Drupal (JSON:API) und erstellt pro Dry‑Run eine faire Zuteilung über **Slots** (z. B. 3 Slots). Berücksichtigt werden **Prioritäten** (Wünsche), Kapazitäten und optionale Anti‑Renner‑Regeln (*Slicing*). Ein **Happy‑Index** fasst die Erfüllungsqualität zusammen.
+Der Matching-Service berechnet die Workshop-Zuteilungen für das JugendFEIER-Startercamp.
 
-## TL;DR – So nutzt ihr’s
+Er liest **Teilnehmende**, **Workshops**, **Wünsche** und die grundlegende Matching-Konfiguration aus Drupal und erzeugt daraus eine valide Zuteilung über die konfigurierten Slots.
 
-1. Drupal vorbereiten: `start-drupal.sh` im **Drupal‑Container** ausführen.  
-   - Admin‑UX: Gin, Admin Toolbar, 403→Login, Frontpage→/admin/content  
-   - Bundles/Felder: `workshop`, `teilnehmer`, `wunsch`, `matching_config`  
-   - Rollen & Rechte: `team` (CRUD + CSV/Maching), `api_writer` (Service), `administrator`
+## Ziel des Matchings
 
-2. Daten einspielen (CSV‑Importer oder manuell):  
-   - **Workshops** mit `Maximale Plätze`  
-   - **Teilnehmer:innen** mit `Code`, `Vorname`, `Nachname`, `Regionalverband`  
-   - **Wünsche**: pro Teilnehmer genau **ein** `wunsch`‑Knoten, Feld `Wünsche` = geordnete Referenzen auf Workshops (Priorität 1..N)
+Die aktuelle Matching-Logik verfolgt diese Prioritäten:
 
-3. Matching aufrufen:
-   - `GET /matching/health` – Service up?
-   - `GET /matching/stats` – Überblick: Kapazitäten, Wunschdichte, TopK‑Popularität.  
-   - `POST /matching/dry-run` – Zuteilung simulieren (es wird **nichts** nach Drupal geschrieben).
+1. Jede Person erhält die konfigurierte Anzahl an Workshop-Zuteilungen.
+2. Kapazitäten und weitere harte Bedingungen werden eingehalten.
+3. Möglichst viele und möglichst hoch priorisierte Wünsche werden erfüllt.
+4. Füll-Zuteilungen werden erst verwendet, wenn die Wunschoptimierung ausgeschöpft ist.
+5. Wenn nicht alle Wünsche gleichzeitig erfüllbar sind, soll die Verteilung fair bleiben.
 
-## Endpunkte
+Die produktive Zuteilung darf keinen Workshop innerhalb derselben Person doppelt enthalten.
 
-- `GET /matching/health` – ok
-- `GET /matching/debug` – Rohzähler, Sanity Checks
-- `GET /matching/probe` – Stichprobe/IDs, Duplikate
-- `GET /matching/probe/missing` – count fehlender Wunschlisten
-- `GET /matching/stats` – **TopK‑Popularität**, Kapazitäten, Histogramme
-- `POST /matching/dry-run` – Matching-Ergebnis inkl. **Happy‑Index**
+## Datenbasis
 
-## Konfiguration (Drupal: Inhaltstyp **matching_config**)
+Aus Drupal werden insbesondere verwendet:
 
-| Feld | Bedeutung |
-|---|---|
-| **Anzahl Wünsche** (`field_num_wuensche`) | Wie viele Wünsche (Prioritäten) je Person berücksichtigt werden. |
-| **Anzahl Zuteilungen (Slots)** (`field_num_zuteilung`) | Anzahl Workshop‑Slots (z. B. 3). |
-| **Seed** (`field_seed`) | Fixiert die zufällige Rotationsreihenfolge. Leer = echter Zufall. |
-| **Top‑K = Slots** (`field_topk_equals_slots`) | Wenn aktiv, ist **TopK = Slots**, sonst `min(Slots, Anzahl Wünsche)`. |
-| **Slicing Mode** (`field_slicing_mode`) | `off`, `relative` (z. B. 50 %/Slot), `fixed` (absolute Zahl pro Slot). Wirkt **nur** bei „Rennern“. |
-| **Slicing Value** (`field_slicing_value`) | Prozent (relative) oder absolute Zahl (fixed). |
-| **Gewichte Prio 1..5** (`field_weight_p1..p5`) | Bewertung pro Priorität für den **Happy‑Index**. |
+- `teilnehmer`
+- `workshop`
+- `wunsch`
+- `matching_config`
 
-## Matching-Logik
+Ein Wunsch-Node verweist auf genau einen Teilnehmer und enthält in `field_wuensche` die geordnete Wunschliste.
 
-- **Ziel**: Jede Person erhält pro Slot **genau einen** Workshop, **ohne Wiederholung**. Kapazitäten werden eingehalten.
-- **Prioritäten**: Wünsche werden in Reihenfolge 1..N versucht.
-- **Balanced‑Rotation**: Pro Slot wird die Teilnehmerreihenfolge rotiert → fairere Verteilung.
-- **Slicing**: „Renner“ (Top 20 % nach Nachfrage) werden pro Slot gedeckelt:
-  - `off`: keine Deckelung  
-  - `relative`: z. B. 50 % von Kapazität/Slot  
-  - `fixed`: absolute Anzahl pro Slot  
-- **Filler**: Wenn kein Wunsch greift, wird ein freier Workshop zugeteilt (aber nie doppelt für dieselbe Person).
+Die produktive Zuteilung eines Teilnehmers liegt in:
 
-## Happy‑Index
+```text
+field_zugewiesen
+```
 
-- Für Top‑K (meist = Slots) prüft der Service, ob die Slot‑Zuteilungen in den **Top‑K Wünschen** liegen.
-- Je Treffer wird die jeweilige **Prioritäts‑Gewichtung** addiert (1:1.0, 2:0.8, 3:0.6, …).  
-- Der **Happy‑Index** ist der Mittelwert über alle Teilnehmenden, normalisiert auf 0..1.
+Die Delta-Reihenfolge des Feldes entspricht der Slot-Reihenfolge.
 
-**Beispiel:** Slots=3, Gewichte (1:1.0, 2:0.8, 3:0.6).  
-- Person A erhält Prio1, Prio2, Prio3 → Score = 1.0+0.8+0.6 = 2.4 → normiert (÷2.4) = 1.0  
-- Person B erhält Prio1, Filler, Prio3 → Score = 1.0+0.0+0.6 = 1.6 → normiert ≈ 0.667
+## Wichtige Endpunkte
 
-## Seed vs. Zufall
+Der Matching-Service stellt weiterhin technische Endpunkte für Status und Berechnung bereit, darunter:
 
-- **Zufall** wird für die faire **Reihenfolge** genutzt (Shuffling, Rotation).  
-- **Seed** fixiert diese Zufallsquelle → das gleiche Input führt deterministisch zum gleichen Ergebnis.  
-- Kein Seed = jedes Mal eine neue, valide Verteilung (gleich gute Qualität, aber andere Zuordnung).
+- `GET /matching/health`
+- `GET /matching/stats`
+- `POST /matching/dry-run`
 
-## Tipps zur Qualität
+Ein Dry-Run verändert den produktiven Drupal-Zuteilungsstand nicht.
 
-- Wenn es **wenige Renner** gibt, aktiviere **Slicing (relative 50 %)** und prüfe `/matching/dry-run` → Happy‑Index sollte steigen.  
-- Achte darauf, dass **alle** Teilnehmenden **genügend** Wünsche eingeben (idealerweise ≥ Slots).  
-- Verteile Kapazitäten möglichst proportional zur Popularität (siehe `/matching/stats` → Popularität & Kapazität).
+## Matching-Runs in Drupal
 
-## Environment
+Die eigentliche operative Steuerung erfolgt über Drupal.
 
-- `DRUPAL_URL` (z. B. `http://drupal/jsonapi`)
-- `DRUPAL_LANGS` (z. B. `de,en`)
-- `PUBLISHED_ONLY` (`1|0`)
-- `PAGE_CHUNK` (Default 100)
-- `MATCHING_SEED` (Fallback, wenn in matching_config kein Seed)
+Ein Run durchläuft vereinfacht diesen Ablauf:
 
-## Sicherheit / Rollen
+```text
+Input erfassen
+    ↓
+Matching berechnen
+    ↓
+Run als Snapshot speichern
+    ↓
+Run prüfen
+    ↓
+optional: Apply
+```
 
-- **administrator**: Vollzugriff
-- **team**: CRUD auf Kernobjekte + CSV‑Import & Matching starten
-- **api_writer**: Technischer Nutzer für Serviceintegration (minimal erforderliche Rechte)
+Abgeschlossene Runs werden in `jfcamp_matching_run` gespeichert.
 
+Ein Run enthält unter anderem:
+
+- Status
+- verwendete Konfiguration
+- Zusammenfassung
+- vollständigen Snapshot
+- Ergebnis-Hash
+- Input-Fingerprint
+- Apply-Status
+- Zeitpunkte und Benutzerinformationen
+
+## Snapshot und Apply
+
+Ein abgeschlossener Run ist ein historischer, unveränderlicher Snapshot.
+
+Wichtig:
+
+**Ein berechneter Run verändert die produktiven Zuteilungen nicht.**
+
+Erst **Apply** schreibt den gespeicherten Snapshot in die produktiven `field_zugewiesen`-Werte.
+
+Dadurch sind Berechnung und produktiver Stand bewusst getrennt.
+
+## Manuelle Änderungen nach dem Matching
+
+Nach einem Apply kann die Camp-Leitung:
+
+- Wünsche nachträglich ändern
+- einzelne Zuteilungen ändern
+- kapazitätssichere Tausche durchführen
+
+Diese Änderungen verändern den produktiven Stand, aber nicht den gespeicherten Matching-Snapshot.
+
+Deshalb gilt:
+
+> Ein späteres Apply eines älteren oder bereits berechneten Runs kann manuelle Änderungen überschreiben.
+
+Vor Apply muss deshalb immer geprüft werden, ob der aktuelle produktive Stand bereits manuell angepasst wurde.
+
+## Kapazitäten
+
+Das Matching muss Workshop-Kapazitäten pro Slot einhalten.
+
+Auch die nachträgliche manuelle Bearbeitung in Drupal verhindert Überbuchungen:
+
+- normale Umbuchungen sind nur bei freier Zielkapazität möglich
+- volle Workshops können nur über einen validierten 1:1-Tausch erreicht werden
+
+## Konfiguration
+
+Die grundlegende Matching-Konfiguration liegt in Drupal im Inhaltstyp `matching_config`.
+
+Relevant sind insbesondere:
+
+- Anzahl der berücksichtigten Wünsche
+- Anzahl der Zuteilungen/Slots
+- Slot-Zeiten für die Darstellung
+
+Historische Algorithmus-Parameter und mehrere auswählbare Matching-Strategien sind nicht mehr Teil des normalen operativen Workflows.
+
+## Betrieb
+
+### Healthcheck
+
+```bash
+curl http://localhost:5001/matching/health
+```
+
+### DEV
+
+Der Matching-Service wird über Docker Compose gemeinsam mit der übrigen Anwendung betrieben.
+
+Änderungen am Python-Matching-Code benötigen in der lokalen Entwicklungsumgebung in der Regel einen Rebuild des Matching-Containers.
+
+## Sicherheit
+
+Die Matching-Oberfläche in Drupal ist auf entsprechend berechtigte Benutzer beschränkt.
+
+Die Rolle **Camp-Leitung** darf Matching-Runs starten und anwenden.
+
+Die Rolle **Teamer*in** besitzt keinen Matching-Zugriff.

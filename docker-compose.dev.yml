@@ -15,6 +15,13 @@ services:
       MATCHING_BASE_URL: http://matching:5001
       CONFIG_SYNC_DIRECTORY: /opt/drupal/config/sync
       DRUPAL_ENABLE_DEV_CORS: "1"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'curl -fsS -H "Host: localhost" http://localhost/jsonapi >/dev/null || exit 1'
+      interval: 20s
+      timeout: 5s
+      retries: 15
     ports:
       - "8080:80"
     volumes:

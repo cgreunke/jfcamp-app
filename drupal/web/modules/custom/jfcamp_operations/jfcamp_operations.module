@@ -10,36 +10,54 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\jfcamp_operations\Service\ParticipantAccessService;
 use Drupal\node\NodeInterface;
 
+
 /**
  * Implements hook_node_access().
  *
- * Restricted JF Camp users may only view participant nodes from one of their
- * assigned Regionalverbände. The regular Drupal node-access system remains
- * responsible for deciding whether an in-scope participant is viewable at all
- * (for example based on publication status).
+ * Prevents unauthorized direct access to participant and wish nodes.
  */
 function jfcamp_operations_node_access(NodeInterface $node, $op, AccountInterface $account): AccessResult {
-  if ($node->bundle() !== 'teilnehmer' || $op !== 'view') {
+  if ($op !== 'view') {
     return AccessResult::neutral();
   }
 
-  // Camp leadership and other explicitly unrestricted accounts keep the normal
-  // Drupal node-access behaviour.
+  $bundle = $node->bundle();
+
+  // Other content types are unaffected.
+  if (!in_array($bundle, ['teilnehmer', 'wunsch'], TRUE)) {
+    return AccessResult::neutral();
+  }
+
+  // Drupal administrators retain their existing access.
+  if ($account->hasPermission('administer nodes')) {
+    return AccessResult::neutral()
+      ->cachePerPermissions();
+  }
+
+  // Wish nodes require the camp leadership permission.
+  if ($bundle === 'wunsch') {
+    return $account->hasPermission('edit jfcamp participant wishes')
+      ? AccessResult::neutral()->cachePerPermissions()
+      : AccessResult::forbidden('Kein Zugriff auf Teilnehmerwünsche.')
+        ->cachePerPermissions();
+  }
+
+  // Camp leadership can view participants across all regions.
   if ($account->hasPermission(ParticipantAccessService::PERMISSION_VIEW_ALL)) {
     return AccessResult::neutral()
       ->cachePerPermissions();
   }
 
-  // Only accounts using the regional JF Camp participant overview are subject
-  // to this additional restriction. Other account types keep their existing
-  // node-access behaviour.
+  // Users without participant overview permission are denied.
   if (!$account->hasPermission('view jfcamp participant overview')) {
-    return AccessResult::neutral()
+    return AccessResult::forbidden('Kein Zugriff auf Teilnehmerdaten.')
       ->cachePerPermissions();
   }
 
+  // Regional teamers may only view assigned regions.
   /** @var \Drupal\jfcamp_operations\Service\ParticipantAccessService $access */
   $access = \Drupal::service('jfcamp_operations.participant_access');
+
   $allowedRegions = $access->getAllowedRegionsFor($account) ?? [];
   $participantRegion = strtoupper(trim((string) $node->get('field_regionalverband')->value));
 
